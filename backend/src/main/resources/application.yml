@@ -7,6 +7,90 @@ spring:
   jpa:
     open-in-view: false
 
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  navigation:
+    items:
+      - key: dashboard
+        label: Dashboard
+        path: /
+        coming-soon: false
+        icon: LayoutDashboard
+        order: 1
+      - key: team
+        label: Team Space
+        path: /team
+        coming-soon: true
+        icon: Users
+        order: 2
+      - key: project-space
+        label: Project Space
+        path: /project-space
+        coming-soon: false
+        icon: Box
+        order: 3
+      - key: requirements
+        label: Requirement Management
+        path: /requirements
+        coming-soon: true
+        icon: FileText
+        order: 4
+      - key: project-management
+        label: Project Management
+        path: /project-management
+        coming-soon: true
+        icon: GitBranch
+        order: 5
+      - key: design
+        label: Design Management
+        path: /design
+        coming-soon: true
+        icon: Layers
+        order: 6
+      - key: code
+        label: "Code & Build"
+        path: /code
+        coming-soon: true
+        icon: Code
+        order: 7
+      - key: testing
+        label: Testing
+        path: /testing
+        coming-soon: true
+        icon: TestTube
+        order: 8
+      - key: deployment
+        label: Deployment
+        path: /deployment
+        coming-soon: true
+        icon: Send
+        order: 9
+      - key: incidents
+        label: Incident Management
+        path: /incidents
+        coming-soon: false
+        icon: AlertTriangle
+        order: 10
+      - key: ai-center
+        label: AI Center
+        path: /ai-center
+        coming-soon: true
+        icon: Cpu
+        order: 11
+      - key: reports
+        label: Report Center
+        path: /reports
+        coming-soon: true
+        icon: BarChart
+        order: 12
+      - key: platform
+        label: Platform Center
+        path: /platform
+        coming-soon: false
+        icon: Settings
+        order: 13
+
 management:
   endpoints:
     web:

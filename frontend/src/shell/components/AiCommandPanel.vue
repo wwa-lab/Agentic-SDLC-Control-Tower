@@ -1,5 +1,39 @@
 <script setup lang="ts">
 import { Sparkles, Terminal, Info, Database } from 'lucide-vue-next';
+import type { AiPanelContent } from '@/shared/types/shell';
+
+interface Props {
+  content?: AiPanelContent;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  content: () => ({
+    summary: 'Observing shell deployment. Workspace context is stable. AI is ready for command injection.',
+    reasoning: [
+      { text: 'Verified "No-Line" Rule compliance.', status: 'ok' as const },
+      { text: 'Tonal hierarchy active.', status: 'ok' as const },
+    ],
+    evidence: JSON.stringify({ status: 'ready', components: 5, routes: 13, style: 'tactical_cmd' }, null, 2),
+  }),
+});
+
+const emit = defineEmits<{
+  command: [value: string];
+}>();
+
+const STATUS_LED: Record<string, string> = {
+  ok: 'led-emerald',
+  warning: 'led-amber',
+  error: 'led-crimson',
+};
+
+function onCommand(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.value.trim()) {
+    emit('command', input.value.trim());
+    input.value = '';
+  }
+}
 </script>
 
 <template>
@@ -14,7 +48,7 @@ import { Sparkles, Terminal, Info, Database } from 'lucide-vue-next';
       <section class="content-zone">
         <header><Info :size="12" /> <span>SUMMARY</span></header>
         <div class="zone-body section-high">
-          <p class="text-body-sm">Observing Phase A shell deployment. Workspace context is stable. AI is ready for command injection.</p>
+          <p class="text-body-sm">{{ props.content.summary }}</p>
         </div>
       </section>
 
@@ -23,8 +57,10 @@ import { Sparkles, Terminal, Info, Database } from 'lucide-vue-next';
         <header><Database :size="12" /> <span>REASONING</span></header>
         <div class="zone-body section-high">
           <ul class="reasoning-list">
-            <li><span class="led led-emerald"></span> Verified "No-Line" Rule compliance.</li>
-            <li><span class="led led-emerald"></span> Tonal hierarchy active.</li>
+            <li v-for="(item, i) in props.content.reasoning" :key="i">
+              <span class="led" :class="STATUS_LED[item.status]"></span>
+              {{ item.text }}
+            </li>
           </ul>
         </div>
       </section>
@@ -33,22 +69,20 @@ import { Sparkles, Terminal, Info, Database } from 'lucide-vue-next';
       <section class="content-zone flex-1">
         <header><Terminal :size="12" /> <span>EVIDENCE</span></header>
         <div class="zone-body section-high evidence-box">
-          <pre class="text-tech text-xs">
-{
-  "status": "ready",
-  "components": 5,
-  "routes": 13,
-  "style": "tactical_cmd"
-}
-          </pre>
+          <pre class="text-tech text-xs">{{ props.content.evidence }}</pre>
         </div>
       </section>
     </div>
 
     <div class="panel-input section-highest">
       <div class="input-wrapper">
-        <span class="terminal-prompt text-tech">></span>
-        <input type="text" placeholder="Type AI Command (/ for skills)..." class="command-input text-tech" />
+        <span class="terminal-prompt text-tech">&gt;</span>
+        <input
+          type="text"
+          placeholder="Type AI Command (/ for skills)..."
+          class="command-input text-tech"
+          @keydown.enter="onCommand"
+        />
         <div class="cursor"></div>
       </div>
       <div class="input-glow"></div>
@@ -136,7 +170,7 @@ import { Sparkles, Terminal, Info, Database } from 'lucide-vue-next';
 
 .panel-input {
   margin: 16px;
-  padding: 1px; /* For glow effect */
+  padding: 1px;
   border-radius: var(--radius-sm);
   position: relative;
 }

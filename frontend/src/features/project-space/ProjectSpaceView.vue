@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Box, Layers, Globe } from 'lucide-vue-next';
+import { MOCK_PROJECT, MOCK_ENVIRONMENTS, MOCK_RESOURCES } from './mockData';
 </script>
 
 <template>
@@ -8,9 +9,12 @@ import { Box, Layers, Globe } from 'lucide-vue-next';
       <section class="detail-row section-high">
         <header><Box :size="14" /> <span class="text-label">PROJECT_CORE</span></header>
         <div class="grid-3">
-          <div class="data-block"><span class="text-label">VERSION</span> <span class="text-tech">v2.4.0-STABLE</span></div>
-          <div class="data-block"><span class="text-label">STATUS</span> <span class="status-active"><span class="led led-emerald"></span> IN_FLIGHT</span></div>
-          <div class="data-block"><span class="text-label">MILESTONE</span> <span class="text-tech">MS-7: CLOUD_HANDOFF</span></div>
+          <div class="data-block"><span class="text-label">VERSION</span> <span class="text-tech">{{ MOCK_PROJECT.version }}</span></div>
+          <div class="data-block">
+            <span class="text-label">STATUS</span>
+            <span class="status-active"><span class="led" :class="MOCK_PROJECT.statusLed"></span> {{ MOCK_PROJECT.status }}</span>
+          </div>
+          <div class="data-block"><span class="text-label">MILESTONE</span> <span class="text-tech">{{ MOCK_PROJECT.milestone }}</span></div>
         </div>
       </section>
 
@@ -18,16 +22,15 @@ import { Box, Layers, Globe } from 'lucide-vue-next';
         <section class="detail-row section-high">
           <header><Globe :size="14" /> <span class="text-label">ENVIRONMENTS</span></header>
           <ul class="env-list">
-            <li><span class="text-tech text-xs">PROD</span> <span class="led led-emerald"></span></li>
-            <li><span class="text-tech text-xs">STAGE</span> <span class="led led-emerald"></span></li>
-            <li><span class="text-tech text-xs">UAT</span> <span class="led led-amber"></span></li>
+            <li v-for="env in MOCK_ENVIRONMENTS" :key="env.name">
+              <span class="text-tech text-xs">{{ env.name }}</span> <span class="led" :class="env.led"></span>
+            </li>
           </ul>
         </section>
         <section class="detail-row section-high">
           <header><Layers :size="14" /> <span class="text-label">RESOURCES</span></header>
           <div class="mock-resources">
-            <div class="resource-pill text-tech">EKS_CLUSTER_01</div>
-            <div class="resource-pill text-tech">RDS_POSTGRES_MASTER</div>
+            <div v-for="r in MOCK_RESOURCES" :key="r" class="resource-pill text-tech">{{ r }}</div>
           </div>
         </section>
       </div>

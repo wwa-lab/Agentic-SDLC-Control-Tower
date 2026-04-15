@@ -1,16 +1,26 @@
 <script setup lang="ts">
+import { onMounted } from 'vue';
+import { useWorkspaceStore } from '@/shared/stores/workspaceStore';
 import PrimaryNav from './PrimaryNav.vue';
 import TopContextBar from './TopContextBar.vue';
 import GlobalActionBar from './GlobalActionBar.vue';
 import PageHeader from './PageHeader.vue';
 import AiCommandPanel from './AiCommandPanel.vue';
-import DataRibbon from './shared/DataRibbon.vue';
+import DataRibbon from '@/shared/components/DataRibbon.vue';
+
+const workspaceStore = useWorkspaceStore();
+
+onMounted(() => {
+  workspaceStore.load();
+});
 </script>
 
 <template>
   <div class="app-shell">
-    <!-- Left Nav -->
-    <PrimaryNav />
+    <!-- Left Nav (overridable) -->
+    <slot name="nav">
+      <PrimaryNav />
+    </slot>
 
     <!-- Main Stack -->
     <main class="main-stack">
@@ -19,21 +29,27 @@ import DataRibbon from './shared/DataRibbon.vue';
         <TopContextBar />
         <GlobalActionBar />
       </div>
-      
+
       <!-- Operational Data Ribbon -->
       <DataRibbon />
 
       <!-- Content Area -->
       <div class="content-scroll animate-fade-in">
-        <PageHeader />
+        <slot name="header">
+          <PageHeader />
+        </slot>
         <div class="page-container">
-          <router-view />
+          <slot>
+            <router-view />
+          </slot>
         </div>
       </div>
     </main>
 
-    <!-- Right Panel -->
-    <AiCommandPanel />
+    <!-- Right Panel (overridable) -->
+    <slot name="ai-panel">
+      <AiCommandPanel />
+    </slot>
   </div>
 </template>
 

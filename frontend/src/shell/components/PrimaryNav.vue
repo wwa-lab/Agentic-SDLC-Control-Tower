@@ -1,41 +1,31 @@
 <script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router';
-import { NAVIGATION_ITEMS } from '@/router';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Box, 
-  FileText, 
-  GitBranch, 
-  Layers, 
-  Code, 
-  TestTube, 
-  Send, 
-  AlertTriangle, 
-  Cpu, 
-  BarChart, 
-  Settings 
-} from 'lucide-vue-next';
+import { useRouter } from 'vue-router';
+import { useShellConfig } from '@/shell/composables/useShellConfig';
+import { NAVIGATION_ITEMS, ICON_MAP } from '@/router';
+import type { SystemStatus } from '@/shared/types/shell';
 
-const route = useRoute();
-const router = useRouter();
+interface Props {
+  systemStatus?: SystemStatus;
+}
 
-// Map keys to icons
-const ICON_MAP: Record<string, any> = {
-  dashboard: LayoutDashboard,
-  team: Users,
-  'project-space': Box,
-  requirements: FileText,
-  'project-management': GitBranch,
-  design: Layers,
-  code: Code,
-  testing: TestTube,
-  deployment: Send,
-  incidents: AlertTriangle,
-  'ai-center': Cpu,
-  reports: BarChart,
-  platform: Settings
+const props = withDefaults(defineProps<Props>(), {
+  systemStatus: 'ready',
+});
+
+const STATUS_LABELS: Record<SystemStatus, string> = {
+  ready: 'SYSTEM_READY',
+  degraded: 'SYSTEM_DEGRADED',
+  offline: 'SYSTEM_OFFLINE',
 };
+
+const STATUS_LED: Record<SystemStatus, string> = {
+  ready: 'led-emerald',
+  degraded: 'led-amber',
+  offline: 'led-crimson',
+};
+
+const router = useRouter();
+const { config } = useShellConfig();
 
 const navigate = (path: string) => {
   router.push(path);
@@ -50,11 +40,11 @@ const navigate = (path: string) => {
     </div>
 
     <div class="nav-scroll">
-      <div 
-        v-for="item in NAVIGATION_ITEMS" 
+      <div
+        v-for="item in NAVIGATION_ITEMS"
         :key="item.key"
         class="nav-item"
-        :class="{ active: route.meta.navKey === item.key, 'coming-soon': item.comingSoon }"
+        :class="{ active: config.navKey === item.key, 'coming-soon': item.comingSoon }"
         @click="navigate(item.path)"
       >
         <div class="active-indicator"></div>
@@ -65,8 +55,8 @@ const navigate = (path: string) => {
 
     <div class="nav-footer">
       <div class="system-status">
-        <span class="led led-emerald"></span>
-        <span class="text-label">SYSTEM_READY</span>
+        <span class="led" :class="STATUS_LED[props.systemStatus]"></span>
+        <span class="text-label">{{ STATUS_LABELS[props.systemStatus] }}</span>
       </div>
     </div>
   </nav>
@@ -102,7 +92,6 @@ const navigate = (path: string) => {
   padding: 8px 0;
 }
 
-/* Hide scrollbar */
 .nav-scroll::-webkit-scrollbar { width: 0; }
 
 .nav-item {

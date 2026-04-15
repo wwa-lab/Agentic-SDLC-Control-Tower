@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { AlertTriangle, Activity, ShieldCheck } from 'lucide-vue-next';
+import { MOCK_INCIDENTS, MOCK_DIAGNOSIS_FEED, MOCK_PENDING_APPROVALS } from './mockData';
 </script>
 
 <template>
@@ -9,10 +10,10 @@ import { AlertTriangle, Activity, ShieldCheck } from 'lucide-vue-next';
       <section class="incident-card section-high">
         <header><AlertTriangle :size="14" class="text-crimson" /> <span class="text-label">CRITICAL_SIGNALS</span></header>
         <div class="incident-list">
-          <div class="incident-item">
-            <div class="item-head"><span class="text-tech">INC-0422</span> <span class="text-label">P1</span></div>
-            <p class="text-body-sm">API Gateway Latency Spike (>500ms)</p>
-            <div class="item-foot"><span class="led led-crimson"></span> <span class="text-label">AI_INVESTIGATING</span></div>
+          <div v-for="inc in MOCK_INCIDENTS" :key="inc.id" class="incident-item">
+            <div class="item-head"><span class="text-tech">{{ inc.id }}</span> <span class="text-label">{{ inc.priority }}</span></div>
+            <p class="text-body-sm">{{ inc.title }}</p>
+            <div class="item-foot"><span class="led" :class="inc.statusLed"></span> <span class="text-label">{{ inc.status }}</span></div>
           </div>
         </div>
       </section>
@@ -21,14 +22,8 @@ import { AlertTriangle, Activity, ShieldCheck } from 'lucide-vue-next';
       <section class="incident-card section-high">
         <header><Activity :size="14" /> <span class="text-label">AI_DIAGNOSIS_FEED</span></header>
         <div class="diag-feed section-lowest">
-          <div class="feed-entry">
-            <span class="text-tech">[09:41:02]</span> Analyzing k8s ingress logs...
-          </div>
-          <div class="feed-entry">
-            <span class="text-tech">[09:41:05]</span> Pattern identified: SSL handshake timeout.
-          </div>
-          <div class="feed-entry status-suggest">
-            <span class="text-tech">[09:41:10]</span> SUGGESTION: Scale pod replicas to 5.
+          <div v-for="(entry, i) in MOCK_DIAGNOSIS_FEED" :key="i" class="feed-entry" :class="{ 'status-suggest': entry.type === 'suggestion' }">
+            <span class="text-tech">[{{ entry.timestamp }}]</span> {{ entry.text }}
           </div>
         </div>
       </section>
@@ -38,8 +33,8 @@ import { AlertTriangle, Activity, ShieldCheck } from 'lucide-vue-next';
         <header><ShieldCheck :size="14" /> <span class="text-label">HUMAN_GOVERNANCE</span></header>
         <div class="gov-actions">
           <p class="text-label">PENDING_APPROVAL</p>
-          <div class="action-row">
-            <span class="text-body-sm">Scale Replicas (v2.4.0)</span>
+          <div v-for="action in MOCK_PENDING_APPROVALS" :key="action.key" class="action-row">
+            <span class="text-body-sm">{{ action.label }}</span>
             <div class="btns">
               <button class="btn-machined btn-xs">REJECT</button>
               <button class="btn-machined btn-ai btn-xs">APPROVE</button>

@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { useRoute } from 'vue-router';
+import { useShellConfig } from '@/shell/composables/useShellConfig';
 
-const route = useRoute();
+const { config, isComingSoon } = useShellConfig();
 </script>
 
 <template>
   <div class="placeholder-page">
     <div class="page-info">
-      <h2 class="text-tech">{{ route.meta.navKey }}</h2>
-      <p v-if="route.meta.comingSoon" class="text-label status-tag">Coming Soon</p>
+      <h2 class="text-tech">{{ config.navKey }}</h2>
+      <p v-if="isComingSoon" class="text-label status-tag">Coming Soon</p>
       <p v-else class="text-label">Phase A Implementation Target</p>
     </div>
-    
+
     <div class="mock-content">
       <div class="mock-card section-high">
-        <p class="text-tech">DATA_FEED_ID: {{ route.name }}-MOCK-001</p>
+        <p class="text-tech">DATA_FEED_ID: {{ config.navKey }}-MOCK-001</p>
         <div class="mock-line"></div>
-        <div class="mock-line w-3/4"></div>
+        <div class="mock-line w-75"></div>
       </div>
     </div>
   </div>
@@ -50,5 +50,5 @@ const route = useRoute();
   border-radius: 4px;
 }
 
-.w-3\/4 { width: 75%; }
+.w-75 { width: 75%; }
 </style>

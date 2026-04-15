@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { useWorkspaceContext } from '@/composables/useWorkspaceContext';
+import { useWorkspaceStore } from '@/shared/stores/workspaceStore';
 import { ChevronRight, RefreshCw } from 'lucide-vue-next';
 
-const { context, loading, error, reload } = useWorkspaceContext();
+const store = useWorkspaceStore();
 </script>
 
 <template>
   <div class="top-context-bar glass-panel">
     <!-- Loading state -->
-    <div v-if="loading" class="context-chain animate-fade-in">
+    <div v-if="store.loading" class="context-chain animate-fade-in">
       <span class="text-label">Loading workspace context...</span>
     </div>
 
     <!-- Error state -->
-    <div v-else-if="error" class="context-chain context-error animate-fade-in">
+    <div v-else-if="store.error" class="context-chain context-error animate-fade-in">
       <span class="text-label">Context unavailable</span>
-      <button class="icon-btn" @click="reload" title="Retry">
+      <button class="icon-btn" @click="store.load" title="Retry">
         <RefreshCw :size="14" />
       </button>
     </div>
@@ -24,35 +24,35 @@ const { context, loading, error, reload } = useWorkspaceContext();
     <div v-else class="context-chain animate-fade-in">
       <div class="context-item">
         <span class="text-label">Workspace</span>
-        <span class="text-tech">{{ context.workspace }}</span>
+        <span class="text-tech">{{ store.context.workspace }}</span>
       </div>
 
       <ChevronRight :size="14" class="separator" />
 
       <div class="context-item">
         <span class="text-label">Application</span>
-        <span class="text-tech">{{ context.application }}</span>
+        <span class="text-tech">{{ store.context.application }}</span>
       </div>
 
       <ChevronRight :size="14" class="separator" />
 
       <div class="context-item">
         <span class="text-label">Group</span>
-        <span class="text-tech">{{ context.snowGroup || '---' }}</span>
+        <span class="text-tech">{{ store.context.snowGroup || '---' }}</span>
       </div>
 
       <ChevronRight :size="14" class="separator" />
 
       <div class="context-item">
         <span class="text-label">Project</span>
-        <span class="text-tech">{{ context.project || '---' }}</span>
+        <span class="text-tech">{{ store.context.project || '---' }}</span>
       </div>
 
       <ChevronRight :size="14" class="separator" />
 
       <div class="context-item">
         <span class="text-label">Environment</span>
-        <span class="text-tech">{{ context.environment || '---' }}</span>
+        <span class="text-tech">{{ store.context.environment || '---' }}</span>
       </div>
     </div>
   </div>

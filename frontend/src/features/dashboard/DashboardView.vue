@@ -1,24 +1,30 @@
 <script setup lang="ts">
-import { LayoutDashboard, TrendingUp, Cpu } from 'lucide-vue-next';
+import { TrendingUp, Cpu } from 'lucide-vue-next';
+import { DASHBOARD_SIGNALS } from './mockData';
+
+const { valueStory, aiOperations } = DASHBOARD_SIGNALS;
 </script>
 
 <template>
   <div class="view-container">
     <div class="grid-layout">
-      <!-- High Level Signals -->
       <section class="signal-card section-high">
-        <header><TrendingUp :size="14" /> <span class="text-label">VALUE_STORY</span></header>
+        <header><TrendingUp :size="14" /> <span class="text-label">{{ valueStory.label }}</span></header>
         <div class="mock-stats">
-          <div class="stat-item"><span class="text-label">MTTR</span> <span class="text-tech">12.4m</span></div>
-          <div class="stat-item"><span class="text-label">AI_CONF</span> <span class="text-tech">98.2%</span></div>
+          <div v-for="m in valueStory.metrics" :key="m.key" class="stat-item">
+            <span class="text-label">{{ m.label }}</span>
+            <span class="text-tech">{{ m.value }}</span>
+          </div>
         </div>
       </section>
 
       <section class="signal-card section-high">
-        <header><Cpu :size="14" /> <span class="text-label">AI_OPERATIONS</span></header>
+        <header><Cpu :size="14" /> <span class="text-label">{{ aiOperations.label }}</span></header>
         <div class="mock-bars">
-          <div class="bar-row"><div class="bar-label text-tech">FIX_GEN</div> <div class="bar-track"><div class="bar-fill" style="width: 80%"></div></div></div>
-          <div class="bar-row"><div class="bar-label text-tech">ROOT_CAUSE</div> <div class="bar-track"><div class="bar-fill" style="width: 65%"></div></div></div>
+          <div v-for="bar in aiOperations.bars" :key="bar.key" class="bar-row">
+            <div class="bar-label text-tech">{{ bar.label }}</div>
+            <div class="bar-track"><div class="bar-fill" :style="{ width: bar.percent + '%' }"></div></div>
+          </div>
         </div>
       </section>
     </div>

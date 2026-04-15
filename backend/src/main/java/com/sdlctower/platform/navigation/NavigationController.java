@@ -1,12 +1,14 @@
 package com.sdlctower.platform.navigation;
 
 import java.util.List;
+import com.sdlctower.shared.ApiConstants;
+import com.sdlctower.shared.dto.ApiResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/nav")
+@RequestMapping(ApiConstants.NAV_ENTRIES)
 public class NavigationController {
 
     private final NavigationService navigationService;
@@ -15,8 +17,8 @@ public class NavigationController {
         this.navigationService = navigationService;
     }
 
-    @GetMapping("/entries")
-    public List<NavItem> getEntries() {
-        return navigationService.getEntries();
+    @GetMapping
+    public ApiResponse<List<NavItem>> getEntries() {
+        return ApiResponse.ok(navigationService.getEntries());
     }
 }

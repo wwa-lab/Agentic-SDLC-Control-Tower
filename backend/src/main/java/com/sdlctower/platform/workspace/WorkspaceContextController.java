@@ -1,11 +1,13 @@
 package com.sdlctower.platform.workspace;
 
+import com.sdlctower.shared.ApiConstants;
+import com.sdlctower.shared.dto.ApiResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/workspace-context")
+@RequestMapping(ApiConstants.WORKSPACE_CONTEXT)
 public class WorkspaceContextController {
 
     private final WorkspaceContextService workspaceContextService;
@@ -15,7 +17,7 @@ public class WorkspaceContextController {
     }
 
     @GetMapping
-    public WorkspaceContext getWorkspaceContext() {
-        return workspaceContextService.getCurrentWorkspaceContext();
+    public ApiResponse<WorkspaceContextDto> getWorkspaceContext() {
+        return ApiResponse.ok(workspaceContextService.getCurrentWorkspaceContext());
     }
 }

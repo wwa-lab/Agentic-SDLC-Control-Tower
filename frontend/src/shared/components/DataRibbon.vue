@@ -2,15 +2,17 @@
 import { Cpu, Wifi, Shield } from 'lucide-vue-next';
 
 interface Props {
-  v?: string;
   node?: string;
   latency?: string;
+  version?: string;
+  secureChannel?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  v: 'v1.0.4-LATEST',
-  node: 'NY-WEST-04',
-  latency: '14ms'
+  node: '---',
+  latency: '---',
+  version: '---',
+  secureChannel: true,
 });
 </script>
 
@@ -28,12 +30,12 @@ const props = withDefaults(defineProps<Props>(), {
     <div class="divider">|</div>
     <div class="ribbon-segment">
       <Shield :size="10" />
-      <span class="text-tech">{{ props.v }}</span>
+      <span class="text-tech">{{ props.version }}</span>
     </div>
     <div class="spacer"></div>
     <div class="ribbon-segment">
-      <span class="text-label">SECURE_CHANNEL_ACTIVE</span>
-      <span class="led led-emerald"></span>
+      <span class="text-label">{{ props.secureChannel ? 'SECURE_CHANNEL_ACTIVE' : 'CHANNEL_INACTIVE' }}</span>
+      <span class="led" :class="props.secureChannel ? 'led-emerald' : 'led-crimson'"></span>
     </div>
   </div>
 </template>

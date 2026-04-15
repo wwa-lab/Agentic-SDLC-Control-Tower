@@ -1,16 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
-import type { ShellPageConfig } from '@/types/shell';
+import { useShellConfig } from '@/shell/composables/useShellConfig';
 
-const route = useRoute();
+const emit = defineEmits<{
+  action: [key: string];
+}>();
 
-const config = computed<ShellPageConfig>(() => ({
-  navKey: (route.meta.navKey as string) ?? '',
-  title: (route.meta.title as string) ?? '',
-  subtitle: route.meta.subtitle as string | undefined,
-  actions: route.meta.actions as ShellPageConfig['actions'] | undefined
-}));
+const { config } = useShellConfig();
 </script>
 
 <template>
@@ -26,7 +21,8 @@ const config = computed<ShellPageConfig>(() => ({
         v-for="action in config.actions"
         :key="action.key"
         class="btn-machined"
-        :class="{ 'btn-ai': action.key === 'ai' }"
+        :class="{ 'btn-ai': action.variant === 'ai' }"
+        @click="emit('action', action.key)"
       >
         {{ action.label }}
       </button>

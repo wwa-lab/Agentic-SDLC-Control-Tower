@@ -18,7 +18,13 @@ export interface ShellPageConfig {
   navKey: string;
   title: string;
   subtitle?: string;
-  actions?: Array<{ key: string; label: string }>;
+  actions?: ReadonlyArray<ShellAction>;
+}
+
+export interface ShellAction {
+  key: string;
+  label: string;
+  variant?: 'default' | 'ai';
 }
 
 /**
@@ -28,5 +34,20 @@ export interface NavItem {
   key: string;
   label: string;
   path: string;
+  icon: string;
   comingSoon?: boolean;
+}
+
+/**
+ * System status for the nav footer.
+ */
+export type SystemStatus = 'ready' | 'degraded' | 'offline';
+
+/**
+ * AI Command Panel zone content.
+ */
+export interface AiPanelContent {
+  summary: string;
+  reasoning: ReadonlyArray<{ text: string; status: 'ok' | 'warning' | 'error' }>;
+  evidence: string;
 }

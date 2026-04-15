@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { useTheme } from '@/composables/useTheme';
+import { useTheme } from '@/shared/composables/useTheme';
 import { Search, Bell, History, Sun, Moon } from 'lucide-vue-next';
+
+const emit = defineEmits<{
+  search: [];
+  notifications: [];
+  audit: [];
+}>();
 
 const { theme, toggleTheme } = useTheme();
 </script>
@@ -12,9 +18,9 @@ const { theme, toggleTheme } = useTheme();
       <Moon :size="12" class="toggle-icon moon-icon" />
       <div class="toggle-thumb"></div>
     </div>
-    <button class="icon-btn" title="Search"><Search :size="18" /></button>
-    <button class="icon-btn" title="Notifications"><Bell :size="18" /></button>
-    <button class="icon-btn" title="Audit / History"><History :size="18" /></button>
+    <button class="icon-btn" title="Search" @click="emit('search')"><Search :size="18" /></button>
+    <button class="icon-btn" title="Notifications" @click="emit('notifications')"><Bell :size="18" /></button>
+    <button class="icon-btn" title="Audit / History" @click="emit('audit')"><History :size="18" /></button>
   </div>
 </template>
 
@@ -44,7 +50,6 @@ const { theme, toggleTheme } = useTheme();
   color: var(--color-on-surface);
 }
 
-/* Theme toggle slider */
 .theme-toggle {
   width: 48px;
   height: 24px;
@@ -65,21 +70,10 @@ const { theme, toggleTheme } = useTheme();
   transition: color 0.3s;
 }
 
-.sun-icon {
-  color: var(--color-approval-amber);
-}
-
-.moon-icon {
-  color: var(--color-on-surface-variant);
-}
-
-.theme-toggle.dark .sun-icon {
-  color: var(--color-on-surface-variant);
-}
-
-.theme-toggle.dark .moon-icon {
-  color: var(--color-secondary);
-}
+.sun-icon { color: var(--color-approval-amber); }
+.moon-icon { color: var(--color-on-surface-variant); }
+.theme-toggle.dark .sun-icon { color: var(--color-on-surface-variant); }
+.theme-toggle.dark .moon-icon { color: var(--color-secondary); }
 
 .toggle-thumb {
   position: absolute;

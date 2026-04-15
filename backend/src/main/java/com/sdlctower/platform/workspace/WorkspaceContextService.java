@@ -12,8 +12,9 @@ public class WorkspaceContextService {
         this.repository = repository;
     }
 
-    public WorkspaceContext getCurrentWorkspaceContext() {
-        return repository.findTopByOrderByIdAsc()
-                .orElseThrow(() -> new ResourceNotFoundException("Workspace context was not found"));
+    public WorkspaceContextDto getCurrentWorkspaceContext() {
+        WorkspaceContext entity = repository.findTopByOrderByIdAsc()
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace context not found"));
+        return WorkspaceContextDto.fromEntity(entity);
     }
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Settings, Shield, FileCheck, Users } from 'lucide-vue-next';
+import { Shield, FileCheck, Users } from 'lucide-vue-next';
+import { MOCK_POLICIES, MOCK_AUDIT_ENTRIES, PLATFORM_ACTIONS } from './mockData';
 </script>
 
 <template>
@@ -8,26 +9,23 @@ import { Settings, Shield, FileCheck, Users } from 'lucide-vue-next';
       <section class="admin-card section-high">
         <header><Shield :size="14" /> <span class="text-label">POLICY_ENGINE</span></header>
         <div class="policy-status">
-          <div class="policy-row"><span class="text-body-sm">SOC2_COMPLIANCE</span> <span class="led led-emerald"></span></div>
-          <div class="policy-row"><span class="text-body-sm">AWS_SECURITY_GROUPS</span> <span class="led led-emerald"></span></div>
-          <div class="policy-row"><span class="text-body-sm">DEPLOY_GATED_PR</span> <span class="led led-emerald"></span></div>
+          <div v-for="policy in MOCK_POLICIES" :key="policy.key" class="policy-row">
+            <span class="text-body-sm">{{ policy.label }}</span> <span class="led" :class="policy.led"></span>
+          </div>
         </div>
       </section>
 
       <section class="admin-card section-high">
         <header><FileCheck :size="14" /> <span class="text-label">AUDIT_LOGS</span></header>
         <div class="mock-audit section-lowest text-tech text-xs">
-          <div>[08:12] USER_ADMIN updated SNOW Group FIN-TECH</div>
-          <div>[09:05] AI_ENGINE updated policy DEPLOY_GATED</div>
-          <div>[09:42] SYSTEM accessed Project Space v2.4</div>
+          <div v-for="(entry, i) in MOCK_AUDIT_ENTRIES" :key="i">[{{ entry.time }}] {{ entry.actor }} {{ entry.action }}</div>
         </div>
       </section>
 
       <section class="admin-card section-high">
         <header><Users :size="14" /> <span class="text-label">ACCESS_MANAGEMENT</span></header>
         <div class="access-controls">
-          <button class="btn-machined">MANAGE_ROLES</button>
-          <button class="btn-machined">INVITE_TEAM</button>
+          <button v-for="action in PLATFORM_ACTIONS" :key="action.key" class="btn-machined">{{ action.label }}</button>
         </div>
       </section>
     </div>
