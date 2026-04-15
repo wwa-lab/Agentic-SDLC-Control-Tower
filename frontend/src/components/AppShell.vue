@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PrimaryNav from './PrimaryNav.vue';
 import TopContextBar from './TopContextBar.vue';
+import GlobalActionBar from './GlobalActionBar.vue';
 import PageHeader from './PageHeader.vue';
 import AiCommandPanel from './AiCommandPanel.vue';
 </script>
@@ -12,8 +13,11 @@ import AiCommandPanel from './AiCommandPanel.vue';
 
     <!-- Main Stack -->
     <main class="main-stack">
-      <!-- Top Bar -->
-      <TopContextBar />
+      <!-- Top Bar: Context + Global Actions -->
+      <div class="top-bar section-low">
+        <TopContextBar />
+        <GlobalActionBar />
+      </div>
 
       <!-- Content Area -->
       <div class="content-scroll">
@@ -46,19 +50,23 @@ import AiCommandPanel from './AiCommandPanel.vue';
   background-color: var(--color-surface);
 }
 
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: var(--border-ghost);
+  flex-shrink: 0;
+}
+
 .content-scroll {
   flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  background-color: var(--color-surface);
 }
 
 .page-container {
   flex: 1;
-}
-
-/* Tonal shift for the main content area background vs sidebar */
-.content-scroll {
-  background-color: var(--color-surface);
 }
 </style>

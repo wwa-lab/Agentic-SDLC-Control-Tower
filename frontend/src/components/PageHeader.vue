@@ -1,22 +1,34 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useRoute } from 'vue-router';
+import type { ShellPageConfig } from '@/types/shell';
 
 const route = useRoute();
+
+const config = computed<ShellPageConfig>(() => ({
+  navKey: (route.meta.navKey as string) ?? '',
+  title: (route.meta.title as string) ?? '',
+  subtitle: route.meta.subtitle as string | undefined,
+  actions: route.meta.actions as ShellPageConfig['actions'] | undefined
+}));
 </script>
 
 <template>
   <header class="page-header">
     <div class="title-section">
-      <h1 class="page-title">{{ route.meta.title }}</h1>
-      <p class="page-subtitle text-label">{{ route.name?.toString().toUpperCase() }} OPERATIONAL VIEW</p>
+      <h1 class="page-title">{{ config.title }}</h1>
+      <p v-if="config.subtitle" class="page-subtitle text-label">{{ config.subtitle }}</p>
+      <p v-else class="page-subtitle text-label">{{ config.navKey.toUpperCase() }} OPERATIONAL VIEW</p>
     </div>
 
-    <div class="action-section">
-      <button class="btn-machined">
-        EXPORT DATA
-      </button>
-      <button class="btn-machined btn-ai">
-        AI SYNC
+    <div v-if="config.actions?.length" class="action-section">
+      <button
+        v-for="action in config.actions"
+        :key="action.key"
+        class="btn-machined"
+        :class="{ 'btn-ai': action.key === 'ai' }"
+      >
+        {{ action.label }}
       </button>
     </div>
   </header>

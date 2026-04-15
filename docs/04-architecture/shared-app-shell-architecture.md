@@ -28,7 +28,7 @@ is static or mocked. Backend integration is introduced in later slices.
 | Build tool | Vite | Standard Vue 3 toolchain; fast HMR for development |
 | Routing | Vue Router | Standard SPA routing for Vue; supports route metadata for nav mapping |
 | Client state | Pinia | Official Vue state management; supports module-scoped stores |
-| Backend framework | Spring Boot (Java 17+) | Enterprise-grade, team familiarity, ecosystem maturity |
+| Backend framework | Spring Boot (Java 21) | Enterprise-grade, team familiarity, ecosystem maturity |
 | ORM | JPA / Hibernate | Standard Spring Boot data access layer |
 | Database (production) | Oracle | Enterprise requirement |
 | Database (local/test) | H2 (in-memory) | Zero-setup local testing via Spring profiles |

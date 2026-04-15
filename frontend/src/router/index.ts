@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import type { NavItem } from '@/types/shell';
+import type { NavItem, ShellPageConfig } from '@/types/shell';
 
 /**
  * The 13 required navigation entries as per spec §3.1
@@ -20,6 +20,38 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { key: 'platform', label: 'Platform Center', path: '/platform' }
 ];
 
+/**
+ * Page-specific shell configuration for Round 1 pages.
+ * Provides subtitle and actions via ShellPageConfig contract (spec §7).
+ */
+const PAGE_CONFIGS: Record<string, Partial<ShellPageConfig>> = {
+  dashboard: {
+    subtitle: 'Cross-stage health and operational overview',
+    actions: [
+      { key: 'export', label: 'EXPORT DATA' },
+      { key: 'ai', label: 'AI SYNC' }
+    ]
+  },
+  'project-space': {
+    subtitle: 'Project execution and environment status',
+    actions: [
+      { key: 'export', label: 'EXPORT DATA' }
+    ]
+  },
+  incidents: {
+    subtitle: 'AI-native operations command center',
+    actions: [
+      { key: 'ai', label: 'AI DIAGNOSE' }
+    ]
+  },
+  platform: {
+    subtitle: 'Governance and platform capability hub',
+    actions: [
+      { key: 'audit', label: 'AUDIT LOG' }
+    ]
+  }
+};
+
 const COMPONENT_MAP: Record<string, any> = {
   dashboard: () => import('@/views/DashboardView.vue'),
   'project-space': () => import('@/views/ProjectSpaceView.vue'),
@@ -27,16 +59,21 @@ const COMPONENT_MAP: Record<string, any> = {
   platform: () => import('@/views/PlatformCenterView.vue'),
 };
 
-const routes = NAVIGATION_ITEMS.map(item => ({
-  path: item.path,
-  name: item.key,
-  component: COMPONENT_MAP[item.key] || (() => import('@/views/PlaceholderView.vue')),
-  meta: {
-    navKey: item.key,
-    title: item.label,
-    comingSoon: item.comingSoon
-  }
-}));
+const routes = NAVIGATION_ITEMS.map(item => {
+  const pageConfig = PAGE_CONFIGS[item.key];
+  return {
+    path: item.path,
+    name: item.key,
+    component: COMPONENT_MAP[item.key] || (() => import('@/views/PlaceholderView.vue')),
+    meta: {
+      navKey: item.key,
+      title: item.label,
+      comingSoon: item.comingSoon,
+      subtitle: pageConfig?.subtitle,
+      actions: pageConfig?.actions
+    }
+  };
+});
 
 export const router = createRouter({
   history: createWebHistory(),

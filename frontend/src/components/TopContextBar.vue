@@ -1,22 +1,34 @@
 <script setup lang="ts">
 import { useWorkspaceContext } from '@/composables/useWorkspaceContext';
-import { useTheme } from '@/composables/useTheme';
-import { ChevronRight, Search, Bell, History, Sun, Moon } from 'lucide-vue-next';
+import { ChevronRight, RefreshCw } from 'lucide-vue-next';
 
-const { context } = useWorkspaceContext();
-const { theme, toggleTheme } = useTheme();
+const { context, loading, error, reload } = useWorkspaceContext();
 </script>
 
 <template>
-  <header class="top-context-bar section-low">
-    <div class="context-chain">
+  <div class="top-context-bar">
+    <!-- Loading state -->
+    <div v-if="loading" class="context-chain">
+      <span class="text-label">Loading workspace context...</span>
+    </div>
+
+    <!-- Error state -->
+    <div v-else-if="error" class="context-chain context-error">
+      <span class="text-label">Context unavailable</span>
+      <button class="icon-btn" @click="reload" title="Retry">
+        <RefreshCw :size="14" />
+      </button>
+    </div>
+
+    <!-- Normal state -->
+    <div v-else class="context-chain">
       <div class="context-item">
         <span class="text-label">Workspace</span>
         <span class="text-tech">{{ context.workspace }}</span>
       </div>
-      
+
       <ChevronRight :size="14" class="separator" />
-      
+
       <div class="context-item">
         <span class="text-label">Application</span>
         <span class="text-tech">{{ context.application }}</span>
@@ -43,34 +55,25 @@ const { theme, toggleTheme } = useTheme();
         <span class="text-tech">{{ context.environment || '---' }}</span>
       </div>
     </div>
-
-    <div class="utility-actions">
-      <div class="theme-toggle" :class="{ dark: theme === 'dark' }" @click="toggleTheme">
-        <Sun :size="12" class="toggle-icon sun-icon" />
-        <Moon :size="12" class="toggle-icon moon-icon" />
-        <div class="toggle-thumb"></div>
-      </div>
-      <button class="icon-btn"><Search :size="18" /></button>
-      <button class="icon-btn"><Bell :size="18" /></button>
-      <button class="icon-btn"><History :size="18" /></button>
-    </div>
-  </header>
+  </div>
 </template>
 
 <style scoped>
 .top-context-bar {
-  height: 48px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0 24px;
-  border-bottom: var(--border-ghost);
+  height: 48px;
 }
 
 .context-chain {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.context-error {
+  color: var(--color-incident-crimson);
 }
 
 .context-item {
@@ -95,11 +98,6 @@ const { theme, toggleTheme } = useTheme();
   margin-top: 10px;
 }
 
-.utility-actions {
-  display: flex;
-  gap: 8px;
-}
-
 .icon-btn {
   background: transparent;
   border: none;
@@ -116,58 +114,5 @@ const { theme, toggleTheme } = useTheme();
 .icon-btn:hover {
   background: var(--nav-hover-bg);
   color: var(--color-on-surface);
-}
-
-/* Theme toggle slider */
-.theme-toggle {
-  width: 48px;
-  height: 24px;
-  border-radius: 12px;
-  background: var(--color-surface-container-high);
-  cursor: pointer;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 6px;
-  transition: background 0.3s;
-}
-
-.toggle-icon {
-  position: relative;
-  z-index: 1;
-  transition: color 0.3s;
-}
-
-.sun-icon {
-  color: var(--color-approval-amber);
-}
-
-.moon-icon {
-  color: var(--color-on-surface-variant);
-}
-
-.theme-toggle.dark .sun-icon {
-  color: var(--color-on-surface-variant);
-}
-
-.theme-toggle.dark .moon-icon {
-  color: var(--color-secondary);
-}
-
-.toggle-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--color-on-surface);
-  transition: transform 0.3s;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-}
-
-.theme-toggle.dark .toggle-thumb {
-  transform: translateX(24px);
 }
 </style>
