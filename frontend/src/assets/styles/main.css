@@ -1,0 +1,96 @@
+@import "./variables.css";
+
+/* Reset & Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+#app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Typography Standards */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+.text-tech {
+  font-family: var(--font-tech);
+}
+
+.text-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-on-surface-variant);
+}
+
+/* The No-Line Rule: Layout sectioning via background shifts */
+.section-low { background-color: var(--color-surface-container-low); }
+.section-high { background-color: var(--color-surface-container-high); }
+.section-highest { background-color: var(--color-surface-container-highest); }
+
+/* Status LEDs */
+.led {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  position: relative;
+}
+
+.led::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 50%;
+  filter: blur(2px);
+  opacity: 0.8;
+}
+
+.led-emerald { background-color: var(--color-health-emerald); }
+.led-emerald::after { background-color: var(--color-health-emerald); }
+
+.led-crimson { background-color: var(--color-incident-crimson); }
+.led-crimson::after { background-color: var(--color-incident-crimson); }
+
+.led-amber { background-color: var(--color-approval-amber); }
+.led-amber::after { background-color: var(--color-approval-amber); }
+
+/* Buttons: Machined look */
+.btn-machined {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-machined:hover {
+  opacity: 0.9;
+}
+
+.btn-ai {
+  background: linear-gradient(135deg, var(--color-secondary), var(--color-on-secondary-container));
+  color: white;
+  box-shadow: 0 0 8px var(--color-secondary);
+}

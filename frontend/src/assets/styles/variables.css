@@ -1,0 +1,76 @@
+:root {
+  /* 2. Spacing & Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px; /* Max allowed */
+
+  /* 3. Typography */
+  --font-ui: "Inter", system-ui, -apple-system, sans-serif;
+  --font-tech: "JetBrains Mono", monospace;
+}
+
+/* ===== Dark Theme (default) ===== */
+:root,
+[data-theme="dark"] {
+  --color-surface: #0b1326;
+  --color-surface-container-low: #131b2e;
+  --color-surface-container-high: #222a3d;
+  --color-surface-container-highest: #2d3449;
+  --color-surface-lowest: #060e20;
+
+  --color-on-surface: #dae2fd;
+  --color-on-surface-variant: #94a3b8;
+
+  --color-primary: #bec6e0;
+  --color-on-primary: #283044;
+
+  --color-secondary: #89ceff;
+  --color-on-secondary-container: #00344e;
+
+  /* Status LEDs (The Pulse) */
+  --color-health-emerald: #4edea3;
+  --color-incident-crimson: #ffb4ab;
+  --color-approval-amber: #f59e0b;
+
+  /* Shadows (Ambient Glows) */
+  --shadow-ambient: 0 4px 32px 0 rgba(6, 14, 32, 0.4);
+
+  /* Ghost Border rule */
+  --border-ghost: 1px solid rgba(69, 70, 77, 0.2);
+
+  /* Interactive state overlays */
+  --nav-hover-bg: rgba(255, 255, 255, 0.03);
+  --nav-active-bg: rgba(255, 255, 255, 0.05);
+}
+
+/* ===== Light Theme ===== */
+[data-theme="light"] {
+  --color-surface: #f0f2f5;
+  --color-surface-container-low: #e4e7ec;
+  --color-surface-container-high: #ffffff;
+  --color-surface-container-highest: #f8f9fb;
+  --color-surface-lowest: #d8dce3;
+
+  --color-on-surface: #1a1f2e;
+  --color-on-surface-variant: #5a6478;
+
+  --color-primary: #2d3a5c;
+  --color-on-primary: #ffffff;
+
+  --color-secondary: #0066b8;
+  --color-on-secondary-container: #e0f0ff;
+
+  /* Status LEDs — slightly deeper for light bg */
+  --color-health-emerald: #10b981;
+  --color-incident-crimson: #ef4444;
+  --color-approval-amber: #d97706;
+
+  /* Shadows — subtle for light mode */
+  --shadow-ambient: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
+
+  /* Ghost Border — visible on white */
+  --border-ghost: 1px solid rgba(0, 0, 0, 0.08);
+
+  /* Interactive state overlays */
+  --nav-hover-bg: rgba(0, 0, 0, 0.04);
+  --nav-active-bg: rgba(0, 0, 0, 0.06);
+}
