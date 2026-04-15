@@ -6,14 +6,14 @@ const { context, loading, error, reload } = useWorkspaceContext();
 </script>
 
 <template>
-  <div class="top-context-bar">
+  <div class="top-context-bar glass-panel">
     <!-- Loading state -->
-    <div v-if="loading" class="context-chain">
+    <div v-if="loading" class="context-chain animate-fade-in">
       <span class="text-label">Loading workspace context...</span>
     </div>
 
     <!-- Error state -->
-    <div v-else-if="error" class="context-chain context-error">
+    <div v-else-if="error" class="context-chain context-error animate-fade-in">
       <span class="text-label">Context unavailable</span>
       <button class="icon-btn" @click="reload" title="Retry">
         <RefreshCw :size="14" />
@@ -21,7 +21,7 @@ const { context, loading, error, reload } = useWorkspaceContext();
     </div>
 
     <!-- Normal state -->
-    <div v-else class="context-chain">
+    <div v-else class="context-chain animate-fade-in">
       <div class="context-item">
         <span class="text-label">Workspace</span>
         <span class="text-tech">{{ context.workspace }}</span>

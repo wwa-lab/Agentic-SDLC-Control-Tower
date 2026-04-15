@@ -25,8 +25,9 @@ html, body {
 
 /* Typography Standards */
 h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-on-surface);
+  letter-spacing: -0.02em;
 }
 
 .text-tech {
@@ -34,43 +35,62 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .text-label {
-  font-size: 0.75rem;
+  font-size: 0.625rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   color: var(--color-on-surface-variant);
+  font-weight: 600;
 }
 
-/* The No-Line Rule: Layout sectioning via background shifts */
-.section-low { background-color: var(--color-surface-container-low); }
-.section-high { background-color: var(--color-surface-container-high); }
-.section-highest { background-color: var(--color-surface-container-highest); }
+.text-body-sm {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--color-on-surface);
+  opacity: 0.9;
+}
 
-/* Status LEDs */
+/* 1. Core Animations */
+@keyframes led-pulse {
+  0% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 0px var(--pulse-color); }
+  50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 4px var(--pulse-color); }
+  100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 0px var(--pulse-color); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-fade-in {
+  animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Status LEDs with Pulse */
 .led {
   display: inline-block;
   width: 6px;
   height: 6px;
   border-radius: 50%;
   position: relative;
+  --pulse-color: transparent;
+  animation: led-pulse 2s infinite ease-in-out;
 }
 
-.led::after {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  border-radius: 50%;
-  filter: blur(2px);
-  opacity: 0.8;
+.led-emerald { background-color: var(--color-health-emerald); --pulse-color: var(--color-health-emerald); }
+.led-crimson { background-color: var(--color-incident-crimson); --pulse-color: var(--color-incident-crimson); }
+.led-amber { background-color: var(--color-approval-amber); --pulse-color: var(--color-approval-amber); }
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: rgba(19, 27, 46, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
-
-.led-emerald { background-color: var(--color-health-emerald); }
-.led-emerald::after { background-color: var(--color-health-emerald); }
-
-.led-crimson { background-color: var(--color-incident-crimson); }
-.led-crimson::after { background-color: var(--color-incident-crimson); }
-
-.led-amber { background-color: var(--color-approval-amber); }
-.led-amber::after { background-color: var(--color-approval-amber); }
 
 /* Buttons: Machined look */
 .btn-machined {

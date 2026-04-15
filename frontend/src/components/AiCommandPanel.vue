@@ -46,7 +46,11 @@ import { Sparkles, Terminal, Info, Database } from 'lucide-vue-next';
     </div>
 
     <div class="panel-input section-highest">
-      <input type="text" placeholder="Type AI Command (/ for skills)..." class="command-input text-tech" />
+      <div class="input-wrapper">
+        <span class="terminal-prompt text-tech">></span>
+        <input type="text" placeholder="Type AI Command (/ for skills)..." class="command-input text-tech" />
+        <div class="cursor"></div>
+      </div>
       <div class="input-glow"></div>
     </div>
   </aside>
@@ -60,6 +64,8 @@ import { Sparkles, Terminal, Info, Database } from 'lucide-vue-next';
   flex-direction: column;
   flex-shrink: 0;
   border-left: var(--border-ghost);
+  background: rgba(19, 27, 46, 0.4);
+  backdrop-filter: blur(20px);
 }
 
 .panel-header {
@@ -68,6 +74,7 @@ import { Sparkles, Terminal, Info, Database } from 'lucide-vue-next';
   align-items: center;
   gap: 8px;
   border-bottom: var(--border-ghost);
+  background: rgba(19, 27, 46, 0.6);
 }
 
 .text-secondary { color: var(--color-secondary); }
@@ -85,6 +92,7 @@ import { Sparkles, Terminal, Info, Database } from 'lucide-vue-next';
   display: flex;
   flex-direction: column;
   gap: 8px;
+  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .content-zone header {
@@ -133,15 +141,37 @@ import { Sparkles, Terminal, Info, Database } from 'lucide-vue-next';
   position: relative;
 }
 
-.command-input {
-  width: 100%;
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
   background: var(--color-surface-container-highest);
-  border: none;
   border-radius: var(--radius-sm);
-  padding: 12px;
+  padding: 0 12px;
+}
+
+.terminal-prompt {
+  color: var(--color-secondary);
+  font-weight: 800;
+  margin-right: 8px;
+}
+
+.command-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 12px 0;
   color: var(--color-on-surface);
   font-size: 0.8125rem;
   outline: none;
+}
+
+.cursor {
+  width: 8px;
+  height: 14px;
+  background: var(--color-secondary);
+  animation: cursor-blink 1s infinite;
+  margin-left: 4px;
 }
 
 .input-glow {

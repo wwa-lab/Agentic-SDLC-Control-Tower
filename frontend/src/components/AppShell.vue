@@ -4,6 +4,7 @@ import TopContextBar from './TopContextBar.vue';
 import GlobalActionBar from './GlobalActionBar.vue';
 import PageHeader from './PageHeader.vue';
 import AiCommandPanel from './AiCommandPanel.vue';
+import DataRibbon from './shared/DataRibbon.vue';
 </script>
 
 <template>
@@ -14,13 +15,16 @@ import AiCommandPanel from './AiCommandPanel.vue';
     <!-- Main Stack -->
     <main class="main-stack">
       <!-- Top Bar: Context + Global Actions -->
-      <div class="top-bar section-low">
+      <div class="top-bar section-low glass-panel">
         <TopContextBar />
         <GlobalActionBar />
       </div>
+      
+      <!-- Operational Data Ribbon -->
+      <DataRibbon />
 
       <!-- Content Area -->
-      <div class="content-scroll">
+      <div class="content-scroll animate-fade-in">
         <PageHeader />
         <div class="page-container">
           <router-view />
