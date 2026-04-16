@@ -24,7 +24,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { key: 'dashboard', label: 'Dashboard', path: '/', icon: 'LayoutDashboard' },
   { key: 'team', label: 'Team Space', path: '/team', icon: 'Users', comingSoon: true },
   { key: 'project-space', label: 'Project Space', path: '/project-space', icon: 'Box' },
-  { key: 'requirements', label: 'Requirement Management', path: '/requirements', icon: 'FileText', comingSoon: true },
+  { key: 'requirements', label: 'Requirement Management', path: '/requirements', icon: 'FileText' },
   { key: 'project-management', label: 'Project Management', path: '/project-management', icon: 'GitBranch', comingSoon: true },
   { key: 'design', label: 'Design Management', path: '/design', icon: 'Layers', comingSoon: true },
   { key: 'code', label: 'Code & Build', path: '/code', icon: 'Code', comingSoon: true },
@@ -74,6 +74,12 @@ const PAGE_CONFIGS: Record<string, Pick<ShellPageConfig, 'subtitle' | 'actions'>
       { key: 'export', label: 'EXPORT DATA' },
     ],
   },
+  requirements: {
+    subtitle: 'SDD chain entry point — capture, classify, decompose',
+    actions: [
+      { key: 'ai-analyze', label: 'AI ANALYZE', variant: 'ai' },
+    ],
+  },
   incidents: {
     subtitle: 'AI-native operations command center',
     actions: [
@@ -91,6 +97,7 @@ const PAGE_CONFIGS: Record<string, Pick<ShellPageConfig, 'subtitle' | 'actions'>
 const COMPONENT_MAP: Record<string, () => Promise<any>> = {
   dashboard: () => import('@/features/dashboard/DashboardView.vue'),
   'project-space': () => import('@/features/project-space/ProjectSpaceView.vue'),
+  requirements: () => import('@/features/requirement/RequirementManagementView.vue'),
   incidents: () => import('@/features/incident/IncidentManagementView.vue'),
   platform: () => import('@/features/platform/PlatformCenterView.vue'),
 };
@@ -101,6 +108,10 @@ const COMPONENT_MAP: Record<string, () => Promise<any>> = {
  * and loses its own `name` (the default child takes the parent name).
  */
 const CHILD_ROUTES: Record<string, Array<{ path: string; name: string; component: () => Promise<any> }>> = {
+  requirements: [
+    { path: '', name: 'requirements', component: () => import('@/features/requirement/views/RequirementListView.vue') },
+    { path: ':requirementId', name: 'requirement-detail', component: () => import('@/features/requirement/views/RequirementDetailView.vue') },
+  ],
   incidents: [
     { path: '', name: 'incidents', component: () => import('@/features/incident/views/IncidentListView.vue') },
     { path: ':incidentId', name: 'incident-detail', component: () => import('@/features/incident/views/IncidentDetailView.vue') },

@@ -2,8 +2,9 @@
  * Incident Management Type Definitions
  */
 import type { SectionResult } from '@/shared/types/section';
+import type { SdlcArtifactType, SdlcChainLink, SdlcChain } from '@/shared/types/sdlc-chain';
 
-export type { SectionResult };
+export type { SectionResult, SdlcArtifactType, SdlcChainLink, SdlcChain };
 
 // ── Enums / Union Types ──
 
@@ -31,7 +32,6 @@ export type ActionType = 'automated' | 'requires_approval';
 export type ActionExecutionStatus = 'pending' | 'approved' | 'rejected' | 'executing' | 'executed' | 'rolled_back';
 export type GovernanceActionType = 'approve' | 'reject' | 'escalate' | 'override';
 export type ConfidenceLevel = 'High' | 'Medium' | 'Low';
-export type SdlcArtifactType = 'requirement' | 'spec' | 'design' | 'code' | 'test' | 'deploy';
 export type SortField = 'priority' | 'status' | 'detectedAt' | 'duration';
 
 // ── List Types ──
@@ -137,17 +137,6 @@ export interface GovernanceEntry {
 
 export interface Governance {
   readonly entries: ReadonlyArray<GovernanceEntry>;
-}
-
-export interface SdlcChainLink {
-  readonly artifactType: SdlcArtifactType;
-  readonly artifactId: string;
-  readonly artifactTitle: string;
-  readonly routePath: string;
-}
-
-export interface SdlcChain {
-  readonly links: ReadonlyArray<SdlcChainLink>;
 }
 
 export interface AiLearning {
