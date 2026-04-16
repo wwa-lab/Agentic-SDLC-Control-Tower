@@ -10,6 +10,14 @@ spring:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  requirement-import:
+    kb-provider: ${REQUIREMENT_IMPORT_KB_PROVIDER:stub}
+    dify:
+      base-url: ${DIFY_BASE_URL:}
+      api-key: ${DIFY_API_KEY:}
+      dataset-lookup-limit: ${DIFY_DATASET_LOOKUP_LIMIT:100}
+      segment-page-size: ${DIFY_SEGMENT_PAGE_SIZE:100}
+      indexing-technique: ${DIFY_INDEXING_TECHNIQUE:high_quality}
   navigation:
     items:
       - key: dashboard

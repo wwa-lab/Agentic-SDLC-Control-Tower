@@ -6,12 +6,14 @@ import StatusDistribution from '../components/StatusDistribution.vue';
 import RequirementListTable from '../components/RequirementListTable.vue';
 import PriorityMatrix from '../components/PriorityMatrix.vue';
 import ImportPanel from '../components/ImportPanel.vue';
+import ProfileBadge from '../components/ProfileBadge.vue';
 import type { RequirementPriority, RequirementStatus, RequirementCategory, ViewMode, SortField } from '../types/requirement';
 
 const router = useRouter();
 const store = useRequirementStore();
 
 onMounted(() => {
+  store.loadActiveProfile();
   store.fetchRequirementList();
 });
 
@@ -35,10 +37,6 @@ function setSearch(value: string) {
   store.setFilters({ search: value || undefined });
 }
 
-function toggleCompleted() {
-  store.setFilters({ showCompleted: !store.filters.showCompleted });
-}
-
 function switchView(mode: ViewMode) {
   store.setViewMode(mode);
 }
@@ -56,6 +54,11 @@ function handleStatusFilter(status: RequirementStatus) {
 
 <template>
   <div class="list-view">
+    <div class="profile-row">
+      <ProfileBadge :profile="store.activeProfile" />
+      <span class="profile-caption">{{ store.activeProfile.description }}</span>
+    </div>
+
     <!-- Status Distribution Strip -->
     <StatusDistribution :distribution="store.statusDistribution" @filter="handleStatusFilter" />
 
@@ -94,13 +97,22 @@ function handleStatusFilter(status: RequirementStatus) {
         />
       </div>
       <div class="view-controls">
-        <button
-          class="tab-toggle"
-          :class="{ 'tab--active': store.filters.showCompleted }"
-          @click="toggleCompleted"
-        >
-          {{ store.filters.showCompleted ? 'Hide Completed' : 'Show Completed' }}
-        </button>
+        <div class="status-toggle">
+          <button
+            class="tab-toggle"
+            :class="{ 'tab--active': !store.filters.showCompleted }"
+            @click="store.setFilters({ showCompleted: false })"
+          >
+            Active
+          </button>
+          <button
+            class="tab-toggle"
+            :class="{ 'tab--active': store.filters.showCompleted }"
+            @click="store.setFilters({ showCompleted: true })"
+          >
+            Completed
+          </button>
+        </div>
         <div class="view-toggle">
           <button
             class="view-btn"
@@ -205,6 +217,18 @@ function handleStatusFilter(status: RequirementStatus) {
   padding: 0 24px 24px;
 }
 
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-caption {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  color: var(--color-on-surface-variant);
+}
+
 .filter-bar {
   display: flex;
   justify-content: space-between;
@@ -251,6 +275,11 @@ function handleStatusFilter(status: RequirementStatus) {
 .filter-search::placeholder { color: var(--color-on-surface-variant); opacity: 0.6; }
 
 .view-controls { display: flex; gap: 8px; align-items: center; }
+
+.status-toggle {
+  display: inline-flex;
+  gap: 6px;
+}
 
 .tab-toggle {
   background: var(--color-surface-container-high);

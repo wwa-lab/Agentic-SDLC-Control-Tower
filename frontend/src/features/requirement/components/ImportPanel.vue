@@ -25,8 +25,8 @@ function handleTextSubmit(text: string) {
   store.triggerNormalization();
 }
 
-function handleFileSelected(file: File) {
-  store.handleFileImport(file);
+function handleFilesSelected(files: File[]) {
+  store.handleFileImport(files);
 }
 
 function handleConfirmDraft(draft: RequirementDraft) {
@@ -55,6 +55,8 @@ function handleUpdateMapping(column: string, target: string) {
           <button class="close-btn" @click="handleClose">&times;</button>
         </div>
 
+        <div v-if="importState.error" class="panel-error">{{ importState.error }}</div>
+
         <!-- Source Selection Step -->
         <template v-if="importState.step === 'source'">
           <ImportSourceTabs
@@ -67,15 +69,66 @@ function handleUpdateMapping(column: string, target: string) {
           </template>
 
           <template v-if="importState.sourceType === 'file'">
-            <ImportDropZone @file-selected="handleFileSelected" />
+            <ImportDropZone @files-selected="handleFilesSelected" />
           </template>
         </template>
 
         <!-- Normalizing Step -->
-        <template v-if="importState.step === 'normalizing'">
+        <template v-if="importState.step === 'normalizing' || importState.step === 'processing'">
           <div class="normalizing-state">
             <div class="normalizing-spinner"></div>
-            <span>AI is analyzing your input...</span>
+            <span>
+              {{ importState.step === 'processing'
+                ? (importState.importMessage || 'Uploading files to the knowledge base and waiting for indexing...')
+                : 'AI is analyzing your input...' }}
+            </span>
+            <div v-if="importState.step === 'processing'" class="import-progress-card">
+              <div class="import-progress-row">
+                <span>Knowledge Base</span>
+                <strong>{{ importState.kbName }}</strong>
+              </div>
+              <div v-if="importState.importId" class="import-progress-row">
+                <span>Import ID</span>
+                <strong>{{ importState.importId }}</strong>
+              </div>
+              <div v-if="importState.importDatasetId" class="import-progress-row">
+                <span>Dataset ID</span>
+                <strong>{{ importState.importDatasetId }}</strong>
+              </div>
+              <div class="import-progress-row">
+                <span>Files Accepted</span>
+                <strong>{{ importState.importSuccessCount }}</strong>
+              </div>
+              <div class="import-progress-row">
+                <span>Files Failed</span>
+                <strong>{{ importState.importFailureCount }}</strong>
+              </div>
+              <div v-if="importState.unsupportedFileTypes.length > 0" class="import-chip-group">
+                <span class="chip-label">Unsupported</span>
+                <span
+                  v-for="fileType in importState.unsupportedFileTypes"
+                  :key="fileType"
+                  class="import-chip import-chip--warning"
+                >
+                  {{ fileType }}
+                </span>
+              </div>
+              <div v-if="importState.importFiles.length > 0" class="import-file-list">
+                <div
+                  v-for="file in importState.importFiles"
+                  :key="`${file.displayName}-${file.providerDocumentId ?? file.sourceFileName}`"
+                  class="import-file-row"
+                >
+                  <div class="import-file-meta">
+                    <span class="import-file-name">{{ file.displayName }}</span>
+                    <span class="import-file-kind">{{ file.sourceKind }} · {{ file.fileExtension || 'unknown' }}</span>
+                  </div>
+                  <span class="import-file-status" :class="`status--${file.providerStatus.toLowerCase()}`">
+                    {{ file.providerStatus }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </template>
 
@@ -172,6 +225,16 @@ function handleUpdateMapping(column: string, target: string) {
   margin: 0;
 }
 
+.panel-error {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--color-incident-crimson);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+}
+
 .close-btn {
   background: none;
   border: none;
@@ -203,6 +266,109 @@ function handleUpdateMapping(column: string, target: string) {
   border-top-color: var(--color-secondary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+.import-progress-card {
+  width: min(100%, 560px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-low);
+  border: var(--border-ghost);
+}
+
+.import-progress-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  color: var(--color-on-surface);
+}
+
+.import-progress-row span {
+  color: var(--color-on-surface-variant);
+}
+
+.import-chip-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip-label {
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  color: var(--color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.import-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  background: var(--color-surface-container-highest);
+  color: var(--color-on-surface);
+}
+
+.import-chip--warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.import-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.import-file-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-separator);
+}
+
+.import-file-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.import-file-name {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  color: var(--color-on-surface);
+}
+
+.import-file-kind {
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  color: var(--color-on-surface-variant);
+}
+
+.import-file-status {
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-secondary);
+}
+
+.status--error,
+.status--failed,
+.status--unsupported {
+  color: var(--color-incident-crimson);
+}
+
+.status--completed {
+  color: #0f9f67;
 }
 
 /* Batch Review */

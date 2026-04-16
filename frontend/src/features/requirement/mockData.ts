@@ -139,6 +139,9 @@ export const MOCK_REQUIREMENT_DETAIL_0001: RequirementDetail = {
       category: 'Functional',
       source: 'Manual',
       assignee: 'Sarah Chen',
+      completenessScore: 85,
+      storyCount: 4,
+      specCount: 2,
       createdAt: '2026-04-10T09:00:00Z',
       updatedAt: '2026-04-16T10:30:00Z',
     },
@@ -239,6 +242,9 @@ export const MOCK_REQUIREMENT_DETAIL_0002: RequirementDetail = {
       category: 'Functional',
       source: 'Manual',
       assignee: 'Alex Kim',
+      completenessScore: 60,
+      storyCount: 3,
+      specCount: 1,
       createdAt: '2026-04-11T10:00:00Z',
       updatedAt: '2026-04-16T09:15:00Z',
     },
@@ -331,6 +337,9 @@ export const MOCK_REQUIREMENT_DETAIL_0003: RequirementDetail = {
       category: 'Non-Functional',
       source: 'AI-Generated',
       assignee: 'Unassigned',
+      completenessScore: 15,
+      storyCount: 0,
+      specCount: 0,
       createdAt: '2026-04-15T16:00:00Z',
       updatedAt: '2026-04-15T16:00:00Z',
     },
@@ -391,6 +400,9 @@ export const MOCK_REQUIREMENT_DETAIL_0005: RequirementDetail = {
       category: 'Business',
       source: 'Imported',
       assignee: 'Mike Ross',
+      completenessScore: 70,
+      storyCount: 3,
+      specCount: 2,
       createdAt: '2026-04-12T08:00:00Z',
       updatedAt: '2026-04-16T08:45:00Z',
     },
@@ -476,7 +488,7 @@ export const MOCK_REQUIREMENT_DETAIL_0005: RequirementDetail = {
  * Mock requirement detail for REQ-0004
  */
 export const MOCK_REQUIREMENT_DETAIL_0004: RequirementDetail = {
-  header: { data: { id: 'REQ-0004', title: 'Database Migration to Oracle 23ai', priority: 'Medium', status: 'In Review', category: 'Technical', source: 'Manual', assignee: 'David Park', createdAt: '2026-04-12T09:00:00Z', updatedAt: '2026-04-15T14:20:00Z' }, error: null },
+  header: { data: { id: 'REQ-0004', title: 'Database Migration to Oracle 23ai', priority: 'Medium', status: 'In Review', category: 'Technical', source: 'Manual', assignee: 'David Park', completenessScore: 45, storyCount: 2, specCount: 1, createdAt: '2026-04-12T09:00:00Z', updatedAt: '2026-04-15T14:20:00Z' }, error: null },
   description: { data: { summary: 'Migrate primary data store from PostgreSQL 15 to Oracle 23ai to leverage vector search, JSON Relational Duality, and enterprise-grade partitioning for the Control Tower platform.', businessJustification: 'Enterprise customers on Oracle infrastructure require native Oracle support. Oracle 23ai vector search eliminates the need for a separate vector DB, reducing operational complexity.', acceptanceCriteria: [ { id: 'AC-030', text: 'All Flyway migrations execute successfully against Oracle 23ai', isMet: true }, { id: 'AC-031', text: 'Query performance parity with PostgreSQL baseline (±10%)', isMet: false }, { id: 'AC-032', text: 'Zero data loss during migration', isMet: false } ], assumptions: ['Oracle 23ai license is procured', 'DBA team available for schema review'], constraints: ['Must maintain PostgreSQL compatibility for H2 local dev', 'Migration window is 4 hours maximum'] }, error: null },
   linkedStories: { data: { stories: [ { id: 'US-030', title: 'As a DBA, I can run Flyway migrations against Oracle 23ai', status: 'In Progress', specId: 'SPEC-030', specStatus: 'Review' }, { id: 'US-031', title: 'As a developer, I can use H2 locally while prod uses Oracle', status: 'Draft', specId: null, specStatus: null } ], totalCount: 2 }, error: null },
   linkedSpecs: { data: { specs: [ { id: 'SPEC-030', title: 'Oracle 23ai Migration Specification', status: 'Review', version: 'v0.8' } ], totalCount: 1 }, error: null },
@@ -488,7 +500,7 @@ export const MOCK_REQUIREMENT_DETAIL_0004: RequirementDetail = {
  * Mock requirement detail for REQ-0006
  */
 export const MOCK_REQUIREMENT_DETAIL_0006: RequirementDetail = {
-  header: { data: { id: 'REQ-0006', title: 'User Profile Management', priority: 'Low', status: 'Delivered', category: 'Functional', source: 'Manual', assignee: 'Emily Wang', createdAt: '2026-04-05T09:00:00Z', updatedAt: '2026-04-14T11:00:00Z' }, error: null },
+  header: { data: { id: 'REQ-0006', title: 'User Profile Management', priority: 'Low', status: 'Delivered', category: 'Functional', source: 'Manual', assignee: 'Emily Wang', completenessScore: 100, storyCount: 2, specCount: 1, createdAt: '2026-04-05T09:00:00Z', updatedAt: '2026-04-14T11:00:00Z' }, error: null },
   description: { data: { summary: 'Users can view and edit their profile information including display name, avatar, timezone, and notification preferences.', businessJustification: 'Basic user experience requirement. Supports personalization and timezone-aware scheduling across modules.', acceptanceCriteria: [ { id: 'AC-050', text: 'Users can update their display name and avatar', isMet: true }, { id: 'AC-051', text: 'Timezone selection affects all date/time displays', isMet: true } ], assumptions: ['Avatar storage uses existing file service'], constraints: ['Profile changes must propagate within 5 seconds'] }, error: null },
   linkedStories: { data: { stories: [ { id: 'US-050', title: 'As a user, I can update my profile settings', status: 'Done', specId: 'SPEC-050', specStatus: 'Implemented' }, { id: 'US-051', title: 'As a user, I can set my timezone preference', status: 'Done', specId: null, specStatus: null } ], totalCount: 2 }, error: null },
   linkedSpecs: { data: { specs: [ { id: 'SPEC-050', title: 'User Profile API Specification', status: 'Implemented', version: 'v1.0' } ], totalCount: 1 }, error: null },
@@ -500,7 +512,7 @@ export const MOCK_REQUIREMENT_DETAIL_0006: RequirementDetail = {
  * Mock requirement detail for REQ-0007
  */
 export const MOCK_REQUIREMENT_DETAIL_0007: RequirementDetail = {
-  header: { data: { id: 'REQ-0007', title: '99.9% Uptime SLA', priority: 'Medium', status: 'Approved', category: 'Non-Functional', source: 'Imported', assignee: 'Sarah Chen', createdAt: '2026-04-08T10:00:00Z', updatedAt: '2026-04-14T09:30:00Z' }, error: null },
+  header: { data: { id: 'REQ-0007', title: '99.9% Uptime SLA', priority: 'Medium', status: 'Approved', category: 'Non-Functional', source: 'Imported', assignee: 'Sarah Chen', completenessScore: 50, storyCount: 1, specCount: 1, createdAt: '2026-04-08T10:00:00Z', updatedAt: '2026-04-14T09:30:00Z' }, error: null },
   description: { data: { summary: 'The SDLC Control Tower platform must maintain 99.9% uptime measured monthly, excluding planned maintenance windows. This translates to a maximum of 43.8 minutes of unplanned downtime per month.', businessJustification: 'Enterprise SLA commitment. Contractual obligation for Tier 1 customers. Failure to meet SLA triggers service credits.', acceptanceCriteria: [ { id: 'AC-060', text: 'Health check endpoints respond within 2 seconds', isMet: true }, { id: 'AC-061', text: 'Automated failover completes within 60 seconds', isMet: false }, { id: 'AC-062', text: 'Monthly uptime report is auto-generated', isMet: false } ], assumptions: ['Multi-AZ deployment is available', 'Database replication is configured'], constraints: ['Planned maintenance windows must not exceed 4 hours/month', 'Failover must be transparent to active users'] }, error: null },
   linkedStories: { data: { stories: [ { id: 'US-060', title: 'As an SRE, I can view real-time uptime metrics', status: 'Ready', specId: 'SPEC-060', specStatus: 'Approved' } ], totalCount: 1 }, error: null },
   linkedSpecs: { data: { specs: [ { id: 'SPEC-060', title: 'SLA Monitoring and Reporting Spec', status: 'Approved', version: 'v1.0' } ], totalCount: 1 }, error: null },
@@ -512,7 +524,7 @@ export const MOCK_REQUIREMENT_DETAIL_0007: RequirementDetail = {
  * Mock requirement detail for REQ-0008
  */
 export const MOCK_REQUIREMENT_DETAIL_0008: RequirementDetail = {
-  header: { data: { id: 'REQ-0008', title: 'Event-Driven Architecture Migration', priority: 'High', status: 'Draft', category: 'Technical', source: 'AI-Generated', assignee: 'Unassigned', createdAt: '2026-04-13T17:00:00Z', updatedAt: '2026-04-13T17:00:00Z' }, error: null },
+  header: { data: { id: 'REQ-0008', title: 'Event-Driven Architecture Migration', priority: 'High', status: 'Draft', category: 'Technical', source: 'AI-Generated', assignee: 'Unassigned', completenessScore: 10, storyCount: 0, specCount: 0, createdAt: '2026-04-13T17:00:00Z', updatedAt: '2026-04-13T17:00:00Z' }, error: null },
   description: { data: { summary: 'Migrate inter-service communication from synchronous REST calls to an event-driven architecture using Apache Kafka. This enables asynchronous processing, better fault isolation, and horizontal scalability.', businessJustification: 'Current synchronous architecture creates cascading failures under load. P1 incident INC-0421 (DB pool exhaustion) was caused by synchronous call chains. Event-driven decoupling prevents this class of failure.', acceptanceCriteria: [ { id: 'AC-070', text: 'Core business events are published to Kafka topics', isMet: false }, { id: 'AC-071', text: 'Consumers process events idempotently', isMet: false }, { id: 'AC-072', text: 'Dead letter queue handles failed messages', isMet: false } ], assumptions: ['Kafka cluster is provisioned', 'Schema registry is available for Avro/Protobuf schemas'], constraints: ['Must maintain REST APIs for external consumers', 'Migration must be incremental, not big-bang'] }, error: null },
   linkedStories: { data: { stories: [], totalCount: 0 }, error: null },
   linkedSpecs: { data: { specs: [], totalCount: 0 }, error: null },
@@ -524,7 +536,7 @@ export const MOCK_REQUIREMENT_DETAIL_0008: RequirementDetail = {
  * Mock requirement detail for REQ-0009
  */
 export const MOCK_REQUIREMENT_DETAIL_0009: RequirementDetail = {
-  header: { data: { id: 'REQ-0009', title: 'Legacy Report Export', priority: 'Medium', status: 'Archived', category: 'Business', source: 'Imported', assignee: 'Alex Kim', createdAt: '2026-03-20T09:00:00Z', updatedAt: '2026-04-10T10:00:00Z' }, error: null },
+  header: { data: { id: 'REQ-0009', title: 'Legacy Report Export', priority: 'Medium', status: 'Archived', category: 'Business', source: 'Imported', assignee: 'Alex Kim', completenessScore: 100, storyCount: 2, specCount: 1, createdAt: '2026-03-20T09:00:00Z', updatedAt: '2026-04-10T10:00:00Z' }, error: null },
   description: { data: { summary: 'Export SDLC metrics and compliance reports in PDF, CSV, and Excel formats compatible with legacy reporting tools used by finance and compliance teams.', businessJustification: 'Finance team requires monthly SDLC cost reports in Excel format compatible with their existing SAP integration. Compliance team needs PDF audit reports.', acceptanceCriteria: [ { id: 'AC-080', text: 'Reports export in PDF, CSV, and XLSX formats', isMet: true }, { id: 'AC-081', text: 'Export includes all required compliance fields', isMet: true } ], assumptions: ['Report templates are defined by finance team'], constraints: ['XLSX format must be compatible with Excel 2016+'] }, error: null },
   linkedStories: { data: { stories: [ { id: 'US-080', title: 'As a finance user, I can export monthly cost reports', status: 'Done', specId: 'SPEC-080', specStatus: 'Implemented' }, { id: 'US-081', title: 'As a compliance officer, I can generate PDF audit reports', status: 'Done', specId: null, specStatus: null } ], totalCount: 2 }, error: null },
   linkedSpecs: { data: { specs: [ { id: 'SPEC-080', title: 'Report Export API Specification', status: 'Implemented', version: 'v1.1' } ], totalCount: 1 }, error: null },
@@ -536,7 +548,7 @@ export const MOCK_REQUIREMENT_DETAIL_0009: RequirementDetail = {
  * Mock requirement detail for REQ-0010
  */
 export const MOCK_REQUIREMENT_DETAIL_0010: RequirementDetail = {
-  header: { data: { id: 'REQ-0010', title: 'AI-Powered Requirement Analysis', priority: 'High', status: 'In Review', category: 'Functional', source: 'AI-Generated', assignee: 'Sarah Chen', createdAt: '2026-04-15T07:00:00Z', updatedAt: '2026-04-16T07:00:00Z' }, error: null },
+  header: { data: { id: 'REQ-0010', title: 'AI-Powered Requirement Analysis', priority: 'High', status: 'In Review', category: 'Functional', source: 'AI-Generated', assignee: 'Sarah Chen', completenessScore: 35, storyCount: 2, specCount: 0, createdAt: '2026-04-15T07:00:00Z', updatedAt: '2026-04-16T07:00:00Z' }, error: null },
   description: { data: { summary: 'Integrate AI analysis capabilities into the requirement management module to automatically assess completeness, detect duplicates, estimate impact, and suggest improvements for incoming requirements.', businessJustification: 'Manual requirement review takes 2-3 hours per requirement. AI analysis can reduce this to 15 minutes by pre-screening completeness and flagging issues. Reduces requirement rework by an estimated 40%.', acceptanceCriteria: [ { id: 'AC-090', text: 'AI completeness scoring runs on requirement save', isMet: false }, { id: 'AC-091', text: 'Similar requirement detection uses vector similarity', isMet: false }, { id: 'AC-092', text: 'AI suggestions are actionable and editable', isMet: false } ], assumptions: ['LLM API is available with sufficient quota', 'Vector embeddings are stored for all existing requirements'], constraints: ['Analysis must complete within 30 seconds', 'AI results must be clearly labeled as suggestions, not authoritative'] }, error: null },
   linkedStories: { data: { stories: [ { id: 'US-090', title: 'As a product owner, I see AI analysis after saving a requirement', status: 'Draft', specId: null, specStatus: null }, { id: 'US-091', title: 'As a product owner, I can accept or dismiss AI suggestions', status: 'Draft', specId: null, specStatus: null } ], totalCount: 2 }, error: null },
   linkedSpecs: { data: { specs: [], totalCount: 0 }, error: null },

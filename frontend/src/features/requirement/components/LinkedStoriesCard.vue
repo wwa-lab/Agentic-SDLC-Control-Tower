@@ -3,11 +3,12 @@ import type { SectionResult, LinkedStoriesSection } from '../types/requirement';
 import RequirementCard from './RequirementCard.vue';
 
 interface Props {
+  requirementId: string;
   linkedStories: SectionResult<LinkedStoriesSection>;
   isLoading?: boolean;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 const emit = defineEmits<{
   generateStories: [];
   navigate: [path: string];
@@ -41,8 +42,9 @@ const STATUS_COLORS: Record<string, string> = {
         <div
           v-for="story in linkedStories.data.stories"
           :key="story.id"
+          :id="`story-${story.id}`"
           class="story-item"
-          @click="emit('navigate', '/requirements')"
+          @click="emit('navigate', `/requirements/${props.requirementId}#story-${story.id}`)"
         >
           <span class="story-id">{{ story.id }}</span>
           <span class="story-title">{{ story.title }}</span>

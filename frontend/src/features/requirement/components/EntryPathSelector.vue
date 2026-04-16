@@ -6,16 +6,24 @@ interface Props {
   orchestratorResult: OrchestratorResult | null;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
+
+function resolvedPathLabel(): string {
+  if (!props.orchestratorResult) {
+    return '';
+  }
+  return props.profile.entryPaths.find(p => p.id === props.orchestratorResult?.determinedPathId)?.label
+    ?? props.orchestratorResult.determinedPathId;
+}
 </script>
 
 <template>
-  <!-- Hidden for single-path profiles -->
-  <div v-if="profile.entryPaths.length > 1 && orchestratorResult" class="entry-path-badge">
+  <div v-if="profile.entryPaths.length > 1" class="entry-path-badge">
     <span class="path-label">Path</span>
-    <span class="path-value">
-      {{ profile.entryPaths.find(p => p.id === orchestratorResult!.determinedPathId)?.label ?? orchestratorResult!.determinedPathId }}
+    <span v-if="orchestratorResult" class="path-value">
+      {{ resolvedPathLabel() }}
     </span>
+    <span v-else class="path-placeholder">Path will be determined by orchestrator</span>
   </div>
 </template>
 
@@ -42,5 +50,12 @@ defineProps<Props>();
   font-family: var(--font-tech);
   font-size: 0.5625rem;
   color: var(--color-secondary);
+}
+
+.path-placeholder {
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  color: var(--color-on-surface-variant);
+  opacity: 0.7;
 }
 </style>

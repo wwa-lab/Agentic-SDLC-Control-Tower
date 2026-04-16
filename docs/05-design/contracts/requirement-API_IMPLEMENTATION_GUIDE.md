@@ -31,7 +31,9 @@ patterns for both frontend and backend developers.
 | PATCH | `/api/v1/requirements/:id/status` | Update requirement status (kanban drag-drop) |
 | GET | `/api/v1/pipeline-profiles/active` | Get resolved pipeline profile for workspace |
 | POST | `/api/v1/requirements/:id/invoke-skill` | Invoke a profile-specific skill |
-| POST | `/api/v1/requirements/normalize` | Normalize raw input into requirement draft |
+| POST | `/api/v1/requirements/normalize` | Normalize pasted raw input into requirement draft |
+| POST | `/api/v1/requirements/imports` | Submit KB-backed file import and receive async receipt |
+| GET | `/api/v1/requirements/imports/:importId` | Poll KB-backed file import status and retrieve draft when ready |
 | POST | `/api/v1/requirements` | Create requirement from confirmed draft |
 
 ### Base URL
@@ -934,7 +936,9 @@ Triggers a skill from the active pipeline profile against a requirement.
 
 Accepts raw business input and invokes the active profile's normalizer skill to produce a structured requirement draft.
 
-**Request Body:**
+This endpoint accepts `application/json` for pasted text, email bodies, or meeting summaries.
+
+**JSON Request Body:**
 ```json
 {
   "rawInput": {
@@ -996,6 +1000,121 @@ Accepts raw business input and invokes the active profile's normalizer skill to 
     ],
     "normalizedBy": "req-normalizer",
     "normalizedAt": "2026-04-16T08:30:00Z"
+  },
+  "error": null
+}
+```
+
+### 2.9A POST /api/v1/requirements/imports — Submit KB-backed file import
+
+Accepts KB-aligned file uploads, submits them to the configured knowledge-base provider, and returns an async receipt immediately.
+
+**Multipart Contract:**
+
+- `Content-Type`: `multipart/form-data`
+- Form field `kb_name` (`string`, required): target knowledge base name
+- Form field `file` (`file`, required, repeatable): one or many uploaded source files
+- Form field `profileId` (`string`, optional): requirement profile override; defaults to active profile if omitted
+- Total request size limit: `100 MB`
+- Supported uploaded formats: `.txt`, `.md`, `.pdf`, `.html`, `.htm`, `.xlsx`, `.xls`, `.docx`, `.csv`, `.zip`
+- ZIP archives are unpacked during intake; supported inner files are submitted individually to the KB provider
+
+**Response:** `ApiResponse<RequirementImportStatusDto>`
+
+```json
+{
+  "data": {
+    "importId": "254d73cc-7adf-42b7-abcf-6bd84023d0a6",
+    "taskId": "KB-TASK-20260416-001",
+    "status": "PROCESSING",
+    "message": "Files uploaded successfully for knowledge base 'example_kb'. Processing in background.",
+    "knowledgeBaseName": "example_kb",
+    "datasetId": "dataset-123",
+    "totalNumberOfFiles": 3,
+    "numberOfSuccesses": 2,
+    "numberOfFailures": 1,
+    "totalSize": 123456,
+    "unsupportedFileTypes": [".exe"],
+    "supportedFileTypes": [".txt", ".md", ".pdf", ".html", ".xlsx", ".xls", ".docx", ".csv", ".htm"],
+    "files": [
+      {
+        "displayName": "summary.md",
+        "sourceFileName": "summary.md",
+        "sourceKind": "FILE",
+        "fileExtension": ".md",
+        "fileSize": 2048,
+        "supported": true,
+        "providerStatus": "COMPLETED",
+        "providerDocumentId": "doc-001"
+      },
+      {
+        "displayName": "payload.exe",
+        "sourceFileName": "payload.exe",
+        "sourceKind": "FILE",
+        "fileExtension": ".exe",
+        "fileSize": 1024,
+        "supported": false,
+        "providerStatus": "UNSUPPORTED",
+        "errorMessage": "Unsupported file type for knowledge base ingestion"
+      }
+    ],
+    "createdAt": "2026-04-16T08:30:00Z",
+    "updatedAt": "2026-04-16T08:30:00Z"
+  },
+  "error": null
+}
+```
+
+### 2.9B GET /api/v1/requirements/imports/:importId — Poll import status
+
+Returns the latest import status. Once KB indexing and requirement normalization finish, the response includes the `draft`.
+
+**Response:** `ApiResponse<RequirementImportStatusDto>`
+
+```json
+{
+  "data": {
+    "importId": "254d73cc-7adf-42b7-abcf-6bd84023d0a6",
+    "taskId": "KB-TASK-20260416-001",
+    "status": "DRAFT_READY",
+    "message": "Draft ready for review.",
+    "knowledgeBaseName": "example_kb",
+    "datasetId": "dataset-123",
+    "totalNumberOfFiles": 2,
+    "numberOfSuccesses": 2,
+    "numberOfFailures": 0,
+    "totalSize": 123456,
+    "unsupportedFileTypes": [],
+    "supportedFileTypes": [".txt", ".md", ".pdf", ".html", ".xlsx", ".xls", ".docx", ".csv", ".htm"],
+    "files": [
+      {
+        "displayName": "summary.md",
+        "sourceFileName": "summary.md",
+        "sourceKind": "FILE",
+        "fileExtension": ".md",
+        "fileSize": 2048,
+        "supported": true,
+        "providerStatus": "COMPLETED",
+        "preview": "Need a batch monitor for overnight IBM i failures...",
+        "providerDocumentId": "doc-001"
+      }
+    ],
+    "draft": {
+      "title": "Imported requirement package from 2 files",
+      "prioritySuggestion": "Medium",
+      "categorySuggestion": "Functional",
+      "description": "Imported 2 source file(s) for knowledge base example_kb...",
+      "businessJustification": "Business value to be confirmed during review.",
+      "acceptanceCriteria": ["Alert support within five minutes"],
+      "assumptions": [],
+      "constraints": [],
+      "missingInfo": ["Business owner not identified"],
+      "openQuestions": ["Which uploaded file should be treated as the source of truth for this requirement?"],
+      "normalizedBy": "standard-sdd-normalizer",
+      "normalizedAt": "2026-04-16T08:31:00Z"
+    },
+    "createdAt": "2026-04-16T08:30:00Z",
+    "updatedAt": "2026-04-16T08:31:00Z"
   },
   "error": null
 }

@@ -174,8 +174,9 @@ The requirement intake flow is the primary entry point for creating new requirem
 sequenceDiagram
     participant User
     participant ImportPanel as Import Panel
-    participant Parser as File Parser
     participant Store as Pinia Store
+    participant API as Requirement API
+    participant KB as Knowledge Base Gateway
     participant Normalizer as AI Normalizer Skill
 
     User->>ImportPanel: Click Import Requirement
@@ -183,56 +184,63 @@ sequenceDiagram
 
     alt Text Input
         ImportPanel->>Store: setRawInput(text)
-    else File Upload (.xlsx/.pdf/.eml/.msg/.vtt/.png/.jpg)
-        ImportPanel->>Parser: parseFile(file)
-        Parser-->>Store: extractedText / parsedRows
+        User->>Store: triggerNormalization()
+        Store->>API: POST /api/v1/requirements/normalize
+        API->>Normalizer: invoke profile normalizer
+        Normalizer-->>API: RequirementDraft
+        API-->>Store: RequirementDraft
+    else KB-backed File Upload (.txt/.md/.pdf/.html/.htm/.xlsx/.xls/.docx/.csv/.zip)
+        ImportPanel->>Store: handleFileImport(files)
+        Store->>API: POST /api/v1/requirements/imports
+        API->>KB: upload accepted files / expand ZIP entries
+        KB-->>API: receipt + provider document ids
+        API-->>Store: RequirementImportStatusDto (PROCESSING)
+        loop poll until ready
+            Store->>API: GET /api/v1/requirements/imports/{importId}
+            API->>KB: refresh provider status + fetch segments
+            API->>Normalizer: normalize imported source when KB content is ready
+            API-->>Store: RequirementImportStatusDto
+        end
     end
-
-    User->>Store: triggerNormalization()
-    Store->>Normalizer: invokeSkill(profileNormalizerSkillId, rawInput)
-    Note over Normalizer: Standard SDD: req-normalizer<br/>IBM i: ibm-i-workflow-orchestrator
-    Normalizer-->>Store: RequirementDraft
 
     Store-->>ImportPanel: Show draft review
     User->>ImportPanel: Review, edit fields
 
     alt Confirm
         User->>Store: confirmDraft()
-        Store->>Store: Add to requirement list (status: DRAFT)
-        Store->>Store: Attach original source
+        Store->>API: POST /api/v1/requirements
+        API-->>Store: RequirementListItemDto (status: DRAFT)
     else Discard
         User->>Store: discardDraft()
     end
 ```
 
-#### File Parsing Strategy
+#### File Intake Strategy
 
-| Format | Parser | Extraction |
-|--------|--------|------------|
-| Plain text | N/A (direct) | Full text as raw input |
-| Excel (.xlsx/.csv) | SheetJS (xlsx) | Rows as candidate requirements; auto-detect column headers |
-| PDF (.pdf) | pdf.js | Extracted text content |
-| Outlook (.eml/.msg) | mailparser / @nicktomlin/msg-reader | Subject → title candidate, body → description |
-| Meeting transcript (.vtt) | WebVTT parser | Speaker-tagged text → AI extracts action items |
-| Image (.png/.jpg/.webp) | AI vision (multimodal) | Image sent to AI normalizer with vision capability; extracts text from whiteboards, sticky notes, screenshots, scanned docs |
+| Input | Current Path | Extraction Behavior |
+|-------|--------------|--------------------|
+| Plain text / pasted email / meeting notes | `POST /requirements/normalize` | Sent directly to the requirement normalizer; synchronous draft response |
+| `.txt`, `.md`, `.pdf`, `.html`, `.htm`, `.xlsx`, `.xls`, `.docx`, `.csv` | `POST /requirements/imports` | Uploaded to the configured KB provider, then normalized after KB indexing completes |
+| `.zip` | `POST /requirements/imports` | Expanded server-side; supported entries uploaded individually to the KB provider |
+| Unsupported ZIP entries | `POST /requirements/imports` | Preserved in the import inspection as `MANUAL_REVIEW`; not parsed into text |
+| Standalone image upload | Not enabled in current UI | Deferred until the KB/provider contract supports image ingestion for this page |
 
-File parsing happens **client-side in Phase A** (browser). Phase B may add server-side parsing for better accuracy.
+The active implementation uses a **provider-backed server-side intake path** for uploaded files. Local development defaults to a stub KB provider; production is expected to use the Dify-backed KB adapter via the internal KB API contract.
 
 #### Batch Processing Architecture
 
-For Excel files with multiple rows:
+The current implemented upload path treats spreadsheet files as KB-backed document imports, not row-by-row browser parsing. The `BatchPreviewTable` and related components remain in the codebase for a future structured row import mode.
 
 ```mermaid
 graph TD
-    A["Upload .xlsx"] --> B["Parse rows (SheetJS)"]
-    B --> C["Preview table with checkboxes"]
-    C --> D["User selects rows"]
-    D --> E["Normalize selected (sequential)"]
-    E --> F["Batch draft review"]
+    A["Upload one or many files"] --> B["POST /requirements/imports"]
+    B --> C["KB receipt: importId + datasetId + file statuses"]
+    C --> D["Frontend polls GET /requirements/imports/{importId}"]
+    D --> E["KB segments fetched by backend"]
+    E --> F["Requirement draft assembled"]
     F --> G{"User action"}
-    G -->|"Confirm All"| H["Create all as DRAFT"]
-    G -->|"Confirm Individual"| I["Create one at a time"]
-    G -->|"Discard"| J["Cancel batch"]
+    G -->|"Confirm"| H["POST /requirements"]
+    G -->|"Discard"| I["Cancel review"]
 ```
 
 ---
@@ -437,10 +445,10 @@ Reverse transitions:
 ```
 
 **User Story Status:**
-`DRAFT --> IN_PROGRESS --> DONE | CANCELLED`
+`Draft --> Ready --> In Progress --> Done`
 
 **Spec Status:**
-`DRAFT --> IN_REVIEW --> APPROVED --> IMPLEMENTED --> VERIFIED`
+`Draft --> Review --> Approved --> Implemented`
 
 **Acceptance Criterion Status:**
 `PENDING --> PASS | FAIL`
@@ -683,7 +691,7 @@ sequenceDiagram
 
 ### Resilience
 - Per-card error isolation via `SectionResult<T>` -- one card failure does not break the page
-- V1 uses synchronous request/response; no async job processing
+- List/detail/skill endpoints use synchronous request/response; KB-backed file intake uses async receipt + polling
 - List view supports pagination to handle large requirement sets without memory pressure
 
 ### Monitoring / Logging
@@ -705,8 +713,8 @@ sequenceDiagram
 | 7 | Three view modes (list, kanban, matrix) share filter state but have different rendering | Pinia store maintains shared filter state; each view mode reads and applies filters independently. View mode toggle does not reset filters. |
 | 8 | Profile proliferation: custom profiles per project could fragment the organization's SDD practices | Mitigation: Platform Center provides curated profile templates with inheritance; custom profiles require admin approval. |
 | 9 | Skill compatibility: IBM i skills run in a different execution environment (Claude Code with build-agent-skill). The Requirement Management page triggers skills but does not execute them directly. | Mitigation: Skill execution is delegated to the AI Center / Skill Engine. |
-| 10 | File parsing accuracy: Client-side file parsing (especially PDF and email) may produce lower quality text extraction than server-side solutions | Mitigation: AI normalizer is designed to handle noisy input; server-side parsing can be added in Phase B. |
-| 11 | Large file handling: 10MB file limit may be insufficient for some enterprise documents | Mitigation: V1 limit is conservative; can increase with server-side processing in V2. |
+| 10 | Knowledge-base indexing quality varies by provider and format; unsupported ZIP entries still require manual review | Mitigation: import inspection exposes per-file status, previews, and manual-review flags before confirmation. |
+| 11 | Large file handling is capped at 100 MB per request and further constrained by the downstream KB provider / gateway configuration | Mitigation: frontend validates the 100 MB request limit early; provider-specific limits must be aligned in deployment config. |
 
 ---
 

@@ -40,6 +40,18 @@ function formatDate(iso: string): string {
       </div>
       <div class="header-meta">
         <span class="meta-item">
+          <span class="meta-label">Coverage</span>
+          <span class="meta-value">{{ header.data.completenessScore }}%</span>
+        </span>
+        <span class="meta-item">
+          <span class="meta-label">Stories</span>
+          <span class="meta-value">{{ header.data.storyCount }}</span>
+        </span>
+        <span class="meta-item">
+          <span class="meta-label">Specs</span>
+          <span class="meta-value">{{ header.data.specCount }}</span>
+        </span>
+        <span class="meta-item">
           <span class="meta-label">Assignee</span>
           <span class="meta-value">{{ header.data.assignee }}</span>
         </span>
@@ -105,6 +117,7 @@ function formatDate(iso: string): string {
 .header-meta {
   display: flex;
   gap: 24px;
+  flex-wrap: wrap;
 }
 
 .meta-item {

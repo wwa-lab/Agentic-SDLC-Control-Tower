@@ -2,7 +2,7 @@
 
 > **Source stories:** S1–S18 from [requirement-stories.md](../02-user-stories/requirement-stories.md)
 > **Spec status:** Draft
-> **Last updated:** 2026-04-16
+> **Last updated:** 2026-04-17
 
 ---
 
@@ -44,13 +44,13 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 | S9 | Use AI Command Panel for Requirement Context | AI Command Panel with requirement-scoped commands |
 | S10 | Handle Loading, Error, and Empty States | Loading, error, empty, and partial states |
 | S11 | Navigate Between List, Kanban, Matrix, and Detail Views | Routing, view switching, deep-linking |
-| S12 | Filter and Sort Across All Views | Cross-view filtering by priority, status, category, assignee |
+| S12 | Filter and Sort Across All Views | Cross-view filtering by priority, status, category, search, and completed toggle |
 | S13 | Select and View Active Pipeline Profile | Profile display, inheritance, default |
 | S14 | View Profile-Adapted SDLC Chain and Skill Actions | Chain rendering, skill binding, entry paths |
-| S15 | Use Spec Tiering for Legacy Pipeline Profiles | L1/L2/L3 tier selection, conditional UI |
+| S15 | Use Spec Tiering for Legacy Pipeline Profiles | L1/L2/L3 orchestrator-determined tier display, conditional UI |
 | S16 | Import Raw Business Input as Requirement | Multi-format import, drag-drop, paste, file upload |
 | S17 | Review AI-Normalized Requirement Draft | Draft review, edit, confirm/discard, missing info flags |
-| S18 | Batch Import Requirements from Excel | Multi-row Excel parsing, preview, selective import |
+| S18 | Batch Import Requirements from Excel | Reserved row-based spreadsheet intake; current delivery uses KB-backed multi-file and ZIP import |
 
 ---
 
@@ -100,19 +100,19 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 ### F-REQ-LIST: Requirement List Display, Filtering, Sorting
 
 - **FR-01**: The page displays a list of requirements scoped to the current workspace context. *(Source: S1)*
-- **FR-02**: Each requirement row shows: ID (e.g., REQ-0042), title, priority (Critical / High / Medium / Low), current status, category, assignee, story count, spec count. *(Source: S1)*
+- **FR-02**: Each requirement row shows: ID (e.g., REQ-0042), title, priority, current status, category, story count, spec count, completeness, and last updated timestamp. *(Source: S1)*
 - **FR-03**: Active requirements are shown by default; archived requirements are available via tab or filter toggle. *(Source: S1)*
-- **FR-04**: Requirements are sortable by priority, status, creation date, and last updated date. *(Source: S1, S12)*
+- **FR-04**: Requirements are sortable by priority, status, title, and recency (updated timestamp). *(Source: S1, S12)*
 - **FR-05**: Critical-priority requirements use the `--color-incident-crimson` design token for visual flagging. *(Source: S1)*
 - **FR-06**: A status distribution summary (e.g., "3 Draft, 5 Approved, 2 In Progress") is displayed at the top of the list. *(Source: S1)*
-- **FR-07**: Filtering is supported by priority, status, category, and assignee. *(Source: S1, S12)*
+- **FR-07**: Filtering is supported by priority, status, category, and text search; completed/archived visibility is controlled by the Active / Completed toggle. *(Source: S1, S12)*
 - **FR-08**: Clicking a requirement row navigates to the detail view. *(Source: S1, S11)*
 
 ### F-REQ-KANBAN: Kanban Board View
 
 - **FR-10**: The page provides a kanban board view as an alternative to the list view. *(Source: S2)*
 - **FR-11**: Kanban columns correspond to requirement statuses: Draft, In Review, Approved, In Progress, Delivered, Archived. *(Source: S2)*
-- **FR-12**: Each kanban card shows: ID, title, priority badge, assignee avatar, story count, spec count. *(Source: S2)*
+- **FR-12**: Each kanban card shows: ID, title, priority badge, category badge, story count, and spec count. *(Source: S2)*
 - **FR-13**: Column headers display the count of requirements in each column. *(Source: S2)*
 - **FR-14**: Clicking a kanban card navigates to the detail view. *(Source: S2, S11)*
 - **FR-15**: Kanban view respects the same filters applied in the list view. *(Source: S2, S12)*
@@ -129,32 +129,32 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 
 ### F-REQ-DETAIL: Requirement Detail Display
 
-- **FR-30**: The requirement detail view displays a header section with: ID, title, priority, current status, category, assignee, created date, last updated date. *(Source: S4)*
-- **FR-31**: The detail view includes a "Description" section with the full requirement description in rich text. *(Source: S4)*
+- **FR-30**: The requirement detail view displays a header section with: ID, title, priority, current status, category, source, coverage/completeness score, story count, spec count, assignee, created date, and last updated date. *(Source: S4)*
+- **FR-31**: The detail view includes a "Description" section with summary, business justification, assumptions, constraints, and acceptance criteria. *(Source: S4)*
 - **FR-32**: The detail view includes an "Acceptance Criteria" section listing each criterion as a checkable item (display-only, not editable in V1). *(Source: S4)*
 - **FR-33**: The detail view includes a "Business Context" section explaining why this requirement exists, its business driver, and expected value. *(Source: S4)*
-- **FR-34**: The detail view includes metadata: source system, external ID (if imported), tags/labels, effort estimate, impact estimate. *(Source: S4)*
+- **FR-34**: The detail view exposes only the metadata currently delivered by the API: source, assignee, coverage, story/spec counts, and timestamps. External IDs, tags, and effort/impact estimates are not part of the current payload. *(Source: S4)*
 - **FR-35**: Status follows the state machine defined in the State Machine section below. *(Source: S4)*
 
 ### F-REQ-STORY: User Story Derivation and Display
 
 - **FR-40**: The detail view includes a "User Stories" card listing all stories derived from this requirement. *(Source: S5)*
-- **FR-41**: Each story row shows: story ID, title, status, assignee, linked spec count. *(Source: S5)*
+- **FR-41**: Each story row shows: story ID, title, status, and any linked spec reference (`specId`, `specStatus`). *(Source: S5)*
 - **FR-42**: A "Derive Stories" button triggers the req-to-user-story AI skill for the current requirement. *(Source: S5)*
 - **FR-43**: When the skill is invoked, a loading indicator appears on the stories card with status text (e.g., "AI is deriving stories..."). *(Source: S5)*
 - **FR-44**: After derivation completes, the new stories appear in the list with a "Generated by AI" badge. *(Source: S5)*
-- **FR-45**: Each story can be expanded inline to show acceptance criteria preview. *(Source: S5)*
-- **FR-46**: Clicking a story navigates to its full detail (future story detail page or inline expansion in V1). *(Source: S5)*
+- **FR-45**: Story rows are rendered as lightweight traceability references; there is no inline expansion in the current implementation. *(Source: S5)*
+- **FR-46**: Clicking a story keeps the user on the requirement detail page and deep-links to the story anchor (`#story-<id>`). *(Source: S5)*
 
 ### F-REQ-SPEC: Spec Linkage, Tracking, Generation Entry
 
 - **FR-50**: The detail view includes a "Specs" card listing all specs linked to this requirement (via user stories). *(Source: S6)*
-- **FR-51**: Each spec row shows: spec ID, title, status (Draft / In Review / Approved / Implemented / Verified / Superseded), linked story ID, last updated. *(Source: S6)*
+- **FR-51**: Each spec row shows: spec ID, title, version, and status (`Draft`, `Review`, `Approved`, or `Implemented`). *(Source: S6)*
 - **FR-52**: A "Generate Spec" button triggers the user-story-to-spec AI skill for a selected user story. *(Source: S6)*
 - **FR-53**: When the skill is invoked, a loading indicator appears on the spec card with status text (e.g., "AI is generating spec..."). *(Source: S6)*
 - **FR-54**: After generation completes, the new spec appears in the list with a "Generated by AI" badge. *(Source: S6)*
-- **FR-55**: The spec card shows a coverage indicator: how many stories have linked specs vs total stories. *(Source: S6)*
-- **FR-56**: Clicking a spec navigates to a spec detail view (or inline expansion in V1). *(Source: S6)*
+- **FR-55**: Requirement coverage is surfaced in the header card via completeness score plus story/spec counts; the specs card itself shows total spec count and the generate entry point. *(Source: S6)*
+- **FR-56**: Clicking a spec keeps the user on the requirement detail page and deep-links to the spec anchor (`#spec-<id>`). *(Source: S6)*
 
 ### F-REQ-CHAIN: SDLC Chain Traceability
 
@@ -242,11 +242,11 @@ The requirement list view must display a prominent "Import Requirement" action b
 > Stories: S16
 
 #### F-REQ-INTAKE-2: Multi-format input support
-The import panel must accept raw input in the following formats: plain text (paste), Excel (.xlsx/.csv), PDF (.pdf), Outlook email (.eml/.msg), meeting transcript (.vtt/.txt), and image (.png/.jpg/.jpeg/.webp). File upload uses a drag-and-drop zone with explicit format indicators. Images are processed via AI vision to extract text and requirements from photos, screenshots, and whiteboard captures.
+The import panel must accept raw input in four source modes: paste text, upload file(s), email text, and meeting summary text. The current file upload control supports `.txt`, `.md`, `.pdf`, `.html`, `.htm`, `.xlsx`, `.xls`, `.docx`, `.csv`, and `.zip`, allows multiple files per submission, and enforces a 100 MB total request limit. ZIP packages are expanded during server-side normalization; unsupported or low-confidence inner files are surfaced for manual review in the import report.
 > Stories: S16
 
 #### F-REQ-INTAKE-3: AI normalization trigger
-After providing raw input, the user triggers AI normalization which invokes the active pipeline profile's normalizer skill. The normalizer produces a structured requirement draft with: title, priority, category, description, acceptance criteria, business justification, assumptions, constraints, missing information, and open questions.
+After providing raw input, the user triggers AI normalization through one of two paths. Text/email/meeting inputs call `POST /api/v1/requirements/normalize` and return a draft immediately. File inputs call `POST /api/v1/requirements/imports`, receive an async receipt (`importId`, `taskId`, dataset/file counters), and then poll `GET /api/v1/requirements/imports/{importId}` until a structured draft is ready.
 > Stories: S16, S17
 
 #### F-REQ-INTAKE-4: Profile-specific normalization output
@@ -258,19 +258,19 @@ The review step displays all AI-extracted fields with visual indicators for AI-s
 > Stories: S17
 
 #### F-REQ-INTAKE-6: Confirm, edit, or discard draft
-The review step provides three actions: edit draft (inline editing), confirm & create (creates requirement with status Draft), and discard (cancels import). On confirmation, the original source is attached to the requirement.
+The review step provides three actions: edit draft (inline editing), confirm & create (creates requirement with status Draft), and discard (cancels import). On confirmation, the requirement persists source attachment metadata and KB/import references rather than copying raw binary file content into the requirement database.
 > Stories: S17
 
 #### F-REQ-INTAKE-7: Batch Excel import
-When an Excel file contains multiple rows, the system presents a preview table with selectable rows, auto-detected column mapping, and batch normalization. Maximum 50 rows per batch in V1.
+Row-based spreadsheet preview remains a reserved future mode. In the current delivery, spreadsheet files follow the same KB-backed file import path as other supported documents, and the modal surfaces file-level import status plus the normalized draft when processing completes.
 > Stories: S18
 
 #### F-REQ-INTAKE-8: Source attachment preservation
-The original raw input (text or file) is preserved as an attachment on the created requirement for audit traceability.
+The created requirement preserves source traceability through stored text input, file metadata, `kb_name`, import task identifiers, and provider document references. Raw file binaries remain in the KB/provider system rather than the requirement service tables.
 > Stories: S16, S17
 
 #### F-REQ-INTAKE-9: Import audit trail
-All import operations are logged with source format, file name, normalizer skill, user, timestamp, and outcome.
+All import operations are logged with source format, file name or bundle summary, KB task metadata, normalizer/import provider, user, timestamp, and outcome.
 > Stories: S16
 
 ---
@@ -343,7 +343,7 @@ flowchart TD
 1. User navigates to `/requirements` from the shared shell left navigation
 2. System loads the requirement list scoped to the current workspace
 3. List displays active requirements by default with status distribution summary
-4. User filters or sorts requirements by priority, status, category, or assignee
+4. User filters or sorts requirements by priority, status, category, search text, or the Active / Completed toggle
 5. User optionally switches to kanban or priority matrix view
 6. User clicks a requirement to open the detail view
 7. Detail view loads all cards: header, description, acceptance criteria, business context, stories, specs, SDLC chain, AI analysis
@@ -365,11 +365,13 @@ flowchart TD
 
 | Entity | Description | Key Attributes |
 |--------|-------------|----------------|
-| Requirement | A business or technical requirement in a workspace | id, title, priority (Critical/High/Medium/Low), status, category, assignee, description, acceptanceCriteria, businessContext, source, externalId, tags, effortEstimate, impactEstimate, createdAt, updatedAt, workspaceId |
-| UserStory | A user story derived from a requirement | id, title, status, assignee, acceptanceCriteria, requirementId, specCount, generatedByAi, createdAt |
-| SpecSummary | A spec linked to a user story (summary view) | id, title, status (Draft/Review/Approved/Rejected), storyId, lastUpdated, generatedByAi |
+| Requirement | A business or technical requirement in a workspace | id, title, priority, status, category, source, assignee, storyCount, specCount, completenessScore, createdAt, updatedAt |
+| UserStory | A user story derived from a requirement | id, title, status, optional specId, optional specStatus, requirementId |
+| SpecSummary | A spec linked to a requirement | id, title, status (Draft/Review/Approved/Implemented), version, requirementId |
+| RequirementDraft | AI-normalized draft shown in the import review step | title, priority, category, summary, businessJustification, acceptanceCriteria, assumptions, constraints, missingInfo, openQuestions, aiSuggestedFields, importInspection, sourceAttachment |
+| RequirementImportStatus | Async file import receipt and polling payload | importId, taskId, status, knowledgeBaseName, datasetId, totalNumberOfFiles, successes/failures, supported/unsupported file types, files, optional draft |
 | SdlcChainNode | A node in the 11-node SDLC traceability chain | nodeType (requirement/user-story/spec/architecture/design/tasks/code/test/deploy/incident/learning), artifactCount, artifacts (id, title, routePath) |
-| AiAnalysisResult | AI-generated analysis of a requirement | completenessScore, gaps (severity, description, suggestion), duplicates (requirementId, title, similarityScore), impactAnalysis, analyzedAt |
+| AiAnalysisResult | AI-generated analysis of a requirement | completenessScore, missingElements, similarRequirements (requirementId, similarityScore), impactAssessment, suggestions |
 | SkillInvocation | A record of an AI skill invocation | skillName, status (running/completed/failed), startedAt, completedAt, inputSummary, outputSummary |
 | StatusDistribution | Counts of requirements per status | draft, inReview, approved, inProgress, delivered, archived |
 
@@ -378,12 +380,12 @@ flowchart TD
 **Statuses / state machine:**
 
 Valid states:
-- `DRAFT`
-- `IN_REVIEW`
-- `APPROVED`
-- `IN_PROGRESS`
-- `DELIVERED`
-- `ARCHIVED`
+- `Draft`
+- `In Review`
+- `Approved`
+- `In Progress`
+- `Delivered`
+- `Archived`
 
 Valid transitions:
 
@@ -429,12 +431,18 @@ stateDiagram-v2
 **APIs / interfaces:**
 - `GET /api/v1/requirements` — list requirements with filtering/sorting (inbound, new)
 - `GET /api/v1/requirements/:id` — requirement detail (inbound, new)
-- `GET /api/v1/requirements/:id/stories` — user stories for a requirement (inbound, new)
-- `GET /api/v1/requirements/:id/specs` — specs linked to a requirement (inbound, new)
 - `GET /api/v1/requirements/:id/chain` — SDLC chain for a requirement (inbound, new)
 - `GET /api/v1/requirements/:id/analysis` — AI analysis (inbound, new)
+- `GET /api/v1/pipeline-profiles/active` — resolved active pipeline profile (inbound, new)
 - `POST /api/v1/requirements/:id/generate-stories` — trigger story derivation skill (inbound, new)
 - `POST /api/v1/requirements/:id/generate-spec` — trigger spec generation skill (inbound, new)
+- `POST /api/v1/requirements/stories/:storyId/generate-spec` — legacy story-scoped compatibility path (inbound, compatibility)
+- `POST /api/v1/requirements/:id/analyze` — trigger async analysis run (inbound, new)
+- `POST /api/v1/requirements/:id/invoke-skill` — invoke a profile-bound skill action (inbound, new)
+- `POST /api/v1/requirements/normalize` — normalize pasted/email/meeting input or compatibility multipart file upload (inbound, new)
+- `POST /api/v1/requirements/imports` — start async KB-backed file import (inbound, new)
+- `GET /api/v1/requirements/imports/:importId` — poll KB-backed import status (inbound, new)
+- `POST /api/v1/requirements` — create a requirement from a confirmed draft (inbound, new)
 - Existing patterns: `ApiResponse<T>` envelope (verified: `shared/dto/ApiResponse.java`), `fetchJson<T>` client (verified: `shared/api/client.ts`)
 
 > Full endpoint contracts with JSON examples are in [requirement-API_IMPLEMENTATION_GUIDE.md](../05-design/contracts/requirement-API_IMPLEMENTATION_GUIDE.md).
@@ -472,7 +480,7 @@ stateDiagram-v2
 
 ## Out of Scope
 
-- **Creating or editing requirements**: V1 is read-only display of existing requirements; CRUD operations are V2
+- **Editing or deleting existing requirements**: V1 now supports create-from-draft, but full requirement edit/delete/version workflows are still deferred
 - **Drag-and-drop kanban**: V1 kanban is display-only; status changes via drag-and-drop are V2
 - **Real-time collaboration**: No multi-user live editing or conflict resolution in V1
 - **Approval workflows**: No formal review/approval workflow with role-based gates in V1
@@ -487,8 +495,8 @@ stateDiagram-v2
 - **IBM i skill execution engine**: Handled by build-agent-skill
 - **Profile A/B testing or profile migration tools**
 - **Real-time email/calendar integration** (Outlook plugin, Zoom webhook)
-- **OCR for scanned documents or handwritten notes**
-- **Multi-file simultaneous upload**
+- **Standalone image upload / OCR for scanned documents or handwritten notes**
+- **Row-level spreadsheet preview and selective Excel row import**
 
 ---
 
@@ -514,6 +522,9 @@ stateDiagram-v2
 | `SkillInvocationStatus` | Status of a running AI skill |
 | `KanbanColumn` | Column with status label and requirement cards |
 | `MatrixPoint` | Single point in the priority matrix |
+| `RequirementDraft` | Reviewable normalized draft from text or imported files |
+| `ImportInspection` | ZIP / bundle inspection report attached to a draft |
+| `RequirementImportStatus` | Async KB import receipt and polling payload |
 
 > Full type definitions are in [requirement-data-model.md](../04-architecture/requirement-data-model.md).
 
@@ -525,12 +536,18 @@ stateDiagram-v2
 |----------|--------|---------|-------|
 | `/api/v1/requirements` | GET | List requirements with filter/sort query params | B |
 | `/api/v1/requirements/:id` | GET | Full requirement detail (SectionResult envelope) | B |
-| `/api/v1/requirements/:id/stories` | GET | User stories for a requirement | B |
-| `/api/v1/requirements/:id/specs` | GET | Specs linked via stories to a requirement | B |
 | `/api/v1/requirements/:id/chain` | GET | SDLC chain nodes for a requirement | B |
 | `/api/v1/requirements/:id/analysis` | GET | AI analysis | B |
+| `/api/v1/pipeline-profiles/active` | GET | Resolved active pipeline profile | B |
 | `/api/v1/requirements/:id/generate-stories` | POST | Trigger req-to-user-story skill | B |
 | `/api/v1/requirements/:id/generate-spec` | POST | Trigger user-story-to-spec skill | B |
+| `/api/v1/requirements/stories/:storyId/generate-spec` | POST | Legacy story-scoped spec generation compatibility path | B |
+| `/api/v1/requirements/:id/analyze` | POST | Trigger async analysis run | B |
+| `/api/v1/requirements/:id/invoke-skill` | POST | Trigger profile-bound skill action | B |
+| `/api/v1/requirements/normalize` | POST | Normalize JSON input or compatibility multipart upload into a draft | B |
+| `/api/v1/requirements/imports` | POST | Start async KB-backed file import | B |
+| `/api/v1/requirements/imports/:importId` | GET | Poll async file import status and draft readiness | B |
+| `/api/v1/requirements` | POST | Create requirement from confirmed draft | B |
 
 > Full endpoint contracts with JSON request/response examples are in [requirement-API_IMPLEMENTATION_GUIDE.md](../05-design/contracts/requirement-API_IMPLEMENTATION_GUIDE.md).
 

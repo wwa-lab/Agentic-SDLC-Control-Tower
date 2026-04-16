@@ -3,6 +3,7 @@ import type { SectionResult, LinkedSpecsSection } from '../types/requirement';
 import RequirementCard from './RequirementCard.vue';
 
 interface Props {
+  requirementId: string;
   linkedSpecs: SectionResult<LinkedSpecsSection>;
   isLoading?: boolean;
 }
@@ -52,8 +53,9 @@ const STATUS_COLORS: Record<string, string> = {
         <div
           v-for="spec in linkedSpecs.data.specs"
           :key="spec.id"
+          :id="`spec-${spec.id}`"
           class="spec-item"
-          @click="emit('navigate', '/requirements')"
+          @click="emit('navigate', `/requirements/${props.requirementId}#spec-${spec.id}`)"
         >
           <span class="spec-indicator"></span>
           <span class="spec-id">{{ spec.id }}</span>

@@ -8,6 +8,11 @@ import LinkedStoriesCard from '../components/LinkedStoriesCard.vue';
 import LinkedSpecsCard from '../components/LinkedSpecsCard.vue';
 import SdlcChainCard from '../components/SdlcChainCard.vue';
 import AiAnalysisCard from '../components/AiAnalysisCard.vue';
+import ProfileBadge from '../components/ProfileBadge.vue';
+import ProfileChainCard from '../components/ProfileChainCard.vue';
+import ProfileSkillActions from '../components/ProfileSkillActions.vue';
+import EntryPathSelector from '../components/EntryPathSelector.vue';
+import SpecTierSelector from '../components/SpecTierSelector.vue';
 import { ArrowLeft } from 'lucide-vue-next';
 
 const route = useRoute();
@@ -19,6 +24,7 @@ const requirementId = computed(() => route.params.requirementId as string);
 const NULL_SECTION = { data: null, error: null };
 
 onMounted(() => {
+  store.loadActiveProfile();
   store.fetchRequirementDetail(requirementId.value);
 });
 
@@ -36,14 +42,14 @@ function handleGenerateStories() {
 
 function handleGenerateSpec(payload: { sourceType: 'requirement' | 'story'; sourceId: string }) {
   if (payload.sourceType === 'story' && payload.sourceId) {
-    store.generateSpec(payload.sourceId);
+    store.generateSpec(requirementId.value, [payload.sourceId]);
     return;
   }
   // Fallback: find first story without a spec
   const stories = store.detail?.linkedStories.data?.stories ?? [];
   const candidate = stories.find(s => s.specId === null) ?? stories[0];
   if (candidate) {
-    store.generateSpec(candidate.id);
+    store.generateSpec(requirementId.value, [candidate.id]);
   }
 }
 
@@ -53,6 +59,10 @@ function handleRunAnalysis() {
 
 function handleChainNavigate(routePath: string) {
   router.push(routePath);
+}
+
+function handleInvokeProfileSkill(skillId: string) {
+  store.invokeProfileSkill(requirementId.value, skillId);
 }
 </script>
 
@@ -84,6 +94,28 @@ function handleChainNavigate(routePath: string) {
         :is-loading="store.detailLoading"
       />
 
+      <div class="profile-strip">
+        <div class="profile-strip-main">
+          <ProfileBadge :profile="store.activeProfile" />
+          <span class="profile-strip-text">{{ store.activeProfile.description }}</span>
+        </div>
+        <div class="profile-strip-actions">
+          <EntryPathSelector
+            :profile="store.activeProfile"
+            :orchestrator-result="store.orchestratorResult"
+          />
+          <SpecTierSelector
+            :profile="store.activeProfile"
+            :orchestrator-result="store.orchestratorResult"
+          />
+          <ProfileSkillActions
+            :profile="store.activeProfile"
+            @invoke-skill="handleInvokeProfileSkill"
+          />
+        </div>
+        <p v-if="store.skillMessage" class="profile-skill-message">{{ store.skillMessage }}</p>
+      </div>
+
       <!-- Row 2-3: Description (left, span 2 rows) -->
       <DescriptionCard
         class="grid-description"
@@ -94,12 +126,14 @@ function handleChainNavigate(routePath: string) {
       <!-- Row 2-3: Stories + Specs (right stack) -->
       <div class="grid-right-stack">
         <LinkedStoriesCard
+          :requirement-id="requirementId"
           :linked-stories="store.detail.linkedStories"
           :is-loading="store.detailLoading"
           @generate-stories="handleGenerateStories"
           @navigate="handleChainNavigate"
         />
         <LinkedSpecsCard
+          :requirement-id="requirementId"
           :linked-specs="store.detail.linkedSpecs"
           :is-loading="store.detailLoading"
           @generate-spec="handleGenerateSpec"
@@ -108,6 +142,11 @@ function handleChainNavigate(routePath: string) {
       </div>
 
       <!-- Row 4: SDLC Chain + AI Analysis -->
+      <ProfileChainCard
+        :profile="store.activeProfile"
+        :is-loading="store.detailLoading"
+      />
+
       <SdlcChainCard
         :chain="store.detail.sdlcChain ?? NULL_SECTION"
         :is-loading="store.detailLoading"
@@ -152,6 +191,44 @@ function handleChainNavigate(routePath: string) {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+}
+
+.profile-strip {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--color-surface-container-high);
+  border: var(--border-ghost);
+  border-radius: var(--radius-sm);
+}
+
+.profile-strip-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-strip-text {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  color: var(--color-on-surface-variant);
+}
+
+.profile-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-skill-message {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  color: var(--color-secondary);
 }
 
 /* Row 2-3: Description (left, span 2 rows) */

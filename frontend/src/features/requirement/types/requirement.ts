@@ -56,6 +56,9 @@ export interface RequirementListItem {
   readonly storyCount: number;
   readonly specCount: number;
   readonly completeness: number;
+  readonly completenessScore?: number;
+  readonly assignee?: string;
+  readonly createdAt?: string;
   readonly updatedAt: string;
 }
 
@@ -70,6 +73,8 @@ export interface RequirementFilters {
 export interface RequirementList {
   readonly statusDistribution: StatusDistribution;
   readonly requirements: ReadonlyArray<RequirementListItem>;
+  readonly items?: ReadonlyArray<RequirementListItem>;
+  readonly totalCount?: number;
 }
 
 // ── Detail Types ──
@@ -82,6 +87,9 @@ export interface RequirementHeader {
   readonly category: RequirementCategory;
   readonly source: RequirementSource;
   readonly assignee: string;
+  readonly completenessScore: number;
+  readonly storyCount: number;
+  readonly specCount: number;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -189,10 +197,52 @@ export interface OrchestratorResult {
   readonly reasoning: string;
 }
 
+export interface SkillExecutionResult {
+  readonly executionId: string;
+  readonly skillName: string;
+  readonly status: string;
+  readonly requirementId: string;
+  readonly startedAt: string;
+  readonly estimatedCompletionSeconds: number;
+  readonly message: string;
+  readonly orchestratorResult?: OrchestratorResult | null;
+}
+
 // ── Import Types (A12) ──
 
-export type ImportStep = 'source' | 'normalizing' | 'review' | 'batch-preview' | 'batch-normalizing' | 'batch-review';
+export type ImportStep = 'source' | 'normalizing' | 'processing' | 'review' | 'batch-preview' | 'batch-normalizing' | 'batch-review';
 export type ImportSourceType = 'paste' | 'file' | 'email' | 'meeting';
+
+export interface RequirementSourceInput {
+  readonly sourceType: 'TEXT' | 'FILE' | 'EMAIL' | 'MEETING';
+  readonly text: string;
+  readonly fileName: string | null;
+  readonly fileSize: number | null;
+  readonly fileNames?: ReadonlyArray<string>;
+  readonly fileCount?: number | null;
+  readonly kbName?: string | null;
+}
+
+export type ImportInspectionStatus = 'PARSED' | 'MANUAL_REVIEW' | 'SKIPPED';
+
+export interface ImportInspectionFile {
+  readonly fileName: string;
+  readonly fileType: string;
+  readonly processingStatus: ImportInspectionStatus;
+  readonly summary: string;
+  readonly extractedCharacters?: number | null;
+  readonly preview?: string | null;
+}
+
+export interface ImportInspection {
+  readonly sourceFileName: string;
+  readonly sourceKind: 'FILE' | 'ZIP' | string;
+  readonly totalFiles: number;
+  readonly parsedFiles: number;
+  readonly manualReviewFiles: number;
+  readonly skippedFiles: number;
+  readonly files: ReadonlyArray<ImportInspectionFile>;
+}
 
 export interface RequirementDraft {
   readonly title: string;
@@ -206,6 +256,42 @@ export interface RequirementDraft {
   readonly missingInfo: ReadonlyArray<string>;
   readonly openQuestions: ReadonlyArray<string>;
   readonly aiSuggestedFields: ReadonlyArray<string>;
+  readonly normalizedBy?: string;
+  readonly normalizedAt?: string;
+  readonly importInspection?: ImportInspection | null;
+  readonly sourceAttachment?: RequirementSourceInput | null;
+}
+
+export interface RequirementImportFileStatus {
+  readonly displayName: string;
+  readonly sourceFileName: string;
+  readonly sourceKind: string;
+  readonly fileExtension: string | null;
+  readonly fileSize: number;
+  readonly supported: boolean;
+  readonly providerStatus: string;
+  readonly errorMessage?: string | null;
+  readonly preview?: string | null;
+  readonly providerDocumentId?: string | null;
+}
+
+export interface RequirementImportStatus {
+  readonly importId: string;
+  readonly taskId: string;
+  readonly status: string;
+  readonly message: string;
+  readonly knowledgeBaseName: string;
+  readonly datasetId: string | null;
+  readonly totalNumberOfFiles: number;
+  readonly numberOfSuccesses: number;
+  readonly numberOfFailures: number;
+  readonly totalSize: number;
+  readonly unsupportedFileTypes: ReadonlyArray<string>;
+  readonly supportedFileTypes: ReadonlyArray<string>;
+  readonly files: ReadonlyArray<RequirementImportFileStatus>;
+  readonly draft?: RequirementDraft | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }
 
 export interface ImportState {
@@ -213,8 +299,24 @@ export interface ImportState {
   readonly step: ImportStep;
   readonly sourceType: ImportSourceType;
   readonly rawInput: string;
+  readonly kbName: string;
   readonly fileName: string | null;
+  readonly fileSize: number | null;
+  readonly fileNames: ReadonlyArray<string>;
+  readonly fileCount: number;
+  readonly error: string | null;
   readonly draft: RequirementDraft | null;
+  readonly importId: string | null;
+  readonly taskId: string | null;
+  readonly importStatus: string | null;
+  readonly importMessage: string | null;
+  readonly importDatasetId: string | null;
+  readonly importFiles: ReadonlyArray<RequirementImportFileStatus>;
+  readonly supportedFileTypes: ReadonlyArray<string>;
+  readonly unsupportedFileTypes: ReadonlyArray<string>;
+  readonly importSuccessCount: number;
+  readonly importFailureCount: number;
+  readonly importUpdatedAt: string | null;
   readonly batchRows: ReadonlyArray<Record<string, string>>;
   readonly batchDrafts: ReadonlyArray<RequirementDraft>;
   readonly batchProgress: number;

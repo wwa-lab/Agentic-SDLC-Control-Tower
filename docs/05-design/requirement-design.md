@@ -46,14 +46,15 @@ frontend/src/
 │       │   ├── PriorityMatrix.vue            # 2x2 impact vs effort matrix
 │       │   ├── KanbanColumn.vue              # single kanban column
 │       │   ├── ImportPanel.vue               # import modal/drawer host
-│       │   ├── ImportDropZone.vue            # drag-and-drop file upload zone
+│       │   ├── ImportDropZone.vue            # drag-and-drop multi-file upload zone
 │       │   ├── ImportTextInput.vue           # paste text textarea
 │       │   ├── ImportSourceTabs.vue          # source type tabs (Text/File/Email/Meeting)
 │       │   ├── NormalizationResultCard.vue   # AI draft review with editable fields
+│       │   ├── ImportInspectionCard.vue      # parsed/manual-review file inspection summary
 │       │   ├── MissingInfoBanner.vue         # amber warnings for missing fields
-│       │   ├── BatchPreviewTable.vue         # Excel row preview with checkboxes
+│       │   ├── BatchPreviewTable.vue         # reserved for future row-based spreadsheet intake
 │       │   ├── ColumnMappingEditor.vue       # column-to-field mapping UI
-│       │   └── BatchProgressBar.vue          # "3 of 12 normalized..." progress
+│       │   └── BatchProgressBar.vue          # reserved progress UI for future batch row normalization
 │       ├── stores/
 │       │   └── requirementStore.ts           # Pinia store — list + kanban + detail state
 │       ├── api/
@@ -81,6 +82,12 @@ backend/src/main/java/com/sdlctower/
 │   └── requirement/
 │       ├── RequirementController.java        # REST endpoints
 │       ├── RequirementService.java           # domain logic + data assembly
+│       ├── RequirementImportService.java     # KB-backed async file intake + polling
+│       ├── persistence/
+│       │   ├── RequirementImportTaskEntity.java
+│       │   ├── RequirementImportFileEntity.java
+│       │   ├── RequirementImportTaskRepository.java
+│       │   └── RequirementImportFileRepository.java
 │       └── dto/
 │           ├── RequirementListDto.java
 │           ├── RequirementListItemDto.java
@@ -92,7 +99,19 @@ backend/src/main/java/com/sdlctower/
 │           ├── LinkedStoryDto.java
 │           ├── LinkedSpecDto.java
 │           ├── AiAnalysisDto.java
+│           ├── RequirementImportStatusDto.java
+│           ├── RequirementImportFileStatusDto.java
 │           └── SdlcChainLinkDto.java         # reuse from shared
+├── integration/
+│   └── kb/
+│       ├── KnowledgeBaseGateway.java         # provider abstraction
+│       ├── StubKnowledgeBaseGateway.java     # local/dev implementation
+│       ├── DifyKnowledgeBaseGateway.java     # Dify-backed KB integration
+│       └── DifyKnowledgeBaseProperties.java
+├── platform/
+│   └── profile/
+│       ├── PipelineProfileController.java
+│       └── PipelineProfileService.java
 ├── shared/
 │   ├── dto/
 │   │   ├── ApiResponse.java                  # existing shared envelope
@@ -100,9 +119,11 @@ backend/src/main/java/com/sdlctower/
 │   └── ApiConstants.java                     # add requirement endpoint constants
 ├── src/main/resources/
 │   └── db/migration/
-│       └── V5__seed_requirement_data.sql     # seed data for requirements
+│       ├── V5__create_requirement_tables.sql
+│       └── V6__create_requirement_import_task_tables.sql
 ├── src/test/java/com/sdlctower/domain/requirement/
-│   └── RequirementControllerTest.java
+│   ├── RequirementControllerTest.java
+│   └── RequirementServiceTest.java
 ```
 
 ---
@@ -465,17 +486,22 @@ For IBM i (when `usesOrchestrator` is true): renders a single "Send to Orchestra
 | close | void | Emitted when panel should close |
 | created | RequirementListItem | Emitted when a draft is confirmed |
 
-Full-screen modal or right drawer (840px width). Hosts the import flow state machine: input → parsing → normalizing → review (or batch-preview → batch-normalizing → batch-review). Background uses `surface-container-low` with glass overlay on the main page.
+Centered modal (840px width). Hosts the current import flow state machine:
+
+- Text / email / meeting summary: `source -> normalizing -> review`
+- File upload: `source -> processing -> review`
+
+For uploaded files the panel first shows a knowledge-base receipt (`importId`, `datasetId`, success/failure counts, per-file provider status), then polls until the draft is ready. `batch-preview`, `batch-normalizing`, and `batch-review` components remain in the codebase for future structured row import, but are not on the active file-upload path today.
 
 #### ImportDropZone.vue
 | Prop | Type | Description |
 |------|------|-------------|
-| acceptedFormats | string[] | ['.xlsx', '.csv', '.pdf', '.eml', '.msg', '.vtt', '.txt', '.png', '.jpg', '.jpeg', '.webp'] |
-| maxSizeMb | number | 10 |
+| acceptedFormats | string[] | ['.txt', '.md', '.pdf', '.html', '.htm', '.xlsx', '.xls', '.docx', '.csv', '.zip'] |
+| maxTotalSizeMb | number | 100 |
 | Event | Payload | |
-| file-selected | File | Browser File object |
+| files-selected | File[] | One or many browser File objects |
 
-Dashed border zone (ghost border style, `outline_variant` at 20% opacity). On drag-over: border becomes `secondary` (cyan) with subtle glow. Shows accepted format icons and "Drop file here or click to browse" text. File size validation with error message.
+Dashed border zone (ghost border style, `outline_variant` at 20% opacity). On drag-over: border becomes `secondary` (cyan) with subtle glow. Shows KB-compatible formats and a 100 MB total-request limit. ZIP packages are accepted and expanded server-side; unsupported inner files are surfaced later as manual-review items in the import result.
 
 #### ImportSourceTabs.vue
 | Prop | Type | Description |
@@ -490,20 +516,18 @@ Horizontal tab bar: [Paste Text] [Upload File] [Email] [Meeting Summary]. Uses `
 | Prop | Type | Description |
 |------|------|-------------|
 | draft | RequirementDraft | AI-produced draft |
-| editable | boolean | Whether fields are editable |
 | Event | Payload | |
-| update:draft | RequirementDraft | Updated draft after user edits |
-| confirm | void | User confirms draft |
+| confirm | RequirementDraft | User confirms edited draft |
 | discard | void | User discards draft |
 
-Shows all draft fields in a structured form layout. AI-suggested values have a small cyan "AI" badge. Missing info flags appear as amber banners at the top. Open questions appear in a collapsible section. Three action buttons at bottom: "Edit Draft" (toggles editable), "Confirm & Create" (primary, cyan gradient), "Discard" (tertiary).
+Shows all draft fields in an inline-editable form layout. AI-suggested values have a small cyan "AI" badge. Missing info items appear as amber banners at the top. Open questions appear in a collapsible section. When the draft comes from KB-backed file import, the card also renders `ImportInspectionCard` so the user can see parsed files, manual-review files, and extracted previews before confirming.
 
 #### MissingInfoBanner.vue
 | Prop | Type | Description |
 |------|------|-------------|
-| flags | MissingInfoFlag[] | Missing info from normalization |
+| items | string[] | Missing info messages from normalization |
 
-Amber background strip (`#F59E0B` at 10% opacity) with warning icon and text. Each flag is a separate line. Severity 'warning' gets amber icon, 'info' gets muted icon.
+Amber background strip (`#F59E0B` at 10% opacity) with warning icon and text. Each missing-info message is a separate line.
 
 #### BatchPreviewTable.vue
 | Prop | Type | Description |
@@ -515,14 +539,14 @@ Amber background strip (`#F59E0B` at 10% opacity) with warning icon and text. Ea
 | toggle-all | boolean | Select/deselect all |
 | update:columnMappings | ColumnMapping[] | Column mapping changed |
 
-Table with checkbox column, row index, and mapped field columns. Auto-detected mappings shown with green check, manual overrides with edit icon. Header row has "Select All" checkbox. Uses `surface-container-high` for table body, `surface-container-low` for header.
+Reserved for a future row-based spreadsheet intake flow. The current implemented upload path submits spreadsheet files to the KB-backed import endpoint instead of exposing row selection in the live UI.
 
 #### BatchProgressBar.vue
 | Prop | Type | Description |
 |------|------|-------------|
 | progress | BatchImportProgress | Current progress |
 
-Horizontal progress bar with `secondary` (cyan) fill. Text shows "3 of 12 normalized..." in `body-sm`. Errors shown as crimson count badge.
+Reserved for future batch row normalization. Not currently used by the live file-import flow.
 
 ---
 
@@ -711,8 +735,8 @@ The requirement page uses nested routes within the existing shell:
 - List row click / Kanban card click -> `router.push({ name: 'requirement-detail', params: { requirementId } })`
 - Detail back button -> `router.push({ name: 'requirements' })`
 - SDLC chain link -> `router.push(routePath)`
-- Linked story click -> `router.push({ name: 'story-detail', params: { storyId } })` (future)
-- Linked spec click -> `router.push({ name: 'spec-detail', params: { specId } })` (future)
+- Linked story click -> `router.push('/requirements/:requirementId#story-:storyId')`
+- Linked spec click -> `router.push('/requirements/:requirementId#spec-:specId')`
 
 ---
 
@@ -729,9 +753,14 @@ Full contracts are defined in
 | GET | `/api/v1/requirements/:id` | Full detail | `ApiResponse<RequirementDetailDto>` |
 | GET | `/api/v1/requirements/:id/chain` | SDLC chain | `ApiResponse<SdlcChainDto>` |
 | GET | `/api/v1/requirements/:id/analysis` | AI analysis | `ApiResponse<AiAnalysisDto>` |
+| GET | `/api/v1/pipeline-profiles/active` | Resolved active profile | `ApiResponse<PipelineProfileDto>` |
+| POST | `/api/v1/requirements/:id/invoke-skill` | Invoke profile-specific skill | `ApiResponse<SkillExecutionResultDto>` |
 | POST | `/api/v1/requirements/:id/generate-stories` | Generate user stories | `ApiResponse<LinkedStoriesDto>` |
 | POST | `/api/v1/requirements/:id/generate-spec` | Generate spec | `ApiResponse<LinkedSpecDto>` |
-| PATCH | `/api/v1/requirements/:id/status` | Update status (kanban) | `ApiResponse<RequirementHeaderDto>` |
+| POST | `/api/v1/requirements/normalize` | Normalize pasted text/email/meeting input | `ApiResponse<RequirementDraftDto>` |
+| POST | `/api/v1/requirements/imports` | Submit KB-backed file import | `ApiResponse<RequirementImportStatusDto>` |
+| GET | `/api/v1/requirements/imports/:importId` | Poll file import status | `ApiResponse<RequirementImportStatusDto>` |
+| POST | `/api/v1/requirements` | Create requirement from confirmed draft | `ApiResponse<RequirementListItemDto>` |
 
 ### 7.2 Query Parameters for List
 
@@ -740,11 +769,11 @@ Full contracts are defined in
 | `priority` | `string` | — | Filter by priority |
 | `status` | `string` | — | Filter by status |
 | `category` | `string` | — | Filter by category |
-| `assignee` | `string` | — | Filter by assignee |
-| `search` | `string` | — | Text search across title and description |
-| `showCompleted` | `boolean` | `false` | Include Delivered/Archived requirements |
+| `search` | `string` | — | Text search term |
 | `sortBy` | `string` | `updatedAt` | Sort field |
 | `sortDirection` | `string` | `desc` | Sort direction |
+
+`showCompleted` remains a frontend-only toggle; the store uses it client-side after fetching the API list.
 
 ---
 
@@ -756,50 +785,42 @@ Full data model is defined in
 ### 8.1 Enums / Union Types
 
 ```typescript
-export type RequirementPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type RequirementPriority = 'Critical' | 'High' | 'Medium' | 'Low';
 
 export type RequirementStatus =
-  | 'DRAFT'
-  | 'IN_REVIEW'
-  | 'APPROVED'
-  | 'IN_PROGRESS'
-  | 'DELIVERED'
-  | 'ARCHIVED';
+  | 'Draft'
+  | 'In Review'
+  | 'Approved'
+  | 'In Progress'
+  | 'Delivered'
+  | 'Archived';
 
 export type RequirementCategory =
-  | 'FUNCTIONAL'
-  | 'NON_FUNCTIONAL'
-  | 'TECHNICAL'
-  | 'BUSINESS';
+  | 'Functional'
+  | 'Non-Functional'
+  | 'Technical'
+  | 'Business';
 
-export type RequirementSource = 'MANUAL' | 'IMPORTED' | 'AI_GENERATED';
+export type RequirementSource = 'Manual' | 'Imported' | 'AI-Generated';
 
-export type SpecStatus = 'DRAFT' | 'IN_REVIEW' | 'APPROVED' | 'IMPLEMENTED' | 'VERIFIED' | 'SUPERSEDED';
+export type SpecStatus = 'Draft' | 'Review' | 'Approved' | 'Implemented';
 
-export type SortField = 'priority' | 'status' | 'category' | 'updatedAt' | 'title';
+export type SortField = 'priority' | 'status' | 'recency' | 'title';
 
-export type SdlcArtifactType =
-  | 'requirement'
-  | 'user_story'
-  | 'spec'
-  | 'architecture'
-  | 'design'
-  | 'tasks'
-  | 'code'
-  | 'test'
-  | 'deploy';
+export type ViewMode = 'list' | 'kanban' | 'matrix';
+export type ImportStep = 'source' | 'normalizing' | 'processing' | 'review' | 'batch-preview' | 'batch-normalizing' | 'batch-review';
 ```
 
 ### 8.2 List Types
 
 ```typescript
 export interface StatusDistribution {
-  readonly DRAFT: number;
-  readonly IN_REVIEW: number;
-  readonly APPROVED: number;
-  readonly IN_PROGRESS: number;
-  readonly DELIVERED: number;
-  readonly ARCHIVED: number;
+  readonly draft: number;
+  readonly inReview: number;
+  readonly approved: number;
+  readonly inProgress: number;
+  readonly delivered: number;
+  readonly archived: number;
 }
 
 export interface RequirementListItem {
@@ -808,13 +829,12 @@ export interface RequirementListItem {
   readonly priority: RequirementPriority;
   readonly status: RequirementStatus;
   readonly category: RequirementCategory;
-  readonly assignee: string;
   readonly storyCount: number;
   readonly specCount: number;
-  readonly specCoverage: number;     // 0.0 to 1.0
-  readonly impact: number;          // 1-10 for matrix
-  readonly effort: number;          // 1-10 for matrix
-  readonly createdAt: string;
+  readonly completeness: number;
+  readonly completenessScore?: number;
+  readonly assignee?: string;
+  readonly createdAt?: string;
   readonly updatedAt: string;
 }
 
@@ -822,7 +842,6 @@ export interface RequirementFilters {
   readonly priority?: RequirementPriority;
   readonly status?: RequirementStatus;
   readonly category?: RequirementCategory;
-  readonly assignee?: string;
   readonly search?: string;
   readonly showCompleted: boolean;
 }
@@ -830,6 +849,8 @@ export interface RequirementFilters {
 export interface RequirementList {
   readonly statusDistribution: StatusDistribution;
   readonly requirements: ReadonlyArray<RequirementListItem>;
+  readonly items?: ReadonlyArray<RequirementListItem>;
+  readonly totalCount?: number;
 }
 ```
 
@@ -842,20 +863,19 @@ export interface RequirementHeader {
   readonly priority: RequirementPriority;
   readonly status: RequirementStatus;
   readonly category: RequirementCategory;
-  readonly assignee: string;
   readonly source: RequirementSource;
+  readonly assignee: string;
+  readonly completenessScore: number;
   readonly storyCount: number;
   readonly specCount: number;
-  readonly specCoverage: number;
-  readonly chainHealth: 'green' | 'amber' | 'red';
   readonly createdAt: string;
   readonly updatedAt: string;
 }
 
 export interface AcceptanceCriterion {
   readonly id: string;
-  readonly description: string;
-  readonly passed: boolean | null;  // null = not yet evaluated
+  readonly text: string;
+  readonly isMet: boolean;
 }
 
 export interface RequirementDescription {
@@ -965,20 +985,21 @@ Full DDL is defined in [requirement-data-model.md](../04-architecture/requiremen
 | Table | Purpose |
 |-------|---------|
 | `requirement` | Core requirement entity |
-| `acceptance_criterion` | Structured acceptance criteria per requirement |
-| `requirement_story_link` | Parent-child relationship: requirement -> user stories |
-| `requirement_spec_link` | Requirement -> spec linkage |
-| `requirement_chain` | SDLC chain traceability records |
-| `requirement_ai_analysis` | Stored AI analysis results |
-| `requirement_audit_log` | Change tracking and governance audit trail |
+| `requirement_acceptance_criterion` | Structured acceptance criteria per requirement |
+| `requirement_assumption` | Ordered assumptions per requirement |
+| `requirement_constraint` | Ordered constraints per requirement |
+| `user_story` | Stories derived from a requirement |
+| `requirement_spec` | Specs linked to a requirement |
+| `requirement_sdlc_chain_link` | SDLC chain traceability records |
+| `requirement_ai_analysis` | Stored AI analysis summary |
+| `requirement_ai_analysis_element` | Missing/similar/suggestion rows for AI analysis |
+| `requirement_import_audit` | Confirmed import audit trail |
+| `requirement_import_task` | Async KB import receipt and draft payload |
+| `requirement_import_file` | Per-file KB processing state |
 
 ### 9.2 Seed Data Migration
 
-`V5__seed_requirement_data.sql` provides sample requirements for Phase A/B development:
-- 8-10 requirements across different priorities, statuses, and categories
-- Linked user stories and specs for chain demonstration
-- Pre-computed AI analysis results for representative requirements
-- Audit log entries for governance trail demonstration
+`V5__create_requirement_tables.sql` now creates and seeds the core requirement dataset used by the live Phase B implementation. `V6__create_requirement_import_task_tables.sql` adds async KB import tracking tables for the new file-ingestion flow.
 
 ---
 

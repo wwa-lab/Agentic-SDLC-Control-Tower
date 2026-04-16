@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import type { RequirementDraft, RequirementPriority, RequirementCategory } from '../types/requirement';
+import ImportInspectionCard from './ImportInspectionCard.vue';
 import MissingInfoBanner from './MissingInfoBanner.vue';
 
 interface Props {
@@ -106,6 +107,11 @@ function handleConfirm() {
     </div>
 
     <MissingInfoBanner :items="draft.missingInfo" />
+
+    <ImportInspectionCard
+      v-if="draft.importInspection"
+      :inspection="draft.importInspection"
+    />
 
     <!-- Open Questions -->
     <div v-if="draft.openQuestions.length > 0">

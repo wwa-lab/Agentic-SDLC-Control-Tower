@@ -2,35 +2,49 @@
 import { ref } from 'vue';
 
 const emit = defineEmits<{
-  fileSelected: [file: File];
+  filesSelected: [files: File[]];
 }>();
 
-const ACCEPTED = '.xlsx,.csv,.pdf,.eml,.msg,.vtt,.txt,.png,.jpg,.jpeg,.webp';
-const MAX_SIZE_MB = 10;
-const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+const ACCEPTED = '.txt,.md,.pdf,.html,.htm,.xlsx,.xls,.docx,.csv,.zip';
+const MAX_TOTAL_SIZE_MB = 100;
 
 const isDragOver = ref(false);
 const errorMsg = ref<string | null>(null);
 
-function validateAndEmit(file: File) {
+function formatSelectedFileNames(files: File[]) {
+  if (files.length === 0) return '';
+  if (files.length === 1) return files[0].name;
+  if (files.length === 2) return `${files[0].name}, ${files[1].name}`;
+  return `${files[0].name} + ${files.length - 1} more`;
+}
+
+function validateAndEmit(fileList: FileList | File[]) {
   errorMsg.value = null;
-  if (file.size > MAX_SIZE_BYTES) {
-    errorMsg.value = `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is ${MAX_SIZE_MB} MB.`;
+  const files = Array.from(fileList);
+  if (files.length === 0) {
+    errorMsg.value = 'Select at least one file to continue.';
     return;
   }
-  emit('fileSelected', file);
+
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  const maxSizeBytes = MAX_TOTAL_SIZE_MB * 1024 * 1024;
+  if (totalBytes > maxSizeBytes) {
+    errorMsg.value = `Upload too large (${(totalBytes / 1024 / 1024).toFixed(1)} MB across ${files.length} files: ${formatSelectedFileNames(files)}). Maximum per upload is ${MAX_TOTAL_SIZE_MB} MB.`;
+    return;
+  }
+
+  emit('filesSelected', files);
 }
 
 function handleDrop(e: DragEvent) {
   isDragOver.value = false;
-  const file = e.dataTransfer?.files[0];
-  if (file) validateAndEmit(file);
+  const files = e.dataTransfer?.files;
+  if (files && files.length > 0) validateAndEmit(files);
 }
 
 function handleFileInput(e: Event) {
   const input = e.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (file) validateAndEmit(file);
+  if (input.files && input.files.length > 0) validateAndEmit(input.files);
   input.value = '';
 }
 </script>
@@ -45,15 +59,19 @@ function handleFileInput(e: Event) {
       @drop.prevent="handleDrop"
     >
       <span class="drop-icon">↑</span>
-      <span class="drop-text">Drop a file here or click to browse</span>
+      <span class="drop-text">Drop files here or click to browse</span>
       <span class="drop-formats">
-        Supported: Excel, CSV, PDF, Email, Transcript, Text, Image
+        KB-compatible formats: TXT, MD, PDF, HTML, HTM, XLSX, XLS, DOCX, CSV, ZIP
       </span>
-      <span class="drop-limit">Max {{ MAX_SIZE_MB }} MB</span>
+      <span class="drop-formats">
+        ZIP packages are expanded during normalization; inner files that still need manual review are called out in the import report
+      </span>
+      <span class="drop-limit">Upload one or many files, total up to {{ MAX_TOTAL_SIZE_MB }} MB per request</span>
       <input
         type="file"
         class="file-input"
         :accept="ACCEPTED"
+        multiple
         @change="handleFileInput"
       />
     </div>

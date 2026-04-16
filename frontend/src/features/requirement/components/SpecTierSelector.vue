@@ -10,10 +10,10 @@ defineProps<Props>();
 </script>
 
 <template>
-  <!-- Hidden when specTiering is null or until orchestrator returns a result -->
-  <div v-if="profile.specTiering && orchestratorResult?.determinedTier" class="tier-badge">
+  <div v-if="profile.specTiering" class="tier-badge">
     <span class="tier-label">Tier</span>
-    <span class="tier-value">{{ orchestratorResult.determinedTier }}</span>
+    <span v-if="orchestratorResult?.determinedTier" class="tier-value">{{ orchestratorResult.determinedTier }}</span>
+    <span v-else class="tier-placeholder">Tier will be determined by orchestrator</span>
   </div>
 </template>
 
@@ -41,5 +41,12 @@ defineProps<Props>();
   font-size: 0.625rem;
   font-weight: 700;
   color: #a78bfa;
+}
+
+.tier-placeholder {
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  color: var(--color-on-surface-variant);
+  opacity: 0.7;
 }
 </style>

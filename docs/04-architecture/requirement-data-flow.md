@@ -142,19 +142,24 @@ ApiResponse<RequirementDetailDto>
 +-- data
 |   +-- header: SectionResult<RequirementHeaderDto>
 |   |   +-- data: { id, title, priority, status, category, source,
-|   |               description, rationale, createdAt, updatedAt }
-|   +-- acceptanceCriteria: SectionResult<AcceptanceCriteriaDto>
-|   |   +-- data: { criteria[]: { id, description, verifiable, verified } }
-|   +-- linkedStories: SectionResult<LinkedStoriesDto>
-|   |   +-- data: { stories[]: { id, title, status, storyPoints, sprintId } }
-|   +-- linkedSpecs: SectionResult<LinkedSpecsDto>
-|   |   +-- data: { specs[]: { id, title, status, specType, lastUpdated } }
+|   |               assignee, completenessScore, storyCount, specCount,
+|   |               createdAt, updatedAt }
+|   +-- description: SectionResult<RequirementDescriptionDto>
+|   |   +-- data: { summary, businessJustification,
+|   |               acceptanceCriteria[]: { id, text, isMet },
+|   |               assumptions[], constraints[] }
+|   +-- linkedStories: SectionResult<LinkedStoriesSectionDto>
+|   |   +-- data: { stories[]: { id, title, status, specId, specStatus },
+|   |               totalCount }
+|   +-- linkedSpecs: SectionResult<LinkedSpecsSectionDto>
+|   |   +-- data: { specs[]: { id, title, status, version }, totalCount }
 |   +-- sdlcChain: SectionResult<SdlcChainDto>
 |   |   +-- data: { links[]: { artifactType, artifactId,
 |   |                           artifactTitle, routePath } }
 |   +-- aiAnalysis: SectionResult<AiAnalysisDto>
-|   |   +-- data: { completeness: 0.85, ambiguityScore: 0.12,
-|   |               suggestions[], dependencies[], riskFlags[] } | null
+|   |   +-- data: { completenessScore, missingElements[],
+|   |               similarRequirements[]: { id, similarity },
+|   |               impactAssessment, suggestions[] } | null
 +-- error: null
 ```
 
@@ -173,19 +178,13 @@ sequenceDiagram
 
     User->>Detail: Click "Generate Stories" button
     Detail->>Store: generateStories(requirementId)
-    Store->>Store: Set linkedStories.loading = true
     Store->>Client: postJson("/requirements/" + id + "/generate-stories")
     Client->>Backend: POST /api/v1/requirements/:id/generate-stories
     Backend->>AISkill: Execute story-generation skill
-    AISkill->>AISkill: Analyze requirement text + acceptance criteria
-    AISkill-->>Backend: Generated UserStory[] candidates
-    Backend->>Backend: Persist generated stories with status DRAFT
-    Backend-->>Client: ApiResponse of GenerateStoriesResultDto
+    Backend-->>Client: ApiResponse of GenerationResultDto
     Client-->>Store: Unwrap envelope
-    Store->>Store: Update linkedStories.data with new stories
-    Store->>Store: Set linkedStories.loading = false
-    Store-->>Detail: Re-render Linked Stories card
-    Note over Detail: New stories appear with DRAFT status badge
+    Store->>Store: Set skillMessage from result.message
+    Note over Detail: User refreshes detail later to see newly derived stories
 ```
 
 #### Request / Response
@@ -195,10 +194,15 @@ POST /api/v1/requirements/:id/generate-stories
 Request body: (none — requirement context is read from DB)
 
 Response:
-ApiResponse<GenerateStoriesResultDto>
+ApiResponse<GenerationResultDto>
 +-- data
-|   +-- generatedCount: 3
-|   +-- stories[]: { id, title, status: "DRAFT", storyPoints, acceptanceCriteria[] }
+|   +-- executionId: "exec-..."
+|   +-- skillName: "req-to-user-story"
+|   +-- status: "QUEUED" | "RUNNING"
+|   +-- requirementId: "REQ-..."
+|   +-- startedAt: "2026-04-17T..."
+|   +-- estimatedCompletionSeconds: 15
+|   +-- message: "Story generation queued"
 +-- error: null
 ```
 
@@ -217,18 +221,13 @@ sequenceDiagram
 
     User->>Detail: Click "Generate Spec" button
     Detail->>Store: generateSpec(requirementId)
-    Store->>Store: Set linkedSpecs.loading = true
     Store->>Client: postJson("/requirements/" + id + "/generate-spec")
     Client->>Backend: POST /api/v1/requirements/:id/generate-spec
     Backend->>AISkill: Execute spec-generation skill
-    AISkill->>AISkill: Analyze requirement + linked stories
-    AISkill-->>Backend: Generated Spec draft
-    Backend->>Backend: Persist spec with status DRAFT
-    Backend-->>Client: ApiResponse of GenerateSpecResultDto
+    Backend-->>Client: ApiResponse of GenerationResultDto
     Client-->>Store: Unwrap envelope
-    Store->>Store: Update linkedSpecs.data with new spec
-    Store->>Store: Set linkedSpecs.loading = false
-    Store-->>Detail: Re-render Linked Specs card
+    Store->>Store: Set skillMessage from result.message
+    Note over Detail: Generated specs appear after a later detail refresh
 ```
 
 #### Request / Response
@@ -238,9 +237,16 @@ POST /api/v1/requirements/:id/generate-spec
 Request body: (none — requirement + stories context read from DB)
 
 Response:
-ApiResponse<GenerateSpecResultDto>
+ApiResponse<GenerationResultDto>
 +-- data
-|   +-- spec: { id, title, status: "DRAFT", specType, sections[] }
+|   +-- executionId: "exec-..."
+|   +-- skillName: "user-story-to-spec"
+|   +-- status: "QUEUED" | "RUNNING"
+|   +-- requirementId: "REQ-..."
+|   +-- inputStoryIds[]: ["US-001"]
+|   +-- startedAt: "2026-04-17T..."
+|   +-- estimatedCompletionSeconds: 20
+|   +-- message: "Spec generation queued"
 +-- error: null
 ```
 
@@ -255,37 +261,41 @@ sequenceDiagram
     participant Store as Pinia Store
     participant Client as API Client
     participant Backend as Spring Boot
-    participant AISkill as AI Skill Engine
 
-    User->>Detail: Click "Run Analysis" or auto-triggered on detail load
-    Detail->>Store: fetchAnalysis(requirementId)
-    Store->>Store: Set aiAnalysis.loading = true
-    alt Phase A (mock)
-        Store->>Store: Return mock analysis data
-    else Phase B (API)
+    User->>Detail: Click "Run Analysis"
+    Detail->>Store: runAnalysis(requirementId)
+    Store->>Client: postJson("/requirements/" + id + "/analyze")
+    Client->>Backend: POST /api/v1/requirements/:id/analyze
+    Backend-->>Client: ApiResponse<GenerationResultDto>
+    Client-->>Store: Set skillMessage
+    opt Refresh snapshot
         Store->>Client: fetchJson("/requirements/" + id + "/analysis")
         Client->>Backend: GET /api/v1/requirements/:id/analysis
-        Backend->>AISkill: Execute requirement-analysis skill
-        AISkill->>AISkill: Evaluate completeness, ambiguity, dependencies
-        AISkill-->>Backend: AnalysisResult
-        Backend-->>Client: ApiResponse of AiAnalysisDto
-        Client-->>Store: Unwrap envelope
+        Backend-->>Client: ApiResponse<AiAnalysisDto>
+        Client-->>Store: Update aiAnalysis.data
     end
-    Store->>Store: Set aiAnalysis.data
-    Store->>Store: Set aiAnalysis.loading = false
-    Store-->>Detail: Re-render AI Analysis card
 ```
 
-#### Response Shape
+#### Response Shapes
 
 ```
+POST /api/v1/requirements/:id/analyze
+ApiResponse<GenerationResultDto>
++-- data
+|   +-- executionId: "exec-..."
+|   +-- skillName: "requirement-analysis"
+|   +-- status: "QUEUED" | "RUNNING"
+|   +-- message: "Analysis queued"
++-- error: null
+
+GET /api/v1/requirements/:id/analysis
 ApiResponse<AiAnalysisDto>
 +-- data
-|   +-- completeness: 0.85
-|   +-- ambiguityScore: 0.12
-|   +-- suggestions[]: { type: "MISSING_CRITERIA", description: "..." }
-|   +-- dependencies[]: { requirementId: "REQ-0045", relationship: "DEPENDS_ON" }
-|   +-- riskFlags[]: { severity: "MEDIUM", description: "..." }
+|   +-- completenessScore: 85
+|   +-- missingElements[]: ["Stakeholder not identified"]
+|   +-- similarRequirements[]: { id: "REQ-0045", similarity: 72 }
+|   +-- impactAssessment: "High impact ..."
+|   +-- suggestions[]: ["Clarify timeout requirements"]
 +-- error: null
 ```
 
@@ -419,29 +429,39 @@ sequenceDiagram
     participant API as Backend API
 
     User->>Panel: Click "Import Requirement"
-    Note over Panel: importStep = 'input'
+    Note over Panel: importStep = 'source'
 
     alt Paste Text
         User->>Panel: Paste text into textarea
         Panel->>Store: setRawInput({ sourceType: 'TEXT', text })
-    else Upload File
-        User->>Panel: Drag/drop or select file
-        Panel->>Parser: parseFile(file)
-        Note over Parser: Client-side parsing:<br/>xlsx → SheetJS<br/>pdf → pdf.js<br/>eml/msg → mailparser
-        Parser-->>Store: setRawInput({ sourceType, text, fileName, fileSize })
-    end
+        User->>Panel: Click "Normalize with AI"
+        Panel->>Store: triggerNormalization()
+        Note over Panel: importStep = 'normalizing'
 
-    Note over Panel: importStep = 'parsing' → 'input' (done)
-    User->>Panel: Click "Normalize with AI"
-    Panel->>Store: triggerNormalization()
-    Note over Panel: importStep = 'normalizing'
+        alt Phase A (Mock)
+            Store->>Store: Generate mock draft from template
+        else Phase B (API)
+            Store->>API: POST /api/v1/requirements/normalize
+            Note over API: Body: { rawInput, profileId }
+            API-->>Store: ApiResponse of RequirementDraft
+        end
+    else Upload Files
+        User->>Panel: Drag/drop or select one or many files
+        Panel->>Store: handleFileImport(files)
+        Note over Panel: importStep = 'processing'
 
-    alt Phase A (Mock)
-        Store->>Store: Generate mock draft from template
-    else Phase B (API)
-        Store->>API: POST /api/v1/requirements/normalize
-        Note over API: Body: { rawInput, profileId }
-        API-->>Store: ApiResponse of RequirementDraft
+        alt Phase A (Mock)
+            Store->>Store: Build mock draft from local file descriptions
+        else Phase B (API)
+            Store->>API: POST /api/v1/requirements/imports
+            Note over API: multipart/form-data with kb_name + repeatable file
+            API-->>Store: RequirementImportStatusDto (PROCESSING)
+
+            loop Until draft is ready
+                Store->>API: GET /api/v1/requirements/imports/{importId}
+                API-->>Store: RequirementImportStatusDto
+            end
+        end
     end
 
     Store-->>Panel: draft ready
@@ -451,60 +471,47 @@ sequenceDiagram
 
     alt Confirm
         User->>Store: confirmDraft(editedDraft)
-        Store->>Store: Add to requirements list (status: DRAFT)
-        Note over Panel: importStep = 'idle'
+        Store->>Store: Add to requirements list (status: Draft)
+        Note over Panel: importStep = 'source'
         Panel->>Panel: Close import panel
     else Discard
         User->>Store: discardDraft()
-        Note over Panel: importStep = 'idle'
+        Note over Panel: importStep = 'source'
     end
 ```
 
 ---
 
-### 2.11 Batch Excel Import Flow
+### 2.11 Multi-File / Archive Import Flow
 
 ```mermaid
 sequenceDiagram
     participant User
     participant Panel as ImportPanel
-    participant Parser as SheetJS
     participant Store as Pinia Store
     participant API as Backend API
+    participant KB as Knowledge Base Provider
 
-    User->>Panel: Upload .xlsx/.csv file
-    Panel->>Parser: parse(file)
-    Parser-->>Store: rows + detected columns
-    Note over Panel: importStep = 'batch-preview'
+    User->>Panel: Upload multiple files or a ZIP package
+    Panel->>Store: handleFileImport(files)
+    Note over Panel: importStep = 'processing'
 
-    Store-->>Panel: Show preview table
-    Panel->>Panel: Auto-detect column mapping
-    User->>Panel: Adjust column mapping if needed
-    User->>Panel: Select/deselect rows (checkboxes)
-    User->>Panel: Click "Normalize Selected"
-    Note over Panel: importStep = 'batch-normalizing'
+    Store->>API: POST /api/v1/requirements/imports
+    API->>KB: Upload supported files / ZIP entries
+    KB-->>API: receipt + provider ids
+    API-->>Store: RequirementImportStatusDto
 
-    loop For each selected row
-        Store->>API: POST /api/v1/requirements/normalize
-        Note over Store: batchProgress updates:<br/>"3 of 12 normalized..."
-        API-->>Store: RequirementDraft
-        Store->>Store: Add to batchDrafts[]
+    loop Poll while processing
+        Store->>API: GET /api/v1/requirements/imports/{importId}
+        API->>KB: refresh status / fetch indexed segments
+        API-->>Store: RequirementImportStatusDto
     end
 
-    Note over Panel: importStep = 'batch-review'
-    Store-->>Panel: Show batch review list
-
-    User->>Panel: Expand/review individual drafts
-
-    alt Confirm All
-        User->>Store: confirmAllDrafts()
-        Store->>Store: Add all to requirements list
-    else Confirm Individual
-        User->>Store: confirmDraft(index)
-    else Discard
-        User->>Store: discardAllDrafts()
-    end
+    Store-->>Panel: Show import receipt, file statuses, and draft review once ready
+    Note over Panel: Unsupported ZIP entries remain visible as MANUAL_REVIEW items
 ```
+
+`BatchPreviewTable` / `BatchProgressBar` remain in the frontend codebase for a future row-based spreadsheet import mode, but they are not on the active backend-integrated path today.
 
 ---
 
@@ -725,16 +732,15 @@ async function fetchRequirementList(filters: RequirementFilters): Promise<void> 
 | `RequirementListItem` | `RequirementListItemDto` | requirements[] |
 | `StatusDistribution` | `StatusDistributionDto` | statusDistribution |
 | `RequirementHeader` | `RequirementHeaderDto` | header |
-| `AcceptanceCriterion` | `AcceptanceCriterionDto` | acceptanceCriteria.criteria[] |
+| `AcceptanceCriterion` | `AcceptanceCriterionDto` | description.acceptanceCriteria[] |
 | `LinkedStory` | `LinkedStoryDto` | linkedStories.stories[] |
 | `LinkedSpec` | `LinkedSpecDto` | linkedSpecs.specs[] |
 | `SdlcChainLink` | `SdlcChainLinkDto` | sdlcChain.links[] |
 | `AiAnalysis` | `AiAnalysisDto` | aiAnalysis |
-| `AiSuggestion` | `AiSuggestionDto` | aiAnalysis.suggestions[] |
-| `RequirementDependency` | `RequirementDependencyDto` | aiAnalysis.dependencies[] |
-| `RiskFlag` | `RiskFlagDto` | aiAnalysis.riskFlags[] |
-| `GenerateStoriesResult` | `GenerateStoriesResultDto` | POST generate-stories response |
-| `GenerateSpecResult` | `GenerateSpecResultDto` | POST generate-spec response |
+| `RequirementDraft` | `RequirementDraftDto` | normalize response / import polling draft |
+| `ImportInspection` | `ImportInspectionDto` | requirementDraft.importInspection |
+| `RequirementImportStatus` | `RequirementImportStatusDto` | POST/GET imports response |
+| `GenerationResult` | `GenerationResultDto` | POST generate-stories / generate-spec / analyze response |
 | `SectionResult<T>` | `SectionResultDto<T>` | all detail sections |
 
 All field names use camelCase in both TypeScript and JSON serialization to
@@ -754,6 +760,7 @@ maintain a 1:1 mapping between frontend and backend.
 | loadActiveProfile | profiles/index.ts (hardcoded) | GET /api/v1/pipeline-profiles/active |
 | invokeProfileSkill | Stubbed (show confirmation) | POST /api/v1/requirements/:id/invoke-skill |
 | triggerNormalization | Mock draft from template | POST /api/v1/requirements/normalize |
+| handleFileImport | Mock local file summary -> mock draft | POST /api/v1/requirements/imports + GET /api/v1/requirements/imports/{importId} |
 | confirmDraft | Add to local mock list | POST /api/v1/requirements (create) |
 
 The store's `fetchRequirementList()`, `fetchRequirementDetail(id)`,

@@ -534,16 +534,27 @@ Done when: full stack runs locally; requirement page displays backend seed data
 ### B9: Intake API Endpoints
 
 - Create `POST /api/v1/requirements/normalize` endpoint:
-  - Accepts `{ rawInput, profileId }` body
+  - Accepts `{ rawInput, profileId }` JSON body for pasted text intake
   - Invokes profile's normalizer skill (stubbed in V1: returns hardcoded draft)
   - Returns `ApiResponse<RequirementDraftDto>`
+- Create `POST /api/v1/requirements/imports` endpoint:
+  - Accepts KB-backed `multipart/form-data` for file intake
+  - Multipart contract uses required `kb_name`, repeatable `file` fields, optional `profileId`
+  - Supports batch upload with a `100 MB` total-request limit
+  - Supports `.txt`, `.md`, `.pdf`, `.html`, `.htm`, `.xlsx`, `.xls`, `.docx`, `.csv`, and `.zip`
+  - Returns an async receipt with `importId`, `taskId`, `datasetId`, file counts, supported/unsupported types, and per-file provider status
+- Create `GET /api/v1/requirements/imports/{importId}` endpoint:
+  - Polls KB/provider processing status
+  - Returns `RequirementImportStatusDto`
+  - Includes `draft` once KB indexing + normalization complete
 - Create `POST /api/v1/requirements` endpoint:
   - Accepts confirmed draft as request body
   - Creates requirement record with status DRAFT
   - Stores source attachment metadata
   - Returns `ApiResponse<RequirementListItemDto>`
 - Add import audit logging: source format, file name, skill ID, user, timestamp, outcome
-- Switch frontend from mock normalization to API calls
+- Add requirement-side KB provider abstraction so local stub and Dify-backed KB can share the same contract
+- Switch frontend from mock normalization to JSON normalize for pasted text and async import receipt/polling for uploaded files
 
 Depends on: B1, B2, B3
 Done when: Import flow works end-to-end through the API; requirements persist in database
