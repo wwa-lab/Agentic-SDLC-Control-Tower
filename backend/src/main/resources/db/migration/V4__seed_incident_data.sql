@@ -1,0 +1,13 @@
+-- Incident seed data placeholder
+-- V1 incident data is served as in-code seed data from IncidentService.
+-- No incident-specific tables are created in V1.
+-- Future versions will add:
+--   incident                      — core incident entity
+--   incident_diagnosis_entry      — AI diagnosis feed entries
+--   incident_skill_execution      — AI skill execution timeline
+--   incident_action               — AI-proposed/executed actions
+--   incident_governance_entry     — human governance audit trail
+--   incident_sdlc_chain_link      — SDLC artifact traceability links
+--   incident_ai_learning          — post-resolution AI learning
+-- See docs/04-architecture/incident-data-model.md §5 for full schema.
+SELECT 1;

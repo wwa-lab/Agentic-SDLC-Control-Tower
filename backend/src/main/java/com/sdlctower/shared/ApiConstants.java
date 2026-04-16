@@ -14,4 +14,9 @@ public final class ApiConstants {
     public static final String NAV_ENTRIES = API_V1 + "/nav/entries";
     public static final String DASHBOARD = API_V1 + "/dashboard";
     public static final String DASHBOARD_SUMMARY = DASHBOARD + "/summary";
+
+    public static final String INCIDENTS = API_V1 + "/incidents";
+    public static final String INCIDENT_DETAIL = INCIDENTS + "/{incidentId}";
+    public static final String INCIDENT_ACTION_APPROVE = INCIDENT_DETAIL + "/actions/{actionId}/approve";
+    public static final String INCIDENT_ACTION_REJECT = INCIDENT_DETAIL + "/actions/{actionId}/reject";
 }
