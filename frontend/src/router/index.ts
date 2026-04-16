@@ -95,11 +95,23 @@ const COMPONENT_MAP: Record<string, () => Promise<any>> = {
   platform: () => import('@/features/platform/PlatformCenterView.vue'),
 };
 
+/**
+ * Child route definitions for modules that use nested routing.
+ * Each key matches a NAVIGATION_ITEMS key; the parent gets `children`
+ * and loses its own `name` (the default child takes the parent name).
+ */
+const CHILD_ROUTES: Record<string, Array<{ path: string; name: string; component: () => Promise<any> }>> = {
+  incidents: [
+    { path: '', name: 'incidents', component: () => import('@/features/incident/views/IncidentListView.vue') },
+    { path: ':incidentId', name: 'incident-detail', component: () => import('@/features/incident/views/IncidentDetailView.vue') },
+  ],
+};
+
 const routes = NAVIGATION_ITEMS.map(item => {
   const pageConfig = PAGE_CONFIGS[item.key];
-  return {
+  const children = CHILD_ROUTES[item.key];
+  const base = {
     path: item.path,
-    name: item.key,
     component: COMPONENT_MAP[item.key] || (() => import('@/features/placeholder/PlaceholderView.vue')),
     meta: {
       navKey: item.key,
@@ -109,6 +121,13 @@ const routes = NAVIGATION_ITEMS.map(item => {
       actions: pageConfig?.actions as ReadonlyArray<ShellAction> | undefined,
     },
   };
+
+  // Modules with child routes: parent is a router-view host, name lives on default child
+  if (children) {
+    return { ...base, children };
+  }
+
+  return { ...base, name: item.key };
 });
 
 export const router = createRouter({
