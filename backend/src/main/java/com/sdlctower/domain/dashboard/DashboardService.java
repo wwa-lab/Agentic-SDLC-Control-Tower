@@ -10,7 +10,7 @@ import com.sdlctower.domain.dashboard.dto.MetricValueDto;
 import com.sdlctower.domain.dashboard.dto.QualityMetricsDto;
 import com.sdlctower.domain.dashboard.dto.RecentActivityDto;
 import com.sdlctower.domain.dashboard.dto.SdlcStageHealthDto;
-import com.sdlctower.domain.dashboard.dto.SectionResultDto;
+import com.sdlctower.shared.dto.SectionResultDto;
 import com.sdlctower.domain.dashboard.dto.StabilityMetricsDto;
 import com.sdlctower.domain.dashboard.dto.ValueStoryDto;
 import com.sdlctower.domain.dashboard.dto.ValueStoryMetricDto;

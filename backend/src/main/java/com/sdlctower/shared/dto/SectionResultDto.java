@@ -1,4 +1,4 @@
-package com.sdlctower.domain.dashboard.dto;
+package com.sdlctower.shared.dto;
 
 public record SectionResultDto<T>(T data, String error) {
 

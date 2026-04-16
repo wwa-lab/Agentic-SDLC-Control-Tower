@@ -1,5 +1,6 @@
 package com.sdlctower.domain.dashboard.dto;
 
+import com.sdlctower.shared.dto.SectionResultDto;
 import java.util.List;
 
 public record DashboardSummaryDto(

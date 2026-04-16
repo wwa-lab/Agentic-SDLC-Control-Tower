@@ -2,13 +2,10 @@
  * Dashboard Type Definitions
  */
 
-/**
- * Per-section envelope — allows individual sections to fail independently.
- */
-export interface SectionResult<T> {
-  readonly data: T | null;
-  readonly error: string | null;
-}
+import type { SectionResult } from '@/shared/types/section';
+
+// Re-export for backwards compatibility with existing dashboard imports
+export type { SectionResult };
 
 export interface DashboardSummary {
   readonly sdlcHealth: SectionResult<ReadonlyArray<SdlcStageHealth>>;
