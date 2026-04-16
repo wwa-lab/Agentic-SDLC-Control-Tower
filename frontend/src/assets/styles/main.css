@@ -1,0 +1,116 @@
+@import "./variables.css";
+
+/* Reset & Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+#app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Typography Standards */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  color: var(--color-on-surface);
+  letter-spacing: -0.02em;
+}
+
+.text-tech {
+  font-family: var(--font-tech);
+}
+
+.text-label {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-on-surface-variant);
+  font-weight: 600;
+}
+
+.text-body-sm {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--color-on-surface);
+  opacity: 0.9;
+}
+
+/* 1. Core Animations */
+@keyframes led-pulse {
+  0% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 0px var(--pulse-color); }
+  50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 4px var(--pulse-color); }
+  100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 0px var(--pulse-color); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-fade-in {
+  animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Status LEDs with Pulse */
+.led {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  position: relative;
+  --pulse-color: transparent;
+  animation: led-pulse 2s infinite ease-in-out;
+}
+
+.led-emerald { background-color: var(--color-health-emerald); --pulse-color: var(--color-health-emerald); }
+.led-crimson { background-color: var(--color-incident-crimson); --pulse-color: var(--color-incident-crimson); }
+.led-amber { background-color: var(--color-approval-amber); --pulse-color: var(--color-approval-amber); }
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: rgba(19, 27, 46, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Buttons: Machined look */
+.btn-machined {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-machined:hover {
+  opacity: 0.9;
+}
+
+.btn-ai {
+  background: linear-gradient(135deg, var(--color-secondary), var(--color-on-secondary-container));
+  color: white;
+  box-shadow: 0 0 8px var(--color-secondary);
+}

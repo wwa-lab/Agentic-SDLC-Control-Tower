@@ -1,24 +1,67 @@
-# Compiled class file
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.claude/settings.local.json
+
+# ===== Environment & Secrets =====
+.env
+.env.*
+*.env
+!.env.example
+application-local.yml
+application-prod.yml
+
+# ===== Java =====
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
 *.jar
 *.war
 *.nar
 *.ear
+hs_err_pid*
+replay_pid*
+
+# ===== Maven =====
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ===== Node / Frontend =====
+node_modules/
+dist/
+.cache/
+*.tsbuildinfo
+
+# ===== Package & Archive =====
 *.zip
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Test & Coverage =====
+coverage/
+*.lcov
+test-results/
+playwright-report/
+.nyc_output/
+surefire-reports/
+jacoco/
+
+# ===== Build Artifacts =====
+build/
+out/
+*.ctxt
+.mtj.tmp/

@@ -1,0 +1,104 @@
+:root {
+  /* 2. Spacing & Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px; /* Max allowed */
+
+  /* 3. Typography */
+  --font-ui: "Inter", system-ui, -apple-system, sans-serif;
+  --font-tech: "JetBrains Mono", monospace;
+}
+
+/* ===== Dark Theme (default) ===== */
+:root,
+[data-theme="dark"] {
+  --color-surface: #0b1326;
+  --color-surface-container-low: #131b2e;
+  --color-surface-container-high: #222a3d;
+  --color-surface-container-highest: #2d3449;
+  --color-surface-lowest: #060e20;
+
+  --color-on-surface: #dae2fd;
+  --color-on-surface-variant: #94a3b8;
+
+  --color-primary: #bec6e0;
+  --color-on-primary: #283044;
+
+  --color-secondary: #89ceff;
+  --color-on-secondary-container: #00344e;
+
+  /* Status LEDs (The Pulse) — design.md §5 canonical names */
+  --color-tertiary: #4edea3;
+  --color-error: #ffb4ab;
+  --color-health-emerald: var(--color-tertiary);
+  --color-incident-crimson: var(--color-error);
+  --color-approval-amber: #f59e0b;
+
+  /* Ghost Border source token — design.md §4 */
+  --color-outline-variant: rgba(69, 70, 77, 0.2);
+
+  /* Shadows (Ambient Glows) */
+  --shadow-ambient: 0 4px 32px 0 rgba(6, 14, 32, 0.4);
+  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 4px 16px 0 rgba(0, 0, 0, 0.3);
+
+  /* Ghost Border rule */
+  --border-ghost: 1px solid rgba(69, 70, 77, 0.2);
+
+  /* Semantic overlays — theme-safe opacity variants */
+  --color-secondary-tint: rgba(137, 206, 255, 0.1);
+  --color-secondary-glow: rgba(137, 206, 255, 0.4);
+  --color-secondary-subtle: rgba(137, 206, 255, 0.2);
+  --color-incident-tint: rgba(255, 180, 171, 0.1);
+  --border-separator: rgba(255, 255, 255, 0.05);
+
+  /* Interactive state overlays */
+  --nav-hover-bg: rgba(255, 255, 255, 0.03);
+  --nav-active-bg: rgba(255, 255, 255, 0.05);
+}
+
+/* ===== Light Theme ===== */
+[data-theme="light"] {
+  --color-surface: #f0f2f5;
+  --color-surface-container-low: #e4e7ec;
+  --color-surface-container-high: #ffffff;
+  --color-surface-container-highest: #f8f9fb;
+  --color-surface-lowest: #d8dce3;
+
+  --color-on-surface: #1a1f2e;
+  --color-on-surface-variant: #5a6478;
+
+  --color-primary: #2d3a5c;
+  --color-on-primary: #ffffff;
+
+  --color-secondary: #0066b8;
+  --color-on-secondary-container: #e0f0ff;
+
+  /* Status LEDs — slightly deeper for light bg */
+  --color-tertiary: #10b981;
+  --color-error: #ef4444;
+  --color-health-emerald: var(--color-tertiary);
+  --color-incident-crimson: var(--color-error);
+  --color-approval-amber: #d97706;
+
+  /* Ghost Border source token */
+  --color-outline-variant: rgba(0, 0, 0, 0.08);
+
+  /* Shadows — subtle for light mode */
+  --shadow-ambient: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 1px 4px 0 rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 2px 8px 0 rgba(0, 0, 0, 0.1);
+
+  /* Ghost Border — visible on white */
+  --border-ghost: 1px solid rgba(0, 0, 0, 0.08);
+
+  /* Semantic overlays — light theme variants */
+  --color-secondary-tint: rgba(0, 102, 184, 0.08);
+  --color-secondary-glow: rgba(0, 102, 184, 0.25);
+  --color-secondary-subtle: rgba(0, 102, 184, 0.12);
+  --color-incident-tint: rgba(239, 68, 68, 0.08);
+  --border-separator: rgba(0, 0, 0, 0.06);
+
+  /* Interactive state overlays */
+  --nav-hover-bg: rgba(0, 0, 0, 0.04);
+  --nav-active-bg: rgba(0, 0, 0, 0.06);
+}
