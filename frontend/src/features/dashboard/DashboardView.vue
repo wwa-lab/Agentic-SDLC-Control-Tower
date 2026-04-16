@@ -38,10 +38,22 @@ const handleGovernanceNavigate = () => {
 const handleActivityViewAll = () => {
   router.push('/platform');
 };
+
+const handleTeamSpaceNavigate = () => {
+  router.push('/team?workspaceId=ws-default-001');
+};
 </script>
 
 <template>
   <div class="dashboard-view">
+    <div class="dashboard-drill-in section-high">
+      <div>
+        <p class="text-label">Workspace Drill-In</p>
+        <p class="text-body-sm">Open Team Space to inspect operating model, risk radar, metrics, and project distribution.</p>
+      </div>
+      <button class="btn-machined btn-ai" @click="handleTeamSpaceNavigate">Open Team Space</button>
+    </div>
+
     <div v-if="dashboardStore.summary" class="dashboard-grid">
       <!-- Row 1: SDLC Chain Health (Full Width) -->
       <div class="full-width">
@@ -115,6 +127,16 @@ const handleActivityViewAll = () => {
   background:
     radial-gradient(ellipse 80% 60% at 20% 10%, var(--color-secondary-tint) 0%, transparent 60%),
     radial-gradient(ellipse 60% 50% at 80% 80%, var(--color-incident-tint) 0%, transparent 50%);
+}
+
+.dashboard-drill-in {
+  margin-bottom: 20px;
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
 }
 
 .dashboard-grid {
@@ -197,6 +219,12 @@ const handleActivityViewAll = () => {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+
+  .dashboard-drill-in {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .dashboard-view {
     padding: 0 12px 16px;
   }

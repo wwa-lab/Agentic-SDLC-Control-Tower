@@ -29,7 +29,7 @@ app:
       - key: team
         label: Team Space
         path: /team
-        coming-soon: true
+        coming-soon: false
         icon: Users
         order: 2
       - key: project-space

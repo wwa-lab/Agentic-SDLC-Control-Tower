@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useWorkspaceStore } from '@/shared/stores/workspaceStore';
+import { useShellUiStore } from '@/shell/stores/shellUiStore';
 import PrimaryNav from './PrimaryNav.vue';
 import TopContextBar from './TopContextBar.vue';
 import GlobalActionBar from './GlobalActionBar.vue';
@@ -9,6 +10,7 @@ import AiCommandPanel from './AiCommandPanel.vue';
 import DataRibbon from '@/shared/components/DataRibbon.vue';
 
 const workspaceStore = useWorkspaceStore();
+const shellUiStore = useShellUiStore();
 
 onMounted(() => {
   workspaceStore.load();
@@ -48,7 +50,7 @@ onMounted(() => {
 
     <!-- Right Panel (overridable) -->
     <slot name="ai-panel">
-      <AiCommandPanel />
+      <AiCommandPanel :content="shellUiStore.resolvedAiPanelContent" />
     </slot>
   </div>
 </template>

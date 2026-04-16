@@ -1,10 +1,29 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
 import { Shield, FileCheck, Users } from 'lucide-vue-next';
 import { MOCK_POLICIES, MOCK_AUDIT_ENTRIES, PLATFORM_ACTIONS } from './mockData';
+
+const route = useRoute();
+
+const activeView = computed(() => {
+  const view = route.query.view;
+  return typeof view === 'string' && view.trim() ? view : 'overview';
+});
+
+const workspaceId = computed(() => {
+  const workspace = route.query.workspaceId;
+  return typeof workspace === 'string' && workspace.trim() ? workspace : 'ws-default-001';
+});
 </script>
 
 <template>
   <div class="view-container">
+    <div class="platform-context-banner section-high">
+      <span class="text-label">PLATFORM SCOPE</span>
+      <span class="text-tech">{{ workspaceId }} / {{ activeView }}</span>
+    </div>
+
     <div class="platform-grid">
       <section class="admin-card section-high">
         <header><Shield :size="14" /> <span class="text-label">POLICY_ENGINE</span></header>
@@ -34,6 +53,14 @@ import { MOCK_POLICIES, MOCK_AUDIT_ENTRIES, PLATFORM_ACTIONS } from './mockData'
 
 <style scoped>
 .view-container { padding: 0 24px 24px; }
+.platform-context-banner {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 .platform-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
 .admin-card { padding: 16px; border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 16px; }
 .admin-card header { display: flex; align-items: center; gap: 8px; color: var(--color-on-surface-variant); }

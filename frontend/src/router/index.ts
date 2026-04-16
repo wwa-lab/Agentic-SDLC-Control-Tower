@@ -22,7 +22,7 @@ import {
  */
 export const NAVIGATION_ITEMS: NavItem[] = [
   { key: 'dashboard', label: 'Dashboard', path: '/', icon: 'LayoutDashboard' },
-  { key: 'team', label: 'Team Space', path: '/team', icon: 'Users', comingSoon: true },
+  { key: 'team', label: 'Team Space', path: '/team', icon: 'Users' },
   { key: 'project-space', label: 'Project Space', path: '/project-space', icon: 'Box' },
   { key: 'requirements', label: 'Requirement Management', path: '/requirements', icon: 'FileText' },
   { key: 'project-management', label: 'Project Management', path: '/project-management', icon: 'GitBranch', comingSoon: true },
@@ -68,6 +68,13 @@ const PAGE_CONFIGS: Record<string, Pick<ShellPageConfig, 'subtitle' | 'actions'>
       { key: 'ai-sync', label: 'AI SYNC', variant: 'ai' },
     ],
   },
+  team: {
+    subtitle: 'Workspace operating model, risks, templates, metrics, and project spread',
+    actions: [
+      { key: 'refresh', label: 'REFRESH GRID' },
+      { key: 'ai-brief', label: 'AI BRIEF', variant: 'ai' },
+    ],
+  },
   'project-space': {
     subtitle: 'Project execution and environment status',
     actions: [
@@ -96,6 +103,7 @@ const PAGE_CONFIGS: Record<string, Pick<ShellPageConfig, 'subtitle' | 'actions'>
 
 const COMPONENT_MAP: Record<string, () => Promise<any>> = {
   dashboard: () => import('@/features/dashboard/DashboardView.vue'),
+  team: () => import('@/features/team-space/TeamSpaceView.vue'),
   'project-space': () => import('@/features/project-space/ProjectSpaceView.vue'),
   requirements: () => import('@/features/requirement/RequirementManagementView.vue'),
   incidents: () => import('@/features/incident/IncidentManagementView.vue'),
@@ -121,8 +129,13 @@ const CHILD_ROUTES: Record<string, Array<{ path: string; name: string; component
 const routes = NAVIGATION_ITEMS.map(item => {
   const pageConfig = PAGE_CONFIGS[item.key];
   const children = CHILD_ROUTES[item.key];
+  const resolvedPath = item.key === 'project-space'
+    ? '/project-space/:projectId?'
+    : item.key === 'reports'
+      ? '/reports/:pathMatch(.*)*'
+      : item.path;
   const base = {
-    path: item.path,
+    path: resolvedPath,
     component: COMPONENT_MAP[item.key] || (() => import('@/features/placeholder/PlaceholderView.vue')),
     meta: {
       navKey: item.key,

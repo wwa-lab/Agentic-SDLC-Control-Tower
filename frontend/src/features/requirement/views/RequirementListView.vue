@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useRequirementStore } from '../stores/requirementStore';
 import StatusDistribution from '../components/StatusDistribution.vue';
 import RequirementListTable from '../components/RequirementListTable.vue';
@@ -9,13 +9,63 @@ import ImportPanel from '../components/ImportPanel.vue';
 import ProfileBadge from '../components/ProfileBadge.vue';
 import type { RequirementPriority, RequirementStatus, RequirementCategory, ViewMode, SortField } from '../types/requirement';
 
+const route = useRoute();
 const router = useRouter();
 const store = useRequirementStore();
+
+const TEAM_SPACE_FILTER_LABELS: Record<string, string> = {
+  'recent-inflow': 'Recent requirement inflow',
+  'stories-decomposing': 'Stories decomposing',
+  'specs-generating': 'Specs generating',
+  'specs-in-review': 'Specs in review',
+  'blocked-specs': 'Blocked specs',
+  'approved-awaiting': 'Approved specs awaiting downstream',
+};
+
+const teamSpaceFilterLabel = computed(() => {
+  const filter = route.query.filter;
+  return typeof filter === 'string' ? TEAM_SPACE_FILTER_LABELS[filter] ?? null : null;
+});
+
+function syncFromRouteQuery() {
+  const filter = typeof route.query.filter === 'string' ? route.query.filter : null;
+  switch (filter) {
+    case 'recent-inflow':
+      store.setFilters({ status: undefined, showCompleted: false });
+      store.setSortField('recency');
+      break;
+    case 'stories-decomposing':
+      store.setFilters({ status: 'Draft', showCompleted: false });
+      break;
+    case 'specs-generating':
+      store.setFilters({ status: 'Draft', showCompleted: false });
+      break;
+    case 'specs-in-review':
+      store.setFilters({ status: 'In Review', showCompleted: false });
+      break;
+    case 'blocked-specs':
+      store.setFilters({ status: 'In Review', showCompleted: false });
+      break;
+    case 'approved-awaiting':
+      store.setFilters({ status: 'Approved', showCompleted: false });
+      break;
+    default:
+      break;
+  }
+}
 
 onMounted(() => {
   store.loadActiveProfile();
   store.fetchRequirementList();
+  syncFromRouteQuery();
 });
+
+watch(
+  () => route.query.filter,
+  () => {
+    syncFromRouteQuery();
+  },
+);
 
 function handleSelect(requirementId: string) {
   router.push({ name: 'requirement-detail', params: { requirementId } });
@@ -54,6 +104,11 @@ function handleStatusFilter(status: RequirementStatus) {
 
 <template>
   <div class="list-view">
+    <div v-if="teamSpaceFilterLabel" class="team-space-filter-banner section-high">
+      <span class="text-label">Team Space Filter</span>
+      <span class="text-body-sm">{{ teamSpaceFilterLabel }}</span>
+    </div>
+
     <div class="profile-row">
       <ProfileBadge :profile="store.activeProfile" />
       <span class="profile-caption">{{ store.activeProfile.description }}</span>
@@ -215,6 +270,14 @@ function handleStatusFilter(status: RequirementStatus) {
   flex-direction: column;
   gap: 16px;
   padding: 0 24px 24px;
+}
+
+.team-space-filter-banner {
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .profile-row {

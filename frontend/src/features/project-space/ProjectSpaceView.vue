@@ -1,10 +1,28 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
 import { Box, Layers, Globe } from 'lucide-vue-next';
 import { MOCK_PROJECT, MOCK_ENVIRONMENTS, MOCK_RESOURCES } from './mockData';
+
+const route = useRoute();
+
+const activeProjectId = computed(() => {
+  const paramValue = route.params.projectId;
+  if (typeof paramValue === 'string' && paramValue.trim()) {
+    return paramValue;
+  }
+  const queryValue = route.query.projectId;
+  return typeof queryValue === 'string' && queryValue.trim() ? queryValue : MOCK_PROJECT.version;
+});
 </script>
 
 <template>
   <div class="view-container">
+    <div class="project-context-banner section-high">
+      <span class="text-label">PROJECT SCOPE</span>
+      <span class="text-tech">{{ activeProjectId }}</span>
+    </div>
+
     <div class="detail-stack">
       <section class="detail-row section-high">
         <header><Box :size="14" /> <span class="text-label">PROJECT_CORE</span></header>
@@ -40,6 +58,14 @@ import { MOCK_PROJECT, MOCK_ENVIRONMENTS, MOCK_RESOURCES } from './mockData';
 
 <style scoped>
 .view-container { padding: 0 24px 24px; }
+.project-context-banner {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 .detail-stack { display: flex; flex-direction: column; gap: 24px; }
 .detail-row { padding: 16px; border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 16px; }
 .detail-row header { display: flex; align-items: center; gap: 8px; color: var(--color-on-surface-variant); }

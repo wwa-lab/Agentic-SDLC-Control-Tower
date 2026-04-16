@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router';
 import { useShellConfig } from '@/shell/composables/useShellConfig';
 
+const route = useRoute();
 const { config, isComingSoon } = useShellConfig();
 </script>
 
@@ -15,6 +17,7 @@ const { config, isComingSoon } = useShellConfig();
     <div class="mock-content">
       <div class="mock-card section-high">
         <p class="text-tech">DATA_FEED_ID: {{ config.navKey }}-MOCK-001</p>
+        <p class="text-tech">ROUTE: {{ route.fullPath }}</p>
         <div class="mock-line"></div>
         <div class="mock-line w-75"></div>
       </div>

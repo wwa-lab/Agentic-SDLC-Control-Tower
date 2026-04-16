@@ -1,16 +1,27 @@
 <script setup lang="ts">
 import { useShellConfig } from '@/shell/composables/useShellConfig';
+import { useShellUiStore } from '@/shell/stores/shellUiStore';
 
 const emit = defineEmits<{
   action: [key: string];
 }>();
 
 const { config } = useShellConfig();
+const shellUiStore = useShellUiStore();
 </script>
 
 <template>
   <header class="page-header">
     <div class="title-section">
+      <div v-if="shellUiStore.breadcrumbs.length" class="breadcrumb-row">
+        <span
+          v-for="(item, index) in shellUiStore.breadcrumbs"
+          :key="`${item.label}-${index}`"
+          class="breadcrumb-item text-label"
+        >
+          {{ item.label }}
+        </span>
+      </div>
       <h1 class="page-title">{{ config.title }}</h1>
       <p v-if="config.subtitle" class="page-subtitle text-label">{{ config.subtitle }}</p>
       <p v-else class="page-subtitle text-label">{{ config.navKey.toUpperCase() }} OPERATIONAL VIEW</p>
@@ -42,6 +53,20 @@ const { config } = useShellConfig();
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+}
+
+.breadcrumb-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.breadcrumb-item {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(137, 206, 255, 0.08);
+  border: 1px solid rgba(137, 206, 255, 0.12);
 }
 
 .page-subtitle {
