@@ -12,4 +12,6 @@ public final class ApiConstants {
 
     public static final String WORKSPACE_CONTEXT = API_V1 + "/workspace-context";
     public static final String NAV_ENTRIES = API_V1 + "/nav/entries";
+    public static final String DASHBOARD = API_V1 + "/dashboard";
+    public static final String DASHBOARD_SUMMARY = DASHBOARD + "/summary";
 }

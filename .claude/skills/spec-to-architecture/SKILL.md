@@ -375,7 +375,7 @@ Save the final document as `docs/04-architecture/architecture.md` by default.
 If the user requests a different location, follow the user's requested path.
 
 ### Companion Artifact: Data Flow Document
-After producing the architecture document, also produce a companion `data-flow.md` that describes how data moves through the system. This document should include:
+After producing the architecture document, also produce a companion `{slice}-data-flow.md` that describes how data moves through the system. This document should include:
 - ASCII block diagrams or simple text diagrams for each major data flow
 - Field mapping tables where applicable (e.g., input fields to domain entities)
 - Data objects and their lifecycle
@@ -383,4 +383,4 @@ After producing the architecture document, also produce a companion `data-flow.m
 
 Use the same plain-text diagram style as the architecture diagram. Only use Mermaid if the user explicitly requests it.
 
-Save as `docs/04-architecture/data-flow.md` by default.
+Save as `docs/04-architecture/{slice}-data-flow.md` by default, where `{slice}` is the kebab-case slice name.

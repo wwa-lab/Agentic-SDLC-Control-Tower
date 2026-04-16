@@ -27,10 +27,13 @@ This skill produces up to four files per invocation:
 
 | # | Artifact | Path | Content | Condition |
 |---|----------|------|---------|-----------|
-| 1 | System Architecture | `docs/04-architecture/architecture.md` | High-level architecture: layers, components, integrations, constraints | Always |
-| 2 | Design Document | `docs/05-design/design.md` | Module design, workflows, state machines, validation, error handling, UI flows | Always |
-| 3 | Data Model | `docs/04-architecture/data-model.md` | Persistent entities, relationships, field definitions, state models, ER summary | Always when spec defines entities or persistence |
-| 4 | API Implementation Guide | `docs/09-contracts/API_IMPLEMENTATION_GUIDE.md` | Endpoint reference, request/response schemas, auth, error codes, integration deps | Always when design defines HTTP/REST endpoints |
+| 1 | System Architecture | `docs/04-architecture/{slice}-architecture.md` | High-level architecture: layers, components, integrations, constraints | Always |
+| 2 | Design Document | `docs/05-design/{slice}-design.md` | Module design, workflows, state machines, validation, error handling, UI flows | Always |
+| 3 | Data Flow | `docs/04-architecture/{slice}-data-flow.md` | Runtime data flows, sequence diagrams, state machines, error cascade, refresh strategy | Always |
+| 4 | Data Model | `docs/04-architecture/{slice}-data-model.md` | Persistent entities, relationships, field definitions, state models, ER summary, type mapping | Always when spec defines entities or persistence |
+| 5 | API Implementation Guide | `docs/05-design/contracts/{slice}-API_IMPLEMENTATION_GUIDE.md` | Endpoint reference, request/response schemas (full JSON), auth, error codes, integration deps, testing contracts | Always when design defines HTTP/REST endpoints |
+
+**Note:** `{slice}` is the kebab-case slice name (e.g., `dashboard`, `shared-app-shell`). All paths must be slice-prefixed to avoid collision between slices.
 
 ---
 
@@ -262,10 +265,11 @@ Write each artifact to its designated path. Summarize what was generated:
 
 ```
 Generated:
-  ✓ docs/04-architecture/architecture.md
-  ✓ docs/05-design/design.md
-  ✓ docs/04-architecture/data-model.md
-  ✓ docs/05-design/contracts/API_IMPLEMENTATION_GUIDE.md
+  ✓ docs/04-architecture/{slice}-architecture.md
+  ✓ docs/05-design/{slice}-design.md
+  ✓ docs/04-architecture/{slice}-data-flow.md
+  ✓ docs/04-architecture/{slice}-data-model.md
+  ✓ docs/05-design/contracts/{slice}-API_IMPLEMENTATION_GUIDE.md
   ✗ [artifact] — skipped (reason)
 ```
 

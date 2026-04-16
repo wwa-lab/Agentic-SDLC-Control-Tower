@@ -69,11 +69,16 @@ For each document type, list whether each expected element is: Present / Thin / 
 - Security considerations
 - Known risks and tradeoffs
 
+**Required companion artifacts:**
+- `{slice}-data-flow.md` — Runtime data flows with sequence diagrams, state machines, error cascade, refresh strategy
+- `{slice}-data-model.md` — Domain model ER diagram, frontend types, backend DTOs/entities, DB schema DDL, type mapping
+
 **Quality signals:**
 - Boundaries between components should be explicit and justified
 - Technology choices should explain why, not just what
 - Integration points should specify protocols/contracts, not just "calls service X"
 - Risks should be real risks, not boilerplate
+- Companion data-flow and data-model docs exist alongside the architecture doc
 
 **Red flags:**
 - Architecture that describes implementation (class names, function signatures) — that belongs in design
@@ -81,6 +86,7 @@ For each document type, list whether each expected element is: Present / Thin / 
 - Missing data flow or state management
 - Components with unclear ownership or overlapping responsibilities
 - Security treated as an afterthought
+- Missing companion data-flow.md or data-model.md
 
 ---
 
@@ -95,11 +101,15 @@ For each document type, list whether each expected element is: Present / Thin / 
 - Error handling strategy (what happens when things go wrong)
 - Edge cases addressed
 
+**Required companion artifact:**
+- `contracts/{slice}-API_IMPLEMENTATION_GUIDE.md` — Full endpoint contracts with JSON examples, backend/frontend implementation guide, testing contracts
+
 **Quality signals:**
 - Interfaces should be concrete enough for a developer to implement against
 - Error handling should name error types and recovery strategies
 - State machines should cover all transitions, including failure paths
 - Data schemas should have types and constraints, not just field names
+- Companion API implementation guide exists alongside the design doc
 
 **Red flags:**
 - Design that re-states architecture without adding detail
@@ -107,6 +117,7 @@ For each document type, list whether each expected element is: Present / Thin / 
 - Missing validation or error handling sections
 - No consideration of edge cases
 - Implementation-specific code before a coding task has been assigned (premature)
+- Missing companion API_IMPLEMENTATION_GUIDE.md when APIs are defined
 
 ---
 

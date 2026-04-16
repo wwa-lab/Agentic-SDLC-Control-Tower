@@ -47,7 +47,9 @@ Agentic SDLC Control Tower — AI-native enterprise software delivery control to
 
 **What happened:** The shared-app-shell slice was missing a per-slice requirements doc (`01-requirements/shared-app-shell-requirements.md`) and a per-slice design doc (`05-design/shared-app-shell-design.md`). The product-level `design.md` existed but it covers all modules, not just the shell. The user had to ask why these were missing.
 
-**Rule:** When executing the SDD pipeline for any slice, always produce or verify **all 6 documents**:
+**Rule:** When executing the SDD pipeline for any slice, always produce or verify **all 9 documents** (6 core + 3 supplementary):
+
+**Core Documents (6):**
 
 | # | Stage | File pattern | Content |
 |---|-------|-------------|---------|
@@ -58,7 +60,15 @@ Agentic SDLC Control Tower — AI-native enterprise software delivery control to
 | 5 | Design | `05-design/{slice}-design.md` | Concrete APIs, file structure, data model, visual decisions, DB schema |
 | 6 | Tasks | `06-tasks/{slice}-tasks.md` | Phased implementation breakdown |
 
-Before starting any implementation work, check that all 6 docs exist for the current slice. If any are missing, create them first. Do not start coding with an incomplete doc set.
+**Supplementary Artifacts (3):**
+
+| # | Stage | File pattern | Content |
+|---|-------|-------------|---------|
+| 7 | Data Flow | `04-architecture/{slice}-data-flow.md` | Runtime data flows, sequence diagrams, state machines, error cascade, refresh strategy |
+| 8 | Data Model | `04-architecture/{slice}-data-model.md` | Domain model ER diagram, frontend types, backend DTOs/entities, DB schema DDL, type mapping |
+| 9 | API Guide | `05-design/contracts/{slice}-API_IMPLEMENTATION_GUIDE.md` | Full endpoint contracts with JSON examples, backend/frontend implementation guide, testing contracts |
+
+Before starting any implementation work, check that all 9 docs exist for the current slice. If any are missing, create them first. Do not start coding with an incomplete doc set.
 
 ### 7. Architecture docs must include Mermaid flow diagrams
 
@@ -86,3 +96,15 @@ Use only Mermaid 8.x-compatible syntax: `graph LR/TD/TB`, `sequenceDiagram`, `fl
 - Database schema (DDL with column types)
 - Error and empty state design
 - Integration boundary diagram
+
+### 9. Every slice must have data-flow, data-model, and API implementation guide
+
+**What happened:** The dashboard and shared-app-shell slices had all 6 core SDD docs but were missing the 3 supplementary artifacts: `data-flow.md`, `data-model.md`, and `API_IMPLEMENTATION_GUIDE.md`. The user had to point this out after reviewing the folder structure.
+
+**Rule:** Beyond the 6 core docs, every slice must also produce these 3 supplementary artifacts:
+
+1. **`04-architecture/{slice}-data-flow.md`** — Runtime data flows with Mermaid sequence diagrams covering: page load (Phase A + B), error isolation, navigation, state machine, refresh strategy, API client chain
+2. **`04-architecture/{slice}-data-model.md`** — Domain model ER diagram, complete frontend type catalog, backend DTO definitions, DB schema DDL (current + future), frontend-to-backend type mapping table
+3. **`05-design/contracts/{slice}-API_IMPLEMENTATION_GUIDE.md`** — Full endpoint contract with complete JSON request/response examples, error handling, backend implementation skeleton, frontend integration guide (API client + store + proxy config), testing contracts, versioning policy
+
+These are not optional — they are the bridge between design docs and implementation. Without them, Gemini and Codex have to guess at contracts.
