@@ -1,67 +1,82 @@
 # Agentic SDLC Control Tower
 
-AI-native enterprise software delivery control tower. A unified operating plane across all SDLC stages — from requirement through deployment, incident, and learning — with AI agents, workflow orchestration, and cross-team governance.
+AI-native enterprise software delivery control tower. This repository currently contains a working Vue 3 frontend, a Spring Boot backend, seeded local data, and the Spec Driven Development (SDD) document set used to drive each slice.
+
+## Current Implementation Snapshot
+
+| Area | Frontend | Backend | Status |
+| --- | --- | --- | --- |
+| Shared app shell | Yes | Yes | 13-route shell, workspace context API, global shell UI |
+| Dashboard | Yes | Yes | Live summary view backed by `/api/v1/dashboard/summary` |
+| Requirement Management | Yes | Yes | List/detail/create flows, AI analysis, story/spec generation, normalize/import APIs |
+| Incident Management | Yes | Yes | List/detail flows plus approve/reject action endpoints |
+| Team Space | Yes | Yes | Aggregate + per-card APIs, access guards, seeded metrics/risk data |
+| Project Space | Yes | Yes | Aggregate + per-card APIs, access guards, seeded project data |
+| Platform Center | Yes | No | Current page is mock-backed UI only |
+| Remaining navigation slices | Placeholder | No | Project Management, Design, Code & Build, Testing, Deployment, AI Center, Report Center |
 
 ## Stack
 
-- **Frontend** — Vue 3 + Vite + Vue Router + Pinia + TypeScript
-- **Backend** — Spring Boot 3.x + Java 21 + JPA
-- **Database** — H2 (local) / Oracle (prod), schema managed via Flyway migrations
-- **Dev model** — Spec Driven Development (SDD): documents before code
-- **Frontend dev tool** — Gemini,Claude,Codex (Phase A, mocks-first)
-- **Backend dev tool** — Claude,Codex (Phase B)
-- **Claude Code** — SDD pipeline, doc quality gates, review, orchestration
+- Frontend: Vue 3.4, Vite 5, Vue Router 4, Pinia, TypeScript, Vitest
+- Backend: Spring Boot 3.4.4, Java 21, Spring Web, Spring Data JPA, Actuator
+- Data: H2 in local profile, Oracle in prod profile, Flyway migrations for schema management
+- Integration: optional Dify-backed requirement import; stub provider enabled by default
+- Delivery model: Spec Driven Development (SDD), with docs living alongside code
 
 ## Repository Layout
 
-```
+```text
 .
-├── CLAUDE.md                 # Claude Code project instructions and Lessons Learned
-├── GEMINI.md                 # Gemini dev-tool brief
-├── design.md                 # Product-wide visual design system
-├── frontend/                 # Vue 3 + Vite + TS app
-├── backend/                  # Spring Boot 3 + Java 21 service
-└── docs/
-    ├── SDD-BOOTSTRAP.md      # How the SDD loop works + current slice roadmap
-    ├── 00-context/
-    ├── 01-requirements/      # PRD + per-slice requirements
-    ├── 02-user-stories/      # Agile stories with acceptance criteria
-    ├── 03-spec/              # Implementation-facing contracts
-    ├── 04-architecture/      # Architecture + data-flow + data-model (per slice)
-    ├── 05-design/            # Design docs + contracts/ (API implementation guides)
-    ├── 06-tasks/             # Phased implementation breakdown
-    └── 07-prompts/           # Prompts for external tools (Gemini / Codex)
+├── frontend/                 # Vue app: shell/, shared/, features/
+├── backend/                  # Spring Boot app: config/, domain/, integration/, platform/, shared/
+├── docs/                     # SDD artifacts and slice documentation
+├── CLAUDE.md                 # Project instructions and lessons learned
+├── GEMINI.md                 # Gemini workflow brief
+├── design.md                 # Shared visual design guidance
+└── README.md
 ```
 
-## Spec Driven Development (SDD) Loop
+## What The App Exposes Today
 
-Every feature slice produces a complete **9-document set** before a line of code is written.
+- Frontend routes: `/`, `/team`, `/project-space/:projectId?`, `/requirements`, `/incidents`, `/platform`, plus placeholder routes for the remaining navigation entries.
+- Default seeded workspace: `ws-default-001`
+- Default seeded project: `proj-42`
+- API base path: `/api/v1`
+- Response contract: all endpoints return `ApiResponse<T>`; aggregate card pages use nested `SectionResultDto<T>` sections so one card can fail without blanking the whole page.
 
-**Core (6):** requirements → stories → spec → architecture → design → tasks.
-**Supplementary (3):** data-flow, data-model, API implementation guide.
+### Main API surface
 
-See [`docs/SDD-BOOTSTRAP.md`](docs/SDD-BOOTSTRAP.md) for the full pipeline, minimum gate, and quality rules. See [`CLAUDE.md`](CLAUDE.md) for the enforcement rules (#6–#9).
-
-## Slice Roadmap
-
-| Order | Slice                     | Status                                          |
-| ----- | ------------------------- | ----------------------------------------------- |
-| 0     | `shared-app-shell`      | Completed (docs + code)                         |
-| 1     | `dashboard`             | Completed (docs + code)                         |
-| 2     | `requirement`           | Completed (docs + code)                         |
-| 3     | `incident`              | Completed (docs + code)                         |
-| 4     | `team-space`            | Docs complete; implementation pending           |
-| 5     | `project-space`         | **Docs complete; implementation pending** |
-| 6     | `project-management`    | Not started                                     |
-| 7     | `design-management`     | Not started                                     |
-| 8     | `code-build-management` | Not started                                     |
-| 9     | `testing-management`    | Not started                                     |
-| 10    | `deployment-management` | Not started                                     |
-| 11    | `ai-center`             | Not started                                     |
-| 12    | `report-center`         | Not started                                     |
-| 13    | `platform-center`       | Not started                                     |
+- `GET /api/v1/workspace-context`
+- `GET /api/v1/dashboard/summary`
+- `GET /api/v1/requirements`
+- `GET /api/v1/requirements/{requirementId}`
+- `POST /api/v1/requirements/{requirementId}/generate-stories`
+- `POST /api/v1/requirements/{requirementId}/generate-spec`
+- `POST /api/v1/requirements/{requirementId}/analyze`
+- `POST /api/v1/requirements/{requirementId}/invoke-skill`
+- `POST /api/v1/requirements/normalize`
+- `POST /api/v1/requirements/imports`
+- `GET /api/v1/requirements/imports/{importId}`
+- `GET /api/v1/pipeline-profiles/active`
+- `GET /api/v1/incidents`
+- `GET /api/v1/incidents/{incidentId}`
+- `POST /api/v1/incidents/{incidentId}/actions/{actionId}/approve`
+- `POST /api/v1/incidents/{incidentId}/actions/{actionId}/reject`
+- `GET /api/v1/team-space/{workspaceId}` and section routes under `/summary`, `/operating-model`, `/members`, `/templates`, `/pipeline`, `/metrics`, `/risks`, `/projects`
+- `GET /api/v1/project-space/{projectId}` and section routes under `/summary`, `/leadership`, `/chain`, `/milestones`, `/dependencies`, `/risks`, `/environments`
 
 ## Running Locally
+
+### Backend
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+- Runs on `http://localhost:8080`
+- Local profile uses in-memory H2 with Flyway migrations and `ddl-auto: validate`
+- H2 console is available at `http://localhost:8080/h2-console`
 
 ### Frontend
 
@@ -71,22 +86,62 @@ npm install
 npm run dev
 ```
 
-### Backend
+- Runs on `http://localhost:5173`
+- Vite proxies `/api` to `http://localhost:8080`
+- `frontend/.env.development` currently sets `VITE_USE_BACKEND=true`, so local dev talks to the backend by default
+- To force mock mode for supported slices:
+
+```bash
+cd frontend
+VITE_USE_BACKEND=false npm run dev
+```
+
+### Useful local URLs
+
+- Dashboard: `http://localhost:5173/`
+- Team Space: `http://localhost:5173/team?workspaceId=ws-default-001`
+- Project Space: `http://localhost:5173/project-space/proj-42?workspaceId=ws-default-001`
+- Requirement Management: `http://localhost:5173/requirements`
+- Incident Management: `http://localhost:5173/incidents`
+- Platform Center: `http://localhost:5173/platform?view=overview&workspaceId=ws-default-001`
+
+## Configuration Notes
+
+- Requirement import defaults to `REQUIREMENT_IMPORT_KB_PROVIDER=stub`
+- Optional Dify settings:
+  - `DIFY_BASE_URL`
+  - `DIFY_API_KEY`
+  - `DIFY_DATASET_LOOKUP_LIMIT`
+  - `DIFY_SEGMENT_PAGE_SIZE`
+  - `DIFY_INDEXING_TECHNIQUE`
+- Prod database settings:
+  - `ORACLE_HOST`
+  - `ORACLE_PORT`
+  - `ORACLE_SID`
+  - `ORACLE_USER`
+  - `ORACLE_PASSWORD`
+
+## Tests
 
 ```bash
 cd backend
-./mvnw spring-boot:run
+./mvnw test
 ```
 
-Dev proxy: Vite forwards `/api/*` to the backend. H2 is used for local dev; all schema changes go through Flyway migrations under `backend/src/main/resources/db/migration/` (convention: `V{version}__{description}.sql`). Never rely on `ddl-auto: update` for shared or production environments.
+```bash
+cd frontend
+npm test
+```
 
-## Key Conventions
+The repository already includes controller/service/repository coverage on the backend and Vitest coverage for Project Space on the frontend.
 
-- **Package-by-feature** on the backend: `com.controltower.domain.{slice}.{api,service,infra}` plus `platform/`, `domain/`, `shared/` top-level groupings.
-- **Flyway-only** for schema; `ddl-auto` is limited to local H2 throwaway.
-- **Mermaid 8.x-compatible** diagrams only (no `C4Context`, no `direction` inside subgraphs, no cylinder `[(...)]` notation, no `→` in flowchart node text).
-- **SectionResult`<T>`** envelope for per-card partial-failure isolation on aggregate endpoints.
-- **Phase A / Phase B** delivery: Gemini builds the frontend against mocks first, then Codex implements the backend against the sealed API contracts.
+## SDD Workflow
+
+This repo follows Spec Driven Development. Each slice is expected to have requirements, stories, spec, architecture, design, tasks, and supporting contract/data docs under [`docs/`](docs/).
+
+- Start here: [`docs/SDD-BOOTSTRAP.md`](docs/SDD-BOOTSTRAP.md)
+- Full doc tree overview: [`docs/README.md`](docs/README.md)
+- Project guardrails and workflow rules: [`CLAUDE.md`](CLAUDE.md)
 
 ## License
 
