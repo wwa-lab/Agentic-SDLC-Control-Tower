@@ -26,7 +26,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { key: 'project-space', label: 'Project Space', path: '/project-space', icon: 'Box' },
   { key: 'requirements', label: 'Requirement Management', path: '/requirements', icon: 'FileText' },
   { key: 'project-management', label: 'Project Management', path: '/project-management', icon: 'GitBranch' },
-  { key: 'design', label: 'Design Management', path: '/design', icon: 'Layers', comingSoon: true },
+  { key: 'design', label: 'Design Management', path: '/design-management', icon: 'Layers' },
   { key: 'code', label: 'Code & Build', path: '/code', icon: 'Code', comingSoon: true },
   { key: 'testing', label: 'Testing', path: '/testing', icon: 'TestTube', comingSoon: true },
   { key: 'deployment', label: 'Deployment', path: '/deployment', icon: 'Send', comingSoon: true },
@@ -94,6 +94,13 @@ const PAGE_CONFIGS: Record<string, Pick<ShellPageConfig, 'subtitle' | 'actions'>
       { key: 'ai-brief', label: 'AI BRIEF', variant: 'ai' },
     ],
   },
+  design: {
+    subtitle: 'Artifact catalog, preview, and spec traceability',
+    actions: [
+      { key: 'traceability', label: 'TRACEABILITY' },
+      { key: 'ai-summary', label: 'AI SUMMARY', variant: 'ai' },
+    ],
+  },
   incidents: {
     subtitle: 'AI-native operations command center',
     actions: [
@@ -114,6 +121,7 @@ const COMPONENT_MAP: Record<string, () => Promise<any>> = {
   'project-space': () => import('@/features/project-space/ProjectSpaceView.vue'),
   requirements: () => import('@/features/requirement/RequirementManagementView.vue'),
   'project-management': () => import('@/features/project-management/ProjectManagementView.vue'),
+  design: () => import('@/features/design-management/DesignManagementView.vue'),
   incidents: () => import('@/features/incident/IncidentManagementView.vue'),
   platform: () => import('@/features/platform/PlatformCenterView.vue'),
 };
@@ -131,6 +139,11 @@ const CHILD_ROUTES: Record<string, Array<{ path: string; name: string; component
   'project-management': [
     { path: '', name: 'project-management', component: () => import('@/features/project-management/views/PortfolioView.vue') },
     { path: 'plan/:projectId', name: 'project-management-plan', component: () => import('@/features/project-management/views/PlanView.vue') },
+  ],
+  design: [
+    { path: '', name: 'design-management', component: () => import('@/features/design-management/views/CatalogView.vue') },
+    { path: 'artifacts/:artifactId', name: 'design-management-artifact', component: () => import('@/features/design-management/views/ViewerView.vue') },
+    { path: 'traceability', name: 'design-management-traceability', component: () => import('@/features/design-management/views/TraceabilityView.vue') },
   ],
   incidents: [
     { path: '', name: 'incidents', component: () => import('@/features/incident/views/IncidentListView.vue') },

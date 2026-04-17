@@ -52,8 +52,8 @@ app:
         order: 5
       - key: design
         label: Design Management
-        path: /design
-        coming-soon: true
+        path: /design-management
+        coming-soon: false
         icon: Layers
         order: 6
       - key: code

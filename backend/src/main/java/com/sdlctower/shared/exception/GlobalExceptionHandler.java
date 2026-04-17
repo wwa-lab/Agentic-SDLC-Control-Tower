@@ -1,9 +1,11 @@
 package com.sdlctower.shared.exception;
 
+import com.sdlctower.domain.designmanagement.policy.DesignManagementException;
 import com.sdlctower.domain.projectspace.ProjectAccessDeniedException;
 import com.sdlctower.domain.projectmanagement.policy.ProjectManagementException;
 import com.sdlctower.domain.teamspace.WorkspaceAccessDeniedException;
 import com.sdlctower.shared.dto.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -58,22 +60,29 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(ex.render()));
     }
 
+    @ExceptionHandler(DesignManagementException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDesignManagement(DesignManagementException ex) {
+        return ResponseEntity
+                .status(ex.status())
+                .body(ApiResponse.fail(ex.render()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpServletRequest request) {
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .map(FieldError::getDefaultMessage)
                 .findFirst()
                 .orElse("Validation failed");
         return ResponseEntity
                 .status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(ApiResponse.fail("PM_VALIDATION_ERROR: " + message));
+                .body(ApiResponse.fail(validationPrefix(request) + ": " + message));
     }
 
     @ExceptionHandler(HandlerMethodValidationException.class)
-    public ResponseEntity<ApiResponse<Void>> handleHandlerMethodValidation(HandlerMethodValidationException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleHandlerMethodValidation(HandlerMethodValidationException ex, HttpServletRequest request) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.fail("PM_VALIDATION_ERROR: " + ex.getMessage()));
+                .body(ApiResponse.fail(validationPrefix(request) + ": " + ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
@@ -82,5 +91,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.fail("Internal server error"));
+    }
+
+    private String validationPrefix(HttpServletRequest request) {
+        return request != null && request.getRequestURI() != null && request.getRequestURI().contains("/design-management")
+                ? "DM_VALIDATION_ERROR"
+                : "PM_VALIDATION_ERROR";
     }
 }
