@@ -50,8 +50,8 @@ See [`docs/SDD-BOOTSTRAP.md`](docs/SDD-BOOTSTRAP.md) for the full pipeline, mini
 | 1     | `dashboard`             | Completed (docs + code)                         |
 | 2     | `requirement`           | Completed (docs + code)                         |
 | 3     | `incident`              | Completed (docs + code)                         |
-| 4     | `team-space`            | **Docs complete; implementation pending** |
-| 5     | `project-space`         | Not started                                     |
+| 4     | `team-space`            | Docs complete; implementation pending           |
+| 5     | `project-space`         | **Docs complete; implementation pending** |
 | 6     | `project-management`    | Not started                                     |
 | 7     | `design-management`     | Not started                                     |
 | 8     | `code-build-management` | Not started                                     |
