@@ -1,5 +1,6 @@
 package com.sdlctower.shared.exception;
 
+import com.sdlctower.domain.projectspace.ProjectAccessDeniedException;
 import com.sdlctower.domain.teamspace.WorkspaceAccessDeniedException;
 import com.sdlctower.shared.dto.ApiResponse;
 import org.slf4j.Logger;
@@ -34,6 +35,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(WorkspaceAccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(WorkspaceAccessDeniedException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.fail(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ProjectAccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleProjectAccessDenied(ProjectAccessDeniedException ex) {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.fail(ex.getMessage()));

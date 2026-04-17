@@ -22,8 +22,8 @@ class TeamSpaceRepositoryTest {
 
     @Test
     void seedRiskSignalsAreReadableFromH2() {
-        assertEquals(3, riskSignalRepository.findByWorkspaceIdAndResolvedAtIsNullOrderByDetectedAtDesc("ws-default-001").size());
-        assertFalse(riskSignalRepository.findByWorkspaceIdAndResolvedAtIsNullOrderByDetectedAtDesc("ws-legacy-001").isEmpty());
+        assertEquals(3, riskSignalRepository.findByWorkspaceIdAndProjectIdIsNullAndResolvedAtIsNullOrderByDetectedAtDesc("ws-default-001").size());
+        assertFalse(riskSignalRepository.findByWorkspaceIdAndProjectIdIsNullAndResolvedAtIsNullOrderByDetectedAtDesc("ws-legacy-001").isEmpty());
     }
 
     @Test

@@ -16,6 +16,9 @@ public class RiskSignalEntity {
     @Column(name = "workspace_id", nullable = false)
     private String workspaceId;
 
+    @Column(name = "project_id")
+    private String projectId;
+
     @Column(nullable = false)
     private String category;
 
@@ -57,6 +60,7 @@ public class RiskSignalEntity {
     public static RiskSignalEntity create(
             String id,
             String workspaceId,
+            String projectId,
             String category,
             String severity,
             String sourceKind,
@@ -73,6 +77,7 @@ public class RiskSignalEntity {
         RiskSignalEntity entity = new RiskSignalEntity();
         entity.id = id;
         entity.workspaceId = workspaceId;
+        entity.projectId = projectId;
         entity.category = category;
         entity.severity = severity;
         entity.sourceKind = sourceKind;
@@ -88,8 +93,44 @@ public class RiskSignalEntity {
         return entity;
     }
 
+    public static RiskSignalEntity create(
+            String id,
+            String workspaceId,
+            String category,
+            String severity,
+            String sourceKind,
+            String sourceId,
+            String title,
+            String detail,
+            String actionLabel,
+            String actionUrl,
+            String skillName,
+            String executionId,
+            Instant detectedAt,
+            Instant resolvedAt
+    ) {
+        return create(
+                id,
+                workspaceId,
+                null,
+                category,
+                severity,
+                sourceKind,
+                sourceId,
+                title,
+                detail,
+                actionLabel,
+                actionUrl,
+                skillName,
+                executionId,
+                detectedAt,
+                resolvedAt
+        );
+    }
+
     public String getId() { return id; }
     public String getWorkspaceId() { return workspaceId; }
+    public String getProjectId() { return projectId; }
     public String getCategory() { return category; }
     public String getSeverity() { return severity; }
     public String getSourceKind() { return sourceKind; }

@@ -32,7 +32,7 @@ public class RiskRadarProjection implements TeamSpaceProjection<TeamRiskRadarDto
     public TeamRiskRadarDto load(String workspaceId) {
         seedCatalog.workspace(workspaceId);
 
-        List<RiskSignalEntity> openSignals = riskSignalRepository.findByWorkspaceIdAndResolvedAtIsNullOrderByDetectedAtDesc(workspaceId);
+        List<RiskSignalEntity> openSignals = riskSignalRepository.findByWorkspaceIdAndProjectIdIsNullAndResolvedAtIsNullOrderByDetectedAtDesc(workspaceId);
         Map<String, List<RiskItemDto>> groups = new LinkedHashMap<>();
         groups.put("INCIDENT", openSignals.stream().filter(signal -> "INCIDENT".equals(signal.getCategory())).map(this::toDto).toList());
         groups.put("APPROVAL", openSignals.stream().filter(signal -> "APPROVAL".equals(signal.getCategory())).map(this::toDto).toList());
