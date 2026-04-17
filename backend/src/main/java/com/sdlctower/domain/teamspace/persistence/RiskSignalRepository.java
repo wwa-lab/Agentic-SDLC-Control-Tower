@@ -1,6 +1,7 @@
 package com.sdlctower.domain.teamspace.persistence;
 
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RiskSignalRepository extends JpaRepository<RiskSignalEntity, String> {
@@ -14,4 +15,8 @@ public interface RiskSignalRepository extends JpaRepository<RiskSignalEntity, St
     List<RiskSignalEntity> findByWorkspaceIdAndProjectIdIsNullAndResolvedAtIsNullOrderByDetectedAtDesc(String workspaceId);
 
     List<RiskSignalEntity> findByProjectIdAndResolvedAtIsNullOrderByDetectedAtDesc(String projectId);
+
+    List<RiskSignalEntity> findByProjectIdOrderByDetectedAtDesc(String projectId);
+
+    Optional<RiskSignalEntity> findByProjectIdAndId(String projectId, String id);
 }

@@ -37,4 +37,5 @@ public final class ApiConstants {
     public static final String PIPELINE_PROFILES_ACTIVE = PIPELINE_PROFILES + "/active";
     public static final String TEAM_SPACE = API_V1 + "/team-space";
     public static final String PROJECT_SPACE = API_V1 + "/project-space";
+    public static final String PROJECT_MANAGEMENT = API_V1 + "/project-management";
 }

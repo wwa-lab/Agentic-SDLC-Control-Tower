@@ -3,6 +3,7 @@ package com.sdlctower.domain.projectspace;
 import com.sdlctower.domain.projectspace.dto.ProjectSpaceDtos.MemberRefDto;
 import com.sdlctower.shared.exception.ResourceNotFoundException;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -185,6 +186,16 @@ public class ProjectSpaceSeedCatalog {
             throw new ResourceNotFoundException("Project " + projectId + " not found");
         }
         return seed;
+    }
+
+    public Collection<ProjectSeed> projects() {
+        return PROJECTS.values();
+    }
+
+    public List<ProjectSeed> projectsForWorkspace(String workspaceId) {
+        return PROJECTS.values().stream()
+                .filter(project -> project.workspaceId().equals(workspaceId))
+                .toList();
     }
 
     public MemberRefDto memberRef(String memberId) {

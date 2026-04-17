@@ -34,6 +34,24 @@ public class RiskSignalEntity {
     @Column(nullable = false)
     private String title;
 
+    @Column(name = "pm_state")
+    private String pmState;
+
+    @Column(name = "owner_member_id")
+    private String ownerMemberId;
+
+    @Column(name = "mitigation_note", columnDefinition = "CLOB")
+    private String mitigationNote;
+
+    @Column(name = "resolution_note", columnDefinition = "CLOB")
+    private String resolutionNote;
+
+    @Column(name = "escalated_incident_id")
+    private String escalatedIncidentId;
+
+    @Column(name = "plan_revision_at_update")
+    private long planRevisionAtUpdate;
+
     @Column(nullable = false, columnDefinition = "CLOB")
     private String detail;
 
@@ -136,6 +154,12 @@ public class RiskSignalEntity {
     public String getSourceKind() { return sourceKind; }
     public String getSourceId() { return sourceId; }
     public String getTitle() { return title; }
+    public String getPmState() { return pmState; }
+    public String getOwnerMemberId() { return ownerMemberId; }
+    public String getMitigationNote() { return mitigationNote; }
+    public String getResolutionNote() { return resolutionNote; }
+    public String getEscalatedIncidentId() { return escalatedIncidentId; }
+    public long getPlanRevisionAtUpdate() { return planRevisionAtUpdate; }
     public String getDetail() { return detail; }
     public String getActionLabel() { return actionLabel; }
     public String getActionUrl() { return actionUrl; }
@@ -143,4 +167,15 @@ public class RiskSignalEntity {
     public String getExecutionId() { return executionId; }
     public Instant getDetectedAt() { return detectedAt; }
     public Instant getResolvedAt() { return resolvedAt; }
+
+    public void setTitle(String title) { this.title = title; }
+    public void setSeverity(String severity) { this.severity = severity; }
+    public void setCategory(String category) { this.category = category; }
+    public void setPmState(String pmState) { this.pmState = pmState; }
+    public void setOwnerMemberId(String ownerMemberId) { this.ownerMemberId = ownerMemberId; }
+    public void setMitigationNote(String mitigationNote) { this.mitigationNote = mitigationNote; }
+    public void setResolutionNote(String resolutionNote) { this.resolutionNote = resolutionNote; }
+    public void setEscalatedIncidentId(String escalatedIncidentId) { this.escalatedIncidentId = escalatedIncidentId; }
+    public void setPlanRevisionAtUpdate(long planRevisionAtUpdate) { this.planRevisionAtUpdate = planRevisionAtUpdate; }
+    public void setResolvedAt(Instant resolvedAt) { this.resolvedAt = resolvedAt; }
 }

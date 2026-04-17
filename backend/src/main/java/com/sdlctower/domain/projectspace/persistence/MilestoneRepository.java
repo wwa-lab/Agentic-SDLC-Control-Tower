@@ -8,5 +8,9 @@ public interface MilestoneRepository extends JpaRepository<MilestoneEntity, Stri
 
     List<MilestoneEntity> findByProjectIdOrderByOrderingAsc(String projectId);
 
+    List<MilestoneEntity> findByProjectIdOrderByTargetDateAsc(String projectId);
+
     Optional<MilestoneEntity> findFirstByProjectIdAndIsCurrentTrueOrderByOrderingAsc(String projectId);
+
+    Optional<MilestoneEntity> findByProjectIdAndId(String projectId, String id);
 }

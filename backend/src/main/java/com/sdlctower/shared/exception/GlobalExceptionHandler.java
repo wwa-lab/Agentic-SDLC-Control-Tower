@@ -1,12 +1,16 @@
 package com.sdlctower.shared.exception;
 
 import com.sdlctower.domain.projectspace.ProjectAccessDeniedException;
+import com.sdlctower.domain.projectmanagement.policy.ProjectManagementException;
 import com.sdlctower.domain.teamspace.WorkspaceAccessDeniedException;
 import com.sdlctower.shared.dto.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -45,6 +49,31 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.fail(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ProjectManagementException.class)
+    public ResponseEntity<ApiResponse<Void>> handleProjectManagement(ProjectManagementException ex) {
+        return ResponseEntity
+                .status(ex.status())
+                .body(ApiResponse.fail(ex.render()));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(FieldError::getDefaultMessage)
+                .findFirst()
+                .orElse("Validation failed");
+        return ResponseEntity
+                .status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiResponse.fail("PM_VALIDATION_ERROR: " + message));
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHandlerMethodValidation(HandlerMethodValidationException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.fail("PM_VALIDATION_ERROR: " + ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
