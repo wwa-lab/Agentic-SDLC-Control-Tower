@@ -3,7 +3,8 @@ export type LineageOrigin =
   | 'APPLICATION'
   | 'SNOW_GROUP'
   | 'WORKSPACE'
-  | 'PROJECT';
+  | 'PROJECT'
+  | 'AI_SKILL';
 
 export interface LineageHop {
   readonly origin: LineageOrigin;

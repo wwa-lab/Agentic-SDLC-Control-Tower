@@ -43,8 +43,8 @@ async function readErrorMessage(response: Response): Promise<string | undefined>
   return body;
 }
 
-export async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`);
+export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, init);
   if (!response.ok) {
     throw new ApiError(response.status, response.statusText, await readErrorMessage(response));
   }
