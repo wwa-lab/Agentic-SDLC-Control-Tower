@@ -15,6 +15,7 @@ import {
   BarChart,
   Settings
 } from 'lucide-vue-next';
+import { REPORT_CENTER_CHILD_ROUTES } from '@/features/reportcenter';
 
 /**
  * The 13 required navigation entries as per spec §3.1.
@@ -27,12 +28,12 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { key: 'requirements', label: 'Requirement Management', path: '/requirements', icon: 'FileText' },
   { key: 'project-management', label: 'Project Management', path: '/project-management', icon: 'GitBranch' },
   { key: 'design', label: 'Design Management', path: '/design-management', icon: 'Layers' },
-  { key: 'code', label: 'Code & Build', path: '/code', icon: 'Code', comingSoon: true },
-  { key: 'testing', label: 'Testing', path: '/testing', icon: 'TestTube', comingSoon: true },
-  { key: 'deployment', label: 'Deployment', path: '/deployment', icon: 'Send', comingSoon: true },
+  { key: 'code', label: 'Code & Build', path: '/code-build-management', icon: 'Code' },
+  { key: 'testing', label: 'Testing', path: '/testing', icon: 'TestTube', comingSoon: false },
+  { key: 'deployment', label: 'Deployment', path: '/deployment', icon: 'Send' },
   { key: 'incidents', label: 'Incident Management', path: '/incidents', icon: 'AlertTriangle' },
-  { key: 'ai-center', label: 'AI Center', path: '/ai-center', icon: 'Cpu', comingSoon: true },
-  { key: 'reports', label: 'Report Center', path: '/reports', icon: 'BarChart', comingSoon: true },
+  { key: 'ai-center', label: 'AI Center', path: '/ai-center', icon: 'Cpu' },
+  { key: 'reports', label: 'Reports', path: '/reports', icon: 'BarChart' },
   { key: 'platform', label: 'Platform Center', path: '/platform', icon: 'Settings' }
 ];
 
@@ -101,10 +102,46 @@ const PAGE_CONFIGS: Record<string, Pick<ShellPageConfig, 'subtitle' | 'actions'>
       { key: 'ai-summary', label: 'AI SUMMARY', variant: 'ai' },
     ],
   },
+  code: {
+    subtitle: 'Read-only repository, pull request, run, and traceability observability',
+    actions: [
+      { key: 'traceability', label: 'TRACEABILITY' },
+      { key: 'repo-lens', label: 'REPO LENS' },
+      { key: 'ai-triage', label: 'AI TRIAGE', variant: 'ai' },
+    ],
+  },
+  testing: {
+    subtitle: 'QA lifecycle visibility across plans, cases, runs, and requirement coverage',
+    actions: [
+      { key: 'traceability', label: 'TRACEABILITY' },
+      { key: 'open-catalog', label: 'PLAN GRID' },
+      { key: 'ai-drafts', label: 'AI DRAFTS', variant: 'ai' },
+    ],
+  },
+  deployment: {
+    subtitle: 'Read-only Jenkins deployment observability with AI release notes and traceability',
+    actions: [
+      { key: 'traceability', label: 'TRACEABILITY' },
+      { key: 'ai-notes', label: 'AI NOTES', variant: 'ai' },
+    ],
+  },
   incidents: {
     subtitle: 'AI-native operations command center',
     actions: [
       { key: 'ai-diagnose', label: 'AI DIAGNOSE', variant: 'ai' },
+    ],
+  },
+  'ai-center': {
+    subtitle: 'Skill registry posture, adoption metrics, and execution evidence',
+    actions: [
+      { key: 'refresh-ai-center', label: 'REFRESH RUNS' },
+    ],
+  },
+  reports: {
+    subtitle: 'History-ready analytics, filter-driven evidence, and exportable snapshots',
+    actions: [
+      { key: 'open-history', label: 'OPEN HISTORY' },
+      { key: 'export', label: 'EXPORT DATA' },
     ],
   },
   platform: {
@@ -122,7 +159,12 @@ const COMPONENT_MAP: Record<string, () => Promise<any>> = {
   requirements: () => import('@/features/requirement/RequirementManagementView.vue'),
   'project-management': () => import('@/features/project-management/ProjectManagementView.vue'),
   design: () => import('@/features/design-management/DesignManagementView.vue'),
+  code: () => import('@/features/code-build-management/CodeBuildManagementView.vue'),
+  testing: () => import('@/features/testing-management/TestingManagementView.vue'),
+  deployment: () => import('@/features/deployment-management/views/CatalogView.vue'),
   incidents: () => import('@/features/incident/IncidentManagementView.vue'),
+  'ai-center': () => import('@/features/ai-center/AiCenterView.vue'),
+  reports: () => import('@/features/reportcenter/ReportCenterView.vue'),
   platform: () => import('@/features/platform/PlatformCenterView.vue'),
 };
 
@@ -145,10 +187,37 @@ const CHILD_ROUTES: Record<string, Array<{ path: string; name: string; component
     { path: 'artifacts/:artifactId', name: 'design-management-artifact', component: () => import('@/features/design-management/views/ViewerView.vue') },
     { path: 'traceability', name: 'design-management-traceability', component: () => import('@/features/design-management/views/TraceabilityView.vue') },
   ],
+  code: [
+    { path: '', name: 'code-build-management', component: () => import('@/features/code-build-management/views/CatalogView.vue') },
+    { path: 'traceability', name: 'code-build-management-traceability', component: () => import('@/features/code-build-management/views/TraceabilityView.vue') },
+    { path: 'repos/:repoId', name: 'code-build-management-repo', component: () => import('@/features/code-build-management/views/RepoDetailView.vue') },
+    { path: 'prs/:prId', name: 'code-build-management-pr', component: () => import('@/features/code-build-management/views/PrDetailView.vue') },
+    { path: 'runs/:runId', name: 'code-build-management-run', component: () => import('@/features/code-build-management/views/RunDetailView.vue') },
+  ],
+  testing: [
+    { path: '', name: 'testing-management', component: () => import('@/features/testing-management/views/CatalogView.vue') },
+    { path: 'plans/:planId', name: 'testing-management-plan', component: () => import('@/features/testing-management/views/PlanDetailView.vue') },
+    { path: 'cases/:caseId', name: 'testing-management-case', component: () => import('@/features/testing-management/views/CaseDetailView.vue') },
+    { path: 'runs/:runId', name: 'testing-management-run', component: () => import('@/features/testing-management/views/RunDetailView.vue') },
+    { path: 'traceability', name: 'testing-management-traceability', component: () => import('@/features/testing-management/views/TraceabilityView.vue') },
+  ],
+  deployment: [
+    { path: '', name: 'deployment', component: () => import('@/features/deployment-management/views/CatalogView.vue') },
+    { path: 'traceability', name: 'deployment-traceability', component: () => import('@/features/deployment-management/views/TraceabilityView.vue') },
+    { path: 'applications/:applicationId', name: 'deployment-application', component: () => import('@/features/deployment-management/views/ApplicationDetailView.vue') },
+    { path: 'releases/:releaseId', name: 'deployment-release', component: () => import('@/features/deployment-management/views/ReleaseDetailView.vue') },
+    { path: 'deploys/:deployId', name: 'deployment-deploy', component: () => import('@/features/deployment-management/views/DeployDetailView.vue') },
+    { path: 'applications/:applicationId/environments/:environmentName', name: 'deployment-environment', component: () => import('@/features/deployment-management/views/EnvironmentDetailView.vue') },
+  ],
   incidents: [
     { path: '', name: 'incidents', component: () => import('@/features/incident/views/IncidentListView.vue') },
     { path: ':incidentId', name: 'incident-detail', component: () => import('@/features/incident/views/IncidentDetailView.vue') },
   ],
+  'ai-center': [
+    { path: 'skills/:skillKey', name: 'ai-center-skill-detail', component: () => import('@/features/ai-center/components/SkillDetailPanel.vue') },
+    { path: 'runs/:executionId', name: 'ai-center-run-detail', component: () => import('@/features/ai-center/components/RunDetailPanel.vue') },
+  ],
+  reports: REPORT_CENTER_CHILD_ROUTES,
 };
 
 const routes = NAVIGATION_ITEMS.map(item => {
@@ -156,11 +225,10 @@ const routes = NAVIGATION_ITEMS.map(item => {
   const children = CHILD_ROUTES[item.key];
   const resolvedPath = item.key === 'project-space'
     ? '/project-space/:projectId?'
-    : item.key === 'reports'
-      ? '/reports/:pathMatch(.*)*'
-      : item.path;
+    : item.path;
   const base = {
     path: resolvedPath,
+    ...(item.key === 'testing' ? { alias: '/testing-management' } : {}),
     component: COMPONENT_MAP[item.key] || (() => import('@/features/placeholder/PlaceholderView.vue')),
     meta: {
       navKey: item.key,
