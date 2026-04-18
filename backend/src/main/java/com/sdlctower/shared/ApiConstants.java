@@ -36,4 +36,34 @@ public final class ApiConstants {
     public static final String PIPELINE_PROFILES = API_V1 + "/pipeline-profiles";
     public static final String PIPELINE_PROFILES_ACTIVE = PIPELINE_PROFILES + "/active";
     public static final String TEAM_SPACE = API_V1 + "/team-space";
+    public static final String PROJECT_SPACE = API_V1 + "/project-space";
+    public static final String PROJECT_MANAGEMENT = API_V1 + "/project-management";
+    public static final String DESIGN_MANAGEMENT = API_V1 + "/design-management";
+    public static final String TESTING = API_V1 + "/testing";
+    public static final String TESTING_MANAGEMENT = API_V1 + "/testing-management";
+    public static final String REPORTS_BASE = API_V1 + "/reports";
+    public static final String CODE_BUILD_MANAGEMENT = API_V1 + "/code-build-management";
+
+    public static final String DEPLOYMENT_MANAGEMENT = API_V1 + "/deployment-management";
+    public static final String DEPLOYMENT_CATALOG = DEPLOYMENT_MANAGEMENT + "/catalog";
+    public static final String DEPLOYMENT_APPLICATIONS = DEPLOYMENT_MANAGEMENT + "/applications";
+    public static final String DEPLOYMENT_APPLICATION_DETAIL = DEPLOYMENT_APPLICATIONS + "/{applicationId}";
+    public static final String DEPLOYMENT_APP_ENVIRONMENTS = DEPLOYMENT_APPLICATION_DETAIL + "/environments/{environmentName}";
+    public static final String DEPLOYMENT_RELEASES = DEPLOYMENT_MANAGEMENT + "/releases";
+    public static final String DEPLOYMENT_RELEASE_DETAIL = DEPLOYMENT_RELEASES + "/{releaseId}";
+    public static final String DEPLOYMENT_RELEASE_AI_NOTES = DEPLOYMENT_RELEASE_DETAIL + "/ai-notes/regenerate";
+    public static final String DEPLOYMENT_DEPLOYS = DEPLOYMENT_MANAGEMENT + "/deploys";
+    public static final String DEPLOYMENT_DEPLOY_DETAIL = DEPLOYMENT_DEPLOYS + "/{deployId}";
+    public static final String DEPLOYMENT_DEPLOY_AI_SUMMARY = DEPLOYMENT_DEPLOY_DETAIL + "/ai-summary/regenerate";
+    public static final String DEPLOYMENT_TRACEABILITY = DEPLOYMENT_MANAGEMENT + "/traceability";
+    public static final String DEPLOYMENT_WORKSPACE_AI_SUMMARY = DEPLOYMENT_MANAGEMENT + "/workspaces/{workspaceId}/ai-summary/regenerate";
+    public static final String DEPLOYMENT_WEBHOOKS_JENKINS = DEPLOYMENT_MANAGEMENT + "/webhooks/jenkins";
+
+    public static final String AI_CENTER = API_V1 + "/ai-center";
+    public static final String AI_CENTER_METRICS = AI_CENTER + "/metrics";
+    public static final String AI_CENTER_STAGE_COVERAGE = AI_CENTER + "/stage-coverage";
+    public static final String AI_CENTER_SKILLS = AI_CENTER + "/skills";
+    public static final String AI_CENTER_SKILL_DETAIL = AI_CENTER + "/skills/{skillKey}";
+    public static final String AI_CENTER_RUNS = AI_CENTER + "/runs";
+    public static final String AI_CENTER_RUN_DETAIL = AI_CENTER + "/runs/{executionId}";
 }

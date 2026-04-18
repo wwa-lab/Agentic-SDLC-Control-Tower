@@ -63,8 +63,8 @@ The roadmap follows the PRD §10 information architecture. Each slice produces t
 | 1 | `dashboard` | Completed (docs + code) | 9/9 |
 | 2 | `requirement` | Completed (docs + code) | 9/9 |
 | 3 | `incident` | Completed (docs + code) | 9/9 |
-| 4 | **`team-space`** | **Docs complete; implementation pending** | 9/9 |
-| 5 | `project-space` | Not started | 0/9 |
+| 4 | `team-space` | Docs complete; implementation pending | 9/9 |
+| 5 | **`project-space`** | **Docs complete; implementation pending** | 9/9 |
 | 6 | `project-management` | Not started | 0/9 |
 | 7 | `design-management` | Not started | 0/9 |
 | 8 | `code-build-management` | Not started | 0/9 |
@@ -74,7 +74,23 @@ The roadmap follows the PRD §10 information architecture. Each slice produces t
 | 12 | `report-center` | Not started | 0/9 |
 | 13 | `platform-center` | Not started | 0/9 |
 
-## Current Slice: Team Space
+## Current Slice: Project Space
+
+Project Space is the single-project execution home — the contextual bridge between Team Space (Workspace-level operating home) and the lifecycle pages (Requirement / Design / Code / Test / Deploy / Incident). See PRD §11.3.
+
+Documents for this slice:
+
+- Requirements: [project-space-requirements.md](01-requirements/project-space-requirements.md)
+- Stories: [project-space-stories.md](02-user-stories/project-space-stories.md)
+- Spec: [project-space-spec.md](03-spec/project-space-spec.md)
+- Architecture: [project-space-architecture.md](04-architecture/project-space-architecture.md)
+- Data Flow: [project-space-data-flow.md](04-architecture/project-space-data-flow.md)
+- Data Model: [project-space-data-model.md](04-architecture/project-space-data-model.md)
+- Design: [project-space-design.md](05-design/project-space-design.md)
+- API Guide: [project-space-API_IMPLEMENTATION_GUIDE.md](05-design/contracts/project-space-API_IMPLEMENTATION_GUIDE.md)
+- Tasks: [project-space-tasks.md](06-tasks/project-space-tasks.md)
+
+## Previous Slice: Team Space
 
 Team Space is the Workspace-level operating home — the contextual bridge between Dashboard (cross-team, cross-project global) and Project Space (single-project execution). See PRD §11.2.
 

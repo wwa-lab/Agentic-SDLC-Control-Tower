@@ -52,8 +52,8 @@ app:
         order: 5
       - key: design
         label: Design Management
-        path: /design
-        coming-soon: true
+        path: /design-management
+        coming-soon: false
         icon: Layers
         order: 6
       - key: code
@@ -65,7 +65,7 @@ app:
       - key: testing
         label: Testing
         path: /testing
-        coming-soon: true
+        coming-soon: false
         icon: TestTube
         order: 8
       - key: deployment
@@ -87,9 +87,9 @@ app:
         icon: Cpu
         order: 11
       - key: reports
-        label: Report Center
+        label: Reports
         path: /reports
-        coming-soon: true
+        coming-soon: false
         icon: BarChart
         order: 12
       - key: platform
@@ -104,3 +104,8 @@ management:
     web:
       exposure:
         include: health,info
+
+reports:
+  artifact-dir: ${REPORTS_ARTIFACT_DIR:${java.io.tmpdir}/sdlc-report-artifacts}
+  signing-secret: ${REPORTS_SIGNING_SECRET:report-center-local-secret}
+  org-id: ${REPORTS_ORG_ID:org-default-001}

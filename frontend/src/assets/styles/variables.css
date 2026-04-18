@@ -6,6 +6,9 @@
   /* 3. Typography */
   --font-ui: "Inter", system-ui, -apple-system, sans-serif;
   --font-tech: "JetBrains Mono", monospace;
+  --accent-history: #5f738f;
+  --accent-history-bg: rgba(95, 115, 143, 0.12);
+  --surface-report: rgba(19, 27, 46, 0.85);
 }
 
 /* ===== Dark Theme (default) ===== */
@@ -50,6 +53,51 @@
   --color-secondary-subtle: rgba(137, 206, 255, 0.2);
   --color-incident-tint: rgba(255, 180, 171, 0.1);
   --border-separator: rgba(255, 255, 255, 0.05);
+  --cb-status-success: var(--color-health-emerald);
+  --cb-status-failure: var(--color-incident-crimson);
+  --cb-status-running: var(--color-approval-amber);
+  --cb-status-queued: #fbbf24;
+  --cb-status-cancelled: #94a3b8;
+  --cb-status-neutral: #64748b;
+  --cb-severity-blocker: #ffb4ab;
+  --cb-severity-major: #f97316;
+  --cb-severity-minor: #f59e0b;
+  --cb-severity-info: var(--color-secondary);
+  --cb-link-ok: var(--color-health-emerald);
+  --cb-link-stale: #94a3b8;
+  --cb-link-unknown: #f59e0b;
+  --tm-coverage-green: var(--color-health-emerald);
+  --tm-coverage-green-soft: rgba(78, 222, 163, 0.12);
+  --tm-coverage-amber: var(--color-approval-amber);
+  --tm-coverage-amber-soft: rgba(245, 158, 11, 0.14);
+  --tm-coverage-red: var(--color-incident-crimson);
+  --tm-coverage-red-soft: rgba(255, 180, 171, 0.12);
+  --tm-coverage-grey: #94a3b8;
+  --tm-coverage-grey-soft: rgba(148, 163, 184, 0.14);
+
+  /* Deployment Management tokens */
+  --dp-state-pending: #94a3b8;
+  --dp-state-in-progress: var(--color-approval-amber);
+  --dp-state-succeeded: var(--color-health-emerald);
+  --dp-state-failed: var(--color-incident-crimson);
+  --dp-state-cancelled: #64748b;
+  --dp-state-rolled-back: #c084fc;
+  --dp-env-dev: #60a5fa;
+  --dp-env-qa: #a78bfa;
+  --dp-env-staging: var(--color-approval-amber);
+  --dp-env-prod: var(--color-incident-crimson);
+  --dp-env-canary: #34d399;
+  --dp-trigger-manual: #94a3b8;
+  --dp-trigger-scheduled: #60a5fa;
+  --dp-trigger-webhook: #a78bfa;
+  --dp-trigger-rollback: #c084fc;
+  --dp-freshness-fresh: var(--color-health-emerald);
+  --dp-freshness-degraded: var(--color-approval-amber);
+  --dp-freshness-stale: var(--color-incident-crimson);
+  --dp-release-prepared: #94a3b8;
+  --dp-release-deployed: var(--color-health-emerald);
+  --dp-release-superseded: #64748b;
+  --dp-release-abandoned: var(--color-incident-crimson);
 
   /* Interactive state overlays */
   --nav-hover-bg: rgba(255, 255, 255, 0.03);
@@ -97,6 +145,51 @@
   --color-secondary-subtle: rgba(0, 102, 184, 0.12);
   --color-incident-tint: rgba(239, 68, 68, 0.08);
   --border-separator: rgba(0, 0, 0, 0.06);
+  --cb-status-success: var(--color-health-emerald);
+  --cb-status-failure: var(--color-incident-crimson);
+  --cb-status-running: var(--color-approval-amber);
+  --cb-status-queued: #d97706;
+  --cb-status-cancelled: #64748b;
+  --cb-status-neutral: #475569;
+  --cb-severity-blocker: #dc2626;
+  --cb-severity-major: #ea580c;
+  --cb-severity-minor: #d97706;
+  --cb-severity-info: var(--color-secondary);
+  --cb-link-ok: var(--color-health-emerald);
+  --cb-link-stale: #64748b;
+  --cb-link-unknown: #d97706;
+  --tm-coverage-green: var(--color-health-emerald);
+  --tm-coverage-green-soft: rgba(16, 185, 129, 0.12);
+  --tm-coverage-amber: var(--color-approval-amber);
+  --tm-coverage-amber-soft: rgba(217, 119, 6, 0.12);
+  --tm-coverage-red: var(--color-incident-crimson);
+  --tm-coverage-red-soft: rgba(239, 68, 68, 0.1);
+  --tm-coverage-grey: #64748b;
+  --tm-coverage-grey-soft: rgba(100, 116, 139, 0.12);
+
+  /* Deployment Management tokens */
+  --dp-state-pending: #64748b;
+  --dp-state-in-progress: var(--color-approval-amber);
+  --dp-state-succeeded: var(--color-health-emerald);
+  --dp-state-failed: var(--color-incident-crimson);
+  --dp-state-cancelled: #475569;
+  --dp-state-rolled-back: #9333ea;
+  --dp-env-dev: #3b82f6;
+  --dp-env-qa: #7c3aed;
+  --dp-env-staging: var(--color-approval-amber);
+  --dp-env-prod: var(--color-incident-crimson);
+  --dp-env-canary: #10b981;
+  --dp-trigger-manual: #64748b;
+  --dp-trigger-scheduled: #3b82f6;
+  --dp-trigger-webhook: #7c3aed;
+  --dp-trigger-rollback: #9333ea;
+  --dp-freshness-fresh: var(--color-health-emerald);
+  --dp-freshness-degraded: var(--color-approval-amber);
+  --dp-freshness-stale: var(--color-incident-crimson);
+  --dp-release-prepared: #64748b;
+  --dp-release-deployed: var(--color-health-emerald);
+  --dp-release-superseded: #475569;
+  --dp-release-abandoned: var(--color-incident-crimson);
 
   /* Interactive state overlays */
   --nav-hover-bg: rgba(0, 0, 0, 0.04);

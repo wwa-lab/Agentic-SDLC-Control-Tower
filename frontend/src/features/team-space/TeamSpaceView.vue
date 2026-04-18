@@ -67,7 +67,13 @@ async function loadWorkspace(nextWorkspaceId: string) {
 }
 
 function navigate(url: string) {
-  void router.push(url);
+  const workspaceId = resolvedWorkspaceId.value;
+  if (!url.startsWith('/project-space/') || url.includes('workspaceId=')) {
+    void router.push(url);
+    return;
+  }
+  const separator = url.includes('?') ? '&' : '?';
+  void router.push(`${url}${separator}workspaceId=${workspaceId}`);
 }
 
 function retryCard(cardKey: TeamSpaceCardKey) {
@@ -96,6 +102,13 @@ watch(
   () => teamSpaceStore.aggregate,
   aggregate => {
     const summary = aggregate?.summary.data;
+    workspaceStore.setRouteContext({
+      workspace: summary?.name ?? workspaceStore.context.workspace,
+      application: summary?.applicationName ?? workspaceStore.context.application,
+      snowGroup: summary?.snowGroupName ?? workspaceStore.context.snowGroup,
+      project: null,
+      environment: null,
+    });
     shellUiStore.setBreadcrumbs([
       { label: 'Dashboard', path: '/' },
       { label: 'Team Space', path: '/team' },
@@ -149,6 +162,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  workspaceStore.clearRouteContext();
   shellUiStore.clearBreadcrumbs();
   shellUiStore.clearAiPanelContent();
   teamSpaceStore.reset();

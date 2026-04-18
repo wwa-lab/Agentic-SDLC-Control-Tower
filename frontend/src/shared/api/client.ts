@@ -43,8 +43,8 @@ async function readErrorMessage(response: Response): Promise<string | undefined>
   return body;
 }
 
-export async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`);
+export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, init);
   if (!response.ok) {
     throw new ApiError(response.status, response.statusText, await readErrorMessage(response));
   }
@@ -58,6 +58,22 @@ export async function fetchJson<T>(path: string): Promise<T> {
 export async function postJson<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body != null ? JSON.stringify(body) : undefined,
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, response.statusText, await readErrorMessage(response));
+  }
+  const envelope: ApiEnvelope<T> = await response.json();
+  if (envelope.error) {
+    throw new ApiError(response.status, envelope.error, envelope.error);
+  }
+  return envelope.data as T;
+}
+
+export async function patchJson<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: body != null ? JSON.stringify(body) : undefined,
   });

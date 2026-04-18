@@ -103,7 +103,7 @@ public class RequirementPipelineProjection implements TeamSpaceProjection<Requir
                 ))
                 .toList();
 
-        boolean hasCriticalIncident = riskSignalRepository.findByWorkspaceIdAndResolvedAtIsNullOrderByDetectedAtDesc(workspaceId).stream()
+        boolean hasCriticalIncident = riskSignalRepository.findByWorkspaceIdAndProjectIdIsNullAndResolvedAtIsNullOrderByDetectedAtDesc(workspaceId).stream()
                 .anyMatch(risk -> "CRITICAL".equalsIgnoreCase(risk.getSeverity()));
 
         return new RequirementPipelineDto(
