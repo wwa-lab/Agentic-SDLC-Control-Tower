@@ -1,69 +1,90 @@
 # Agentic SDLC Control Tower
 
-AI-native enterprise software delivery control tower. This repository currently contains a working Vue 3 frontend, a Spring Boot backend, seeded local data, and the Spec Driven Development (SDD) document set used to drive each slice.
+AI-native enterprise software delivery control tower. A full-stack application with 13 SDLC domain slices, each with frontend views, backend APIs, and seeded local data, driven by a complete Spec Driven Development (SDD) document set.
 
-## Current Implementation Snapshot
+## Implementation Status
 
-| Area | Frontend | Backend | Status |
-| --- | --- | --- | --- |
-| Shared app shell | Yes | Yes | 13-route shell, workspace context API, global shell UI |
-| Dashboard | Yes | Yes | Live summary view backed by `/api/v1/dashboard/summary` |
-| Requirement Management | Yes | Yes | List/detail/create flows, AI analysis, story/spec generation, normalize/import APIs |
-| Incident Management | Yes | Yes | List/detail flows plus approve/reject action endpoints |
-| Team Space | Yes | Yes | Aggregate + per-card APIs, access guards, seeded metrics/risk data |
-| Project Space | Yes | Yes | Aggregate + per-card APIs, access guards, seeded project data |
-| Platform Center | Yes | No | Current page is mock-backed UI only |
-| Remaining navigation slices | Placeholder | No | Project Management, Design, Code & Build, Testing, Deployment, AI Center, Report Center |
+All 13 navigation slices are implemented with frontend and backend.
+
+| Slice | Frontend | Backend | Flyway | Key Capabilities |
+| --- | --- | --- | --- | --- |
+| Shared App Shell | Yes | Yes | V1-V2 | 13-route shell, workspace context, global UI |
+| Dashboard | Yes | Yes | V3 | Cross-stage health summary |
+| Requirement Management | Yes | Yes | V5-V6 | List/detail, AI analysis, story/spec generation, normalize/import |
+| Incident Management | Yes | Yes | V4 | List/detail, approve/reject actions |
+| Team Space | Yes | Yes | V7-V8 | Aggregate cards, access guards, metrics/risk |
+| Project Space | Yes | Yes | V9-V11 | Project execution, environment status |
+| Project Management | Yes | Yes | V20-V26 | Portfolio command center, plan execution, AI suggestions |
+| Design Management | Yes | Yes | V30-V36 | Artifact catalog, versioning, spec traceability, AI summary |
+| Code & Build Management | Yes | Yes | V40-V47 | Repo/PR/run observability, story linking, AI triage |
+| Testing Management | Yes | Yes | V50-V53 | Plan/case/run lifecycle, coverage, traceability |
+| AI Center | Yes | Yes | V60-V61 | Skill registry, run history, adoption metrics, stage coverage |
+| Deployment Management | Yes | Yes | V70-V77 | Jenkins observability, release notes, rollback detection, traceability |
+| Report Center | Yes | Yes | V37-V39 | Efficiency reports, export (CSV/PDF), run history |
+| Platform Center | Yes | Planned | V80-V87 | 6 sub-sections: templates, configurations, audit, access, policies, integrations |
 
 ## Stack
 
 - Frontend: Vue 3.4, Vite 5, Vue Router 4, Pinia, TypeScript, Vitest
 - Backend: Spring Boot 3.4.4, Java 21, Spring Web, Spring Data JPA, Actuator
-- Data: H2 in local profile, Oracle in prod profile, Flyway migrations for schema management
+- Data: H2 in local profile, Oracle in prod profile, Flyway migrations (V1-V77, V80-V87 planned)
 - Integration: optional Dify-backed requirement import; stub provider enabled by default
-- Delivery model: Spec Driven Development (SDD), with docs living alongside code
+- Delivery model: Spec Driven Development (SDD) — documents before code
+- Dev tools: Claude Code (SDD pipeline, orchestration), Gemini (frontend), Codex (backend)
 
 ## Repository Layout
 
 ```text
 .
-├── frontend/                 # Vue app: shell/, shared/, features/
-├── backend/                  # Spring Boot app: config/, domain/, integration/, platform/, shared/
-├── docs/                     # SDD artifacts and slice documentation
+├── frontend/                 # Vue 3 app
+│   ├── src/shell/            #   App shell, navigation, global stores
+│   ├── src/shared/           #   API client, shared types, components
+│   └── src/features/         #   13 feature modules (one per slice)
+├── backend/                  # Spring Boot app
+│   ├── src/main/java/.../domain/       # 12 domain packages (package-by-feature)
+│   ├── src/main/java/.../platform/    # Platform-level services (workspace, navigation, profile)
+│   ├── src/main/java/.../shared/       # ApiResponse, SectionResultDto, audit, integration
+│   └── src/main/resources/db/migration/ # 40+ Flyway migrations (V1-V77)
+├── docs/                     # SDD artifacts (9 docs per slice)
+│   ├── 01-requirements/      #   Requirements with REQ-IDs
+│   ├── 02-user-stories/      #   Agile stories with acceptance criteria
+│   ├── 03-spec/              #   Implementation-facing specifications
+│   ├── 04-architecture/      #   Architecture, data flow, data model
+│   ├── 05-design/            #   Design docs + API implementation guides
+│   ├── 06-tasks/             #   Phased task breakdowns
+│   └── 07-prompts/           #   External tool prompts (Gemini, Codex)
 ├── CLAUDE.md                 # Project instructions and lessons learned
 ├── GEMINI.md                 # Gemini workflow brief
-├── design.md                 # Shared visual design guidance
+├── design.md                 # Shared visual design system
 └── README.md
 ```
 
-## What The App Exposes Today
+## What The App Exposes
 
-- Frontend routes: `/`, `/team`, `/project-space/:projectId?`, `/requirements`, `/incidents`, `/platform`, plus placeholder routes for the remaining navigation entries.
+- **13 frontend routes** with nested child routes for detail views
 - Default seeded workspace: `ws-default-001`
 - Default seeded project: `proj-42`
 - API base path: `/api/v1`
-- Response contract: all endpoints return `ApiResponse<T>`; aggregate card pages use nested `SectionResultDto<T>` sections so one card can fail without blanking the whole page.
+- Response contract: all endpoints return `ApiResponse<T>`; aggregate card pages use nested `SectionResultDto<T>` sections so one card can fail without blanking the whole page
 
-### Main API surface
+### API Surface by Slice
 
-- `GET /api/v1/workspace-context`
-- `GET /api/v1/dashboard/summary`
-- `GET /api/v1/requirements`
-- `GET /api/v1/requirements/{requirementId}`
-- `POST /api/v1/requirements/{requirementId}/generate-stories`
-- `POST /api/v1/requirements/{requirementId}/generate-spec`
-- `POST /api/v1/requirements/{requirementId}/analyze`
-- `POST /api/v1/requirements/{requirementId}/invoke-skill`
-- `POST /api/v1/requirements/normalize`
-- `POST /api/v1/requirements/imports`
-- `GET /api/v1/requirements/imports/{importId}`
-- `GET /api/v1/pipeline-profiles/active`
-- `GET /api/v1/incidents`
-- `GET /api/v1/incidents/{incidentId}`
-- `POST /api/v1/incidents/{incidentId}/actions/{actionId}/approve`
-- `POST /api/v1/incidents/{incidentId}/actions/{actionId}/reject`
-- `GET /api/v1/team-space/{workspaceId}` and section routes under `/summary`, `/operating-model`, `/members`, `/templates`, `/pipeline`, `/metrics`, `/risks`, `/projects`
-- `GET /api/v1/project-space/{projectId}` and section routes under `/summary`, `/leadership`, `/chain`, `/milestones`, `/dependencies`, `/risks`, `/environments`
+| Slice | Base Path | Endpoints |
+| --- | --- | --- |
+| Workspace | `/workspace-context` | GET context |
+| Dashboard | `/dashboard` | GET summary |
+| Requirements | `/requirements` | CRUD, analysis, story/spec gen, normalize, import |
+| Incidents | `/incidents` | List, detail, approve/reject actions |
+| Team Space | `/team-space` | Aggregate + 8 section routes |
+| Project Space | `/project-space` | Aggregate + 7 section routes |
+| Project Mgmt | `/project-management` | Portfolio, plan, milestones, AI suggestions |
+| Design Mgmt | `/design-management` | Catalog, viewer, traceability, AI summary |
+| Code & Build | `/code-build-management` | Catalog, repo/PR/run detail, traceability, AI triage |
+| Testing | `/testing-management` | Catalog, plan/case/run detail, traceability |
+| AI Center | `/ai-center` | Metrics, skills, runs, stage coverage |
+| Deployment | `/deployment-management` | Catalog, app/release/deploy/env detail, traceability, Jenkins webhook |
+| Reports | `/reports` | Catalog, run, export, history |
+| Platform | `/platform` | Templates, configurations, audit, access, policies, integrations (Phase B planned) |
 
 ## Running Locally
 
@@ -96,14 +117,21 @@ cd frontend
 VITE_USE_BACKEND=false npm run dev
 ```
 
-### Useful local URLs
+### Useful Local URLs
 
 - Dashboard: `http://localhost:5173/`
 - Team Space: `http://localhost:5173/team?workspaceId=ws-default-001`
 - Project Space: `http://localhost:5173/project-space/proj-42?workspaceId=ws-default-001`
-- Requirement Management: `http://localhost:5173/requirements`
-- Incident Management: `http://localhost:5173/incidents`
-- Platform Center: `http://localhost:5173/platform?view=overview&workspaceId=ws-default-001`
+- Requirements: `http://localhost:5173/requirements`
+- Project Management: `http://localhost:5173/project-management`
+- Design Management: `http://localhost:5173/design-management`
+- Code & Build: `http://localhost:5173/code-build-management`
+- Testing: `http://localhost:5173/testing`
+- Deployment: `http://localhost:5173/deployment`
+- Incidents: `http://localhost:5173/incidents`
+- AI Center: `http://localhost:5173/ai-center`
+- Reports: `http://localhost:5173/reports`
+- Platform Center: `http://localhost:5173/platform`
 
 ## Configuration Notes
 
@@ -133,7 +161,7 @@ cd frontend
 npm test
 ```
 
-The repository already includes controller/service/repository coverage on the backend and Vitest coverage for Project Space on the frontend.
+Backend: 136 tests across all domain slices (including 14 AI Center MockMvc tests). Frontend: Vitest unit and component tests.
 
 ## SDD Workflow
 

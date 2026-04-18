@@ -16,6 +16,7 @@ import {
   Settings
 } from 'lucide-vue-next';
 import { REPORT_CENTER_CHILD_ROUTES } from '@/features/reportcenter';
+import { PLATFORM_CHILD_ROUTES } from '@/features/platform';
 
 /**
  * The 13 required navigation entries as per spec §3.1.
@@ -165,7 +166,7 @@ const COMPONENT_MAP: Record<string, () => Promise<any>> = {
   incidents: () => import('@/features/incident/IncidentManagementView.vue'),
   'ai-center': () => import('@/features/ai-center/AiCenterView.vue'),
   reports: () => import('@/features/reportcenter/ReportCenterView.vue'),
-  platform: () => import('@/features/platform/PlatformCenterView.vue'),
+  platform: () => import('@/features/platform/shell/PlatformShell.vue'),
 };
 
 /**
@@ -218,6 +219,7 @@ const CHILD_ROUTES: Record<string, Array<{ path: string; name: string; component
     { path: 'runs/:executionId', name: 'ai-center-run-detail', component: () => import('@/features/ai-center/components/RunDetailPanel.vue') },
   ],
   reports: REPORT_CENTER_CHILD_ROUTES,
+  platform: PLATFORM_CHILD_ROUTES,
 };
 
 const routes = NAVIGATION_ITEMS.map(item => {

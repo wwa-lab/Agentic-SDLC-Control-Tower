@@ -31,7 +31,7 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 | Phase | Scope | Tool | Deliverable |
 |---|---|---|---|
 | **A** | Frontend with mocked data | Codex | `/platform` renders shell + 6 sub-sections with all states; tests pass; build succeeds |
-| **B** | Backend + live API wiring | Codex | Spring Boot endpoints for all 6 capabilities, Flyway V40–V47 migrations, seed data, FE switched from mocks to live |
+| **B** | Backend + live API wiring | Codex | Spring Boot endpoints for all 6 capabilities, Flyway V80–V87 migrations, seed data, FE switched from mocks to live |
 
 **Dependency**: Phase B begins after Phase A is merged. Phase B must NOT require component re-work beyond swapping the API client from mock to live (per AI Center / Dashboard / Incident precedent).
 
@@ -192,22 +192,22 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 
 ### B.1 Flyway migrations — schema
 - **Files** (under `backend/src/main/resources/db/migration/`):
-  - `V40__create_platform_template.sql` — PLATFORM_TEMPLATE, PLATFORM_TEMPLATE_VERSION
-  - `V41__create_platform_configuration.sql` — PLATFORM_CONFIGURATION
-  - `V42__create_platform_audit.sql` — PLATFORM_AUDIT (append-only, partitioned-ready)
-  - `V43__create_platform_role_assignment.sql` — PLATFORM_ROLE_ASSIGNMENT
-  - `V44__create_platform_policy.sql` — PLATFORM_POLICY, PLATFORM_POLICY_EXCEPTION
-  - `V45__create_platform_connection.sql` — PLATFORM_CONNECTION, PLATFORM_CREDENTIAL_REF (stub)
-  - `V47__reserve_platform_future_columns.sql` — forward-compat reserved columns (`deleted_at`, `tenant_id`, `rev`) on all platform tables
+  - `V80__create_platform_template.sql` — PLATFORM_TEMPLATE, PLATFORM_TEMPLATE_VERSION
+  - `V81__create_platform_configuration.sql` — PLATFORM_CONFIGURATION
+  - `V82__create_platform_audit.sql` — PLATFORM_AUDIT (append-only, partitioned-ready)
+  - `V83__create_platform_role_assignment.sql` — PLATFORM_ROLE_ASSIGNMENT
+  - `V84__create_platform_policy.sql` — PLATFORM_POLICY, PLATFORM_POLICY_EXCEPTION
+  - `V85__create_platform_connection.sql` — PLATFORM_CONNECTION, PLATFORM_CREDENTIAL_REF (stub)
+  - `V86__reserve_platform_future_columns.sql` — forward-compat reserved columns (`deleted_at`, `tenant_id`, `rev`) on all platform tables
 - **Content**: DDL per data-model doc §5; all string columns use Oracle-compatible types; JSON fields stored as CLOB (no vendor JSON type)
-- **Verification**: `MigrationTest` applies V40–V47 from empty schema on H2; `./mvnw test` green; DDL rehearsal on Oracle XE docker image (manual)
+- **Note**: V40–V47 are taken by Code & Build Management; V80+ is the next available range per CLAUDE.md migration allocation
+- **Verification**: `MigrationTest` applies V80–V86 from empty schema on H2; `./mvnw test` green; DDL rehearsal on Oracle XE docker image (manual)
 
-### B.2 Flyway migration — seed (dev/local only)
-- **File**: `backend/src/main/resources/db/seed/V46__seed_platform_center_data.sql`
+### B.2 Flyway migration — seed
+- **File**: `backend/src/main/resources/db/migration/V87__seed_platform_center_data.sql`
 - **Content**: realistic seed matching Phase A mock counts — ≥ 12 templates with ≥ 15 versions; ≥ 20 configuration keys spanning all 4 inheritance layers; ≥ 50 audit events covering every action type; ≥ 8 role assignments with ≥ 2 PLATFORM_ADMIN holders; ≥ 10 policies + exceptions; ≥ 6 connections + credential refs
-- **Flyway config**: `application-local.yml` and `application-dev.yml` include `classpath:db/migration,classpath:db/seed` in `spring.flyway.locations`. `application-prod.yml` must NOT include `db/seed`.
-- **Note**: version V46 is intentionally placed in `db/seed` (not `db/migration`) so it does not affect production schema ordering; V47 in `db/migration` depends only on V45 core tables
-- **Verification**: `local` profile populates data; `prod` profile does NOT attempt seed; CI lint asserts no `db/seed/*` appears in prod deployment artifact
+- **Note**: seed placed in `db/migration/` following the project convention (V2, V3, V8, V11, V26, V36, V39, V47, V53, V61, V77 are all seeds in the migration folder)
+- **Verification**: `local` profile populates data; seed data uses workspace-scoped IDs to avoid collision with other slices
 
 ### B.3 JPA entities
 - **Files** (one per sub-package under `entity/`):
@@ -218,7 +218,7 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
   - Policy: `PlatformPolicy`, `PlatformPolicyException`
   - Integration: `PlatformConnection`, `PlatformCredentialRef`
 - **Content**: per data-model doc §4; no Lombok; standard getters/setters; JSON fields as String/CLOB + Jackson in service layer
-- **Verification**: entity fields map cleanly to DDL in B.1 (`MigrationTest` + entity-to-schema comparison)
+- **Verification**: entity fields map cleanly to DDL in B.1; `@DataJpaTest` validates mapping against H2 schema
 
 ### B.4 Repositories
 - **Files** (one per aggregate root):
@@ -303,7 +303,7 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 
 ### B.16 Phase B acceptance
 - [ ] `./mvnw clean test` passes all tests (existing + new); ArchUnit rule in B.14 passes
-- [ ] `./mvnw spring-boot:run -Dspring.profiles.active=local` starts cleanly with V40–V47 applied + seed loaded
+- [ ] `./mvnw spring-boot:run -Dspring.profiles.active=local` starts cleanly with V80–V87 applied + seed loaded
 - [ ] All 32 endpoints return JSON matching API guide §2 examples (shapes verified by MockMvc tests)
 - [ ] Every platform endpoint returns 403 for non-admin (B.12 verified)
 - [ ] `GET /api/v1/platform/*?size=201` → 400 with `{ data: null, error: "size must be between 1 and 200" }`
@@ -362,7 +362,7 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
                           B.16 Phase B acceptance
 ```
 
-**Critical path**: A.0 → A.1 → A.4 → (A.5–A.10 parallel) → A.11 → A.15, then B.1 → B.3 → B.6 → (B.7–B.11 parallel) → B.14 → B.16.
+**Critical path**: A.0 → A.1 → A.4 → (A.5–A.10 parallel) → A.11 → A.15, then B.1 (V80–V86) → B.2 (V87 seed) → B.3 → B.6 → (B.7–B.11 parallel) → B.14 → B.16.
 
 **Key gating task**: **B.6 (AuditWriter)** must land before any of B.7–B.11 because their mutations invoke `auditWriter.write`.
 
@@ -374,7 +374,7 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 |---|---|
 | Single PLATFORM_ADMIN role not granular enough | V1 ships single role per user decision; layer fine-grained roles in V2 (tracked in open questions) |
 | Atomic audit pattern skipped in new sub-services | ArchUnit rule in B.14 enforces `AuditWriter.write` call in every mutating service method |
-| Seed migration applied in prod | Split Flyway `locations` by profile; CI lint asserts no `db/seed/*` in prod artifact |
+| Seed data in prod | Seed uses workspace-scoped IDs; harmless in prod but can be excluded via Flyway `ignoreMigrationPatterns` if needed |
 | Plaintext credentials leak into UI or API | UI snapshot test rejects `password`/`apiKey`/`token` in DOM; controller input validation rejects same fields in JSON body |
 | Inheritance resolver drift FE vs BE | FE resolver is display-only; BE `InheritanceResolver` is authoritative; contract test asserts FE/BE produce same effective value for the same scope/key |
 | Cursor token forgery | Opaque base64 + HMAC signing in `CursorCodec` (documented in API guide §5); tampered cursor → 400 |
