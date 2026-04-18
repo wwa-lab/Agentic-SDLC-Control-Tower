@@ -4,6 +4,9 @@ import com.sdlctower.domain.designmanagement.policy.DesignManagementException;
 import com.sdlctower.domain.projectspace.ProjectAccessDeniedException;
 import com.sdlctower.domain.projectmanagement.policy.ProjectManagementException;
 import com.sdlctower.domain.teamspace.WorkspaceAccessDeniedException;
+import com.sdlctower.domain.codebuildmanagement.policy.CodeBuildManagementException;
+import com.sdlctower.domain.deploymentmanagement.policy.DeploymentException;
+import com.sdlctower.domain.testingmanagement.policy.TestingManagementException;
 import com.sdlctower.shared.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -67,6 +70,34 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(ex.render()));
     }
 
+    @ExceptionHandler(TestingManagementException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTestingManagement(TestingManagementException ex) {
+        return ResponseEntity
+                .status(ex.status())
+                .body(ApiResponse.fail(ex.render()));
+    }
+
+    @ExceptionHandler(CodeBuildManagementException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCodeBuildManagement(CodeBuildManagementException ex) {
+        return ResponseEntity
+                .status(ex.status())
+                .body(ApiResponse.fail(ex.render()));
+    }
+
+    @ExceptionHandler(DeploymentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDeployment(DeploymentException ex) {
+        HttpStatus status = switch (ex.getErrorCode()) {
+            case "DP_WORKSPACE_FORBIDDEN" -> HttpStatus.FORBIDDEN;
+            case "DP_ROLE_REQUIRED" -> HttpStatus.FORBIDDEN;
+            case "DP_AI_AUTONOMY_INSUFFICIENT" -> HttpStatus.FORBIDDEN;
+            case "DP_RATE_LIMITED" -> HttpStatus.TOO_MANY_REQUESTS;
+            case "DP_INGEST_SIGNATURE_INVALID" -> HttpStatus.UNAUTHORIZED;
+            case "DP_JENKINS_INSTANCE_UNKNOWN" -> HttpStatus.NOT_FOUND;
+            default -> HttpStatus.BAD_REQUEST;
+        };
+        return ResponseEntity.status(status).body(ApiResponse.fail(ex.getErrorCode() + ": " + ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpServletRequest request) {
         String message = ex.getBindingResult().getFieldErrors().stream()
@@ -94,8 +125,21 @@ public class GlobalExceptionHandler {
     }
 
     private String validationPrefix(HttpServletRequest request) {
-        return request != null && request.getRequestURI() != null && request.getRequestURI().contains("/design-management")
-                ? "DM_VALIDATION_ERROR"
-                : "PM_VALIDATION_ERROR";
+        if (request != null && request.getRequestURI() != null) {
+            String uri = request.getRequestURI();
+            if (uri.contains("/design-management")) {
+                return "DM_VALIDATION_ERROR";
+            }
+            if (uri.contains("/testing-management") || uri.contains("/testing")) {
+                return "TM_VALIDATION_ERROR";
+            }
+            if (uri.contains("/code-build-management")) {
+                return "CB_VALIDATION_ERROR";
+            }
+            if (uri.contains("/deployment-management")) {
+                return "DP_VALIDATION_ERROR";
+            }
+        }
+        return "PM_VALIDATION_ERROR";
     }
 }
