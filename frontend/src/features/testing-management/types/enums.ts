@@ -1,0 +1,12 @@
+export type TestPlanState = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+export type TestCaseType = 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'PERF' | 'SECURITY';
+export type TestCasePriority = 'P0' | 'P1' | 'P2' | 'P3';
+export type TestCaseState = 'ACTIVE' | 'DRAFT' | 'DEPRECATED';
+export type TestRunState = 'RUNNING' | 'PASSED' | 'FAILED' | 'ABORTED' | 'INGEST_FAILED';
+export type TestResultOutcome = 'PASS' | 'FAIL' | 'SKIP' | 'ERROR';
+export type TestEnvironmentKind = 'DEV' | 'STAGING' | 'PROD' | 'EPHEMERAL' | 'OTHER';
+export type RunTriggerSource = 'MANUAL_UPLOAD' | 'CI_WEBHOOK';
+export type CoverageStatus = 'GREEN' | 'AMBER' | 'RED' | 'GREY';
+export type ReqLinkStatus = 'VERIFIED' | 'UNKNOWN_REQ' | 'UNVERIFIED';
+export type DraftOrigin = 'AI_DRAFT' | 'MANUAL' | 'IMPORTED';
+export type AiRowStatus = 'DRAFT' | 'ACTIVE' | 'DEPRECATED';
