@@ -11,6 +11,57 @@ Agentic SDLC Control Tower — AI-native enterprise software delivery control to
 - Backend dev tool: Codex
 - Claude Code: SDD pipeline, doc quality gates, review, orchestration
 
+## Current State (2026-04-18)
+
+All 13 SDLC slices are implemented. The app is a fully navigable control tower with frontend views, backend APIs, Flyway migrations (V1-V77), and seeded local data for every domain. Platform Center backend is the only remaining planned work.
+
+### Implemented Slices
+
+| Slice | Frontend Feature | Backend Domain | Migrations |
+|-------|-----------------|----------------|------------|
+| Shared App Shell | `shell/` | `shared/` | V1-V2 |
+| Dashboard | `features/dashboard` | `domain/dashboard` | V3 |
+| Requirement Management | `features/requirement` | `domain/requirement` | V5-V6 |
+| Incident Management | `features/incident` | `domain/incident` | V4 |
+| Team Space | `features/team-space` | `domain/teamspace` | V7-V8 |
+| Project Space | `features/project-space` | `domain/projectspace` | V9-V11 |
+| Project Management | `features/project-management` | `domain/projectmanagement` | V20-V26 |
+| Design Management | `features/design-management` | `domain/designmanagement` | V30-V36 |
+| Code & Build | `features/code-build-management` | `domain/codebuildmanagement` | V40-V47 |
+| Testing Management | `features/testing-management` | `domain/testingmanagement` | V50-V53 |
+| AI Center | `features/ai-center` | `domain/aicenter` | V60-V61 |
+| Deployment Management | `features/deployment-management` | `domain/deploymentmanagement` | V70-V77 |
+| Report Center | `features/reportcenter` | `domain/reportcenter` | V37-V39 |
+| Platform Center | `features/platform` | -- (planned) | -- |
+
+### Backend Conventions
+
+- Package-by-feature: `com.sdlctower.domain.{slice}/{controller,service,persistence,dto,policy,...}`
+- Bean name conflicts: when class names collide across slices (e.g. `CatalogService`), use `@Service("slicePrefixClassName")`
+- All endpoints return `ApiResponse<T>` envelope; card-based views use `SectionResultDto<T>`
+- Flyway migration numbering: V1-V11 (foundation), V20-V26 (project mgmt), V30-V36 (design), V37-V39 (reports), V40-V47 (code & build), V50-V53 (testing), V60-V61 (AI center), V70-V77 (deployment)
+- Table name prefix: `dp_` for deployment management tables (avoids reserved word conflicts with `release`, `deploy`, etc.)
+
+## Lessons Learned (Session 2026-04-18)
+
+### 10. Bean name conflicts require explicit naming when class names collide across slices
+
+**What happened:** Multiple slices define classes with the same simple name (`CatalogService`, `TraceabilityService`, `AiAutonomyPolicy`, `LogRedactor`). Spring's default bean naming (`catalogService`) causes `ConflictingBeanDefinitionException` at startup because the component scan finds two beans with the same name in different packages.
+
+**Rule:** When adding a `@Service`, `@Component`, or similar annotation to a class whose simple name already exists in another domain package, always provide an explicit bean name prefixed with the slice: `@Service("deploymentCatalogService")`. Check for conflicts by searching `public class {ClassName}` across `src/main/java/com/sdlctower/domain/` before creating new beans.
+
+### 11. Flyway migration version numbers must not collide with existing migrations
+
+**What happened:** The tasks doc specified V60-V67 for Deployment Management, but V60-V61 were already taken by AI Center. Using duplicate version numbers causes Flyway to fail at startup.
+
+**Rule:** Before assigning migration version numbers, always `ls backend/src/main/resources/db/migration/` to check existing versions. Use the next available range. Current allocation: V1-V11 (foundation), V20-V26 (project mgmt), V30-V36 (design), V37-V39 (reports), V40-V47 (code & build), V50-V53 (testing), V60-V61 (AI center), V70-V77 (deployment).
+
+### 12. Use `dp_` table prefix for Deployment Management to avoid SQL reserved words
+
+**What happened:** Table names `release`, `deploy`, and `application` are reserved words or common names in H2/Oracle. Using them directly causes SQL parsing errors.
+
+**Rule:** Prefix all Deployment Management tables with `dp_` (e.g., `dp_release`, `dp_deploy`, `dp_application`). Other slices can use their own prefix if needed. Always test migrations on H2 before committing.
+
 ## Lessons Learned (Session 2026-04-15)
 
 ### 1. Search the full project before assuming file locations
