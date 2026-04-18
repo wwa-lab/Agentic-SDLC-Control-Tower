@@ -6,22 +6,22 @@ AI-native enterprise software delivery control tower. A full-stack application w
 
 All 13 navigation slices are implemented with frontend and backend.
 
-| Slice | Frontend | Backend | Flyway | Key Capabilities |
-| --- | --- | --- | --- | --- |
-| Shared App Shell | Yes | Yes | V1-V2 | 13-route shell, workspace context, global UI |
-| Dashboard | Yes | Yes | V3 | Cross-stage health summary |
-| Requirement Management | Yes | Yes | V5-V6 | List/detail, AI analysis, story/spec generation, normalize/import |
-| Incident Management | Yes | Yes | V4 | List/detail, approve/reject actions |
-| Team Space | Yes | Yes | V7-V8 | Aggregate cards, access guards, metrics/risk |
-| Project Space | Yes | Yes | V9-V11 | Project execution, environment status |
-| Project Management | Yes | Yes | V20-V26 | Portfolio command center, plan execution, AI suggestions |
-| Design Management | Yes | Yes | V30-V36 | Artifact catalog, versioning, spec traceability, AI summary |
-| Code & Build Management | Yes | Yes | V40-V47 | Repo/PR/run observability, story linking, AI triage |
-| Testing Management | Yes | Yes | V50-V53 | Plan/case/run lifecycle, coverage, traceability |
-| AI Center | Yes | Yes | V60-V61 | Skill registry, run history, adoption metrics, stage coverage |
-| Deployment Management | Yes | Yes | V70-V77 | Jenkins observability, release notes, rollback detection, traceability |
-| Report Center | Yes | Yes | V37-V39 | Efficiency reports, export (CSV/PDF), run history |
-| Platform Center | Yes | Planned | V80-V87 | 6 sub-sections: templates, configurations, audit, access, policies, integrations |
+| Slice                   | Frontend | Backend | Flyway  | Key Capabilities                                                                 |
+| ----------------------- | -------- | ------- | ------- | -------------------------------------------------------------------------------- |
+| Shared App Shell        | Yes      | Yes     | V1-V2   | 13-route shell, workspace context, global UI                                     |
+| Dashboard               | Yes      | Yes     | V3      | Cross-stage health summary                                                       |
+| Requirement Management  | Yes      | Yes     | V5-V6   | List/detail, AI analysis, story/spec generation, normalize/import                |
+| Incident Management     | Yes      | Yes     | V4      | List/detail, approve/reject actions                                              |
+| Team Space              | Yes      | Yes     | V7-V8   | Aggregate cards, access guards, metrics/risk                                     |
+| Project Space           | Yes      | Yes     | V9-V11  | Project execution, environment status                                            |
+| Project Management      | Yes      | Yes     | V20-V26 | Portfolio command center, plan execution, AI suggestions                         |
+| Design Management       | Yes      | Yes     | V30-V36 | Artifact catalog, versioning, spec traceability, AI summary                      |
+| Code & Build Management | Yes      | Yes     | V40-V47 | Repo/PR/run observability, story linking, AI triage                              |
+| Testing Management      | Yes      | Yes     | V50-V53 | Plan/case/run lifecycle, coverage, traceability                                  |
+| AI Center               | Yes      | Yes     | V60-V61 | Skill registry, run history, adoption metrics, stage coverage                    |
+| Deployment Management   | Yes      | Yes     | V70-V77 | Jenkins observability, release notes, rollback detection, traceability           |
+| Report Center           | Yes      | Yes     | V37-V39 | Efficiency reports, export (CSV/PDF), run history                                |
+| Platform Center         | Yes      | Yes     | V80-V87 | 6 sub-sections: templates, configurations, audit, access, policies, integrations |
 
 ## Stack
 
@@ -69,22 +69,22 @@ All 13 navigation slices are implemented with frontend and backend.
 
 ### API Surface by Slice
 
-| Slice | Base Path | Endpoints |
-| --- | --- | --- |
-| Workspace | `/workspace-context` | GET context |
-| Dashboard | `/dashboard` | GET summary |
-| Requirements | `/requirements` | CRUD, analysis, story/spec gen, normalize, import |
-| Incidents | `/incidents` | List, detail, approve/reject actions |
-| Team Space | `/team-space` | Aggregate + 8 section routes |
-| Project Space | `/project-space` | Aggregate + 7 section routes |
-| Project Mgmt | `/project-management` | Portfolio, plan, milestones, AI suggestions |
-| Design Mgmt | `/design-management` | Catalog, viewer, traceability, AI summary |
-| Code & Build | `/code-build-management` | Catalog, repo/PR/run detail, traceability, AI triage |
-| Testing | `/testing-management` | Catalog, plan/case/run detail, traceability |
-| AI Center | `/ai-center` | Metrics, skills, runs, stage coverage |
-| Deployment | `/deployment-management` | Catalog, app/release/deploy/env detail, traceability, Jenkins webhook |
-| Reports | `/reports` | Catalog, run, export, history |
-| Platform | `/platform` | Templates, configurations, audit, access, policies, integrations (Phase B planned) |
+| Slice         | Base Path                  | Endpoints                                                                          |
+| ------------- | -------------------------- | ---------------------------------------------------------------------------------- |
+| Workspace     | `/workspace-context`     | GET context                                                                        |
+| Dashboard     | `/dashboard`             | GET summary                                                                        |
+| Requirements  | `/requirements`          | CRUD, analysis, story/spec gen, normalize, import                                  |
+| Incidents     | `/incidents`             | List, detail, approve/reject actions                                               |
+| Team Space    | `/team-space`            | Aggregate + 8 section routes                                                       |
+| Project Space | `/project-space`         | Aggregate + 7 section routes                                                       |
+| Project Mgmt  | `/project-management`    | Portfolio, plan, milestones, AI suggestions                                        |
+| Design Mgmt   | `/design-management`     | Catalog, viewer, traceability, AI summary                                          |
+| Code & Build  | `/code-build-management` | Catalog, repo/PR/run detail, traceability, AI triage                               |
+| Testing       | `/testing-management`    | Catalog, plan/case/run detail, traceability                                        |
+| AI Center     | `/ai-center`             | Metrics, skills, runs, stage coverage                                              |
+| Deployment    | `/deployment-management` | Catalog, app/release/deploy/env detail, traceability, Jenkins webhook              |
+| Reports       | `/reports`               | Catalog, run, export, history                                                      |
+| Platform      | `/platform`              | Templates, configurations, audit, access, policies, integrations (Phase B planned) |
 
 ## Running Locally
 
