@@ -42,6 +42,106 @@ All 13 SDLC slices are implemented. The app is a fully navigable control tower w
 - Flyway migration numbering: V1-V11 (foundation), V20-V26 (project mgmt), V30-V36 (design), V37-V39 (reports), V40-V47 (code & build), V50-V53 (testing), V60-V61 (AI center), V70-V77 (deployment)
 - Table name prefix: `dp_` for deployment management tables (avoids reserved word conflicts with `release`, `deploy`, etc.)
 
+## Platform Design Principles
+
+These principles define the long-term operating model for Control Tower. They apply across Requirement, Design, Code, Test, Deploy, Incident, and future domains.
+
+### 1. Control Tower is the control plane, not the content repository
+
+Control Tower must not replace Jira, Confluence, GitHub, CI/CD systems, testing tools, deployment tools, or incident platforms. Its job is to index, display, review, approve, trace, and report freshness across those systems.
+
+Control Tower should store metadata, references, comments, approvals, execution state, and traceability. It should not become a second canonical storage location for SDD Markdown document bodies.
+
+### 2. External systems keep their source-of-truth roles
+
+Jira and Confluence remain BAU business input systems. GitHub remains the source of truth for engineering artifacts and SDD documents. CI/CD, testing, deployment, and incident systems remain the source of truth for their operational facts.
+
+Control Tower connects these sources through stable references instead of copying them into a new monolithic store.
+
+### 3. GitHub `docs/` is the SDD artifact source of truth
+
+Engineering-ready SDD artifacts are stored in the project repository under the root `docs/` folder. Control Tower reads document content from GitHub when rendering documents in the UI.
+
+The platform may index document metadata such as repo, branch, path, commit SHA, blob SHA, document type, profile, status, and GitHub URL, but GitHub owns the Markdown body and version history.
+
+### 4. Business review happens in Control Tower; engineering review happens in GitHub
+
+BA, Business, and Product users should review, comment, approve, or request changes inside Control Tower. Developers and technical leads should review diffs, code, and document PRs in GitHub.
+
+Both review surfaces refer to the same GitHub-backed document versions.
+
+### 5. Comments and approvals must be version-bound
+
+Every business comment, approval, or change request must be tied to the Git version that was reviewed, using commit SHA and blob SHA where available. Users may read the latest document from GitHub, but their decision is recorded against the exact version they saw.
+
+This prevents comment drift and keeps reviews auditable when documents change later.
+
+### 6. CLI agents are the execution plane
+
+Repo-aware, code-aware, and long-running work should be executed by CLI agents, not by synchronous UI flows. Examples include reading a whole repo, generating or updating SDD docs, modifying code, running tests, producing PRs, and uploading execution outputs.
+
+Control Tower should create requests, provide execution context, display status, and show artifacts. The agent performs the heavy work and writes results back through GitHub and platform callbacks.
+
+### 7. MCP is an agent tool layer, not a UI dependency
+
+Jira, Confluence, GitHub, and other BAU systems may be accessed through MCP connectors, but those connectors should normally live in the CLI agent runtime. Control Tower should not depend on MCP implementation details for its core UI.
+
+Control Tower records source references and produces execution manifests. Agents use MCP, REST APIs, or internal connectors to resolve those references during execution.
+
+### 8. Agents consume manifests, not guesses
+
+Agents must not infer the latest sources, documents, or repo context on their own. Control Tower should generate an execution manifest that includes workspace/project identity, repo, branch/ref, SDD profile, source references, relevant GitHub documents, output expectations, and constraints.
+
+The recommended model is "latest resolved, then pinned execution": resolve the latest approved or requested inputs at execution start, pin their versions in the manifest, then execute against those pinned versions.
+
+### 9. SDD is profile-driven
+
+Do not hard-code one Java-oriented SDD chain as the universal workflow. Different system types can define different SDD profiles, document chains, directory conventions, skill bindings, review gates, traceability rules, and tiering rules.
+
+Examples:
+
+- `standard-java-sdd`: Requirement, User Story, Spec, Architecture, Design, Tasks
+- `ibm-i-sdd`: Requirement Normalizer, Functional Spec, Technical Design, Program Spec, File Spec, UT Plan, Test Scaffold, Review Reports
+
+Profile metadata should let Control Tower render the right document stages and let CLI agents pick the right skill workflow.
+
+### 10. Platform models should stay generic and lightweight
+
+Day 1 platform primitives should be reusable across domains without becoming a full workflow engine:
+
+- Source Reference
+- Document Index
+- Review / Comment
+- Execution Manifest
+- Artifact Link
+- Freshness Status
+
+Avoid building a complex DAG engine, custom document editor, GitHub replacement, broad permission DSL, or fully automated orchestration layer before the core operating model is proven.
+
+### 11. Freshness is a first-class platform capability
+
+Control Tower should make staleness visible across systems:
+
+- Jira or Confluence changed after an SDD document was generated
+- A GitHub document changed after business approval
+- Code changed after a spec or test plan was approved
+- Tests do not cover the latest requirement/spec version
+- Deployment or incident evidence points to stale upstream artifacts
+
+Freshness is one of the main reasons Control Tower exists; it should be modeled explicitly rather than treated as a UI detail.
+
+### 12. Keep the system extensible without over-designing
+
+The platform should use stable boundaries and minimal abstractions that can grow:
+
+- BAU inputs: Jira, Confluence, uploads, KB
+- SDD artifacts: GitHub `docs/`
+- Execution: CLI agents and short LLM-backed tasks
+- Review: Control Tower for business, GitHub for engineering
+- Observability: AI Center / execution history / artifact and evidence links
+
+Prefer small, composable contracts over a large orchestration framework. Build the common operating model first; automate more only when the real workflow requires it.
+
 ## Lessons Learned (Session 2026-04-18)
 
 ### 10. Bean name conflicts require explicit naming when class names collide across slices
