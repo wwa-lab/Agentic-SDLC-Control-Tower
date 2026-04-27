@@ -178,7 +178,7 @@ function handleInvokeProfileSkill(skillId: string) {
   border: none;
   color: var(--color-secondary);
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   cursor: pointer;
   padding: 4px 0;
   align-self: flex-start;
@@ -213,7 +213,7 @@ function handleInvokeProfileSkill(skillId: string) {
 
 .profile-strip-text {
   font-family: var(--font-ui);
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   color: var(--color-on-surface-variant);
 }
 
@@ -227,8 +227,87 @@ function handleInvokeProfileSkill(skillId: string) {
 .profile-skill-message {
   margin: 0;
   font-family: var(--font-ui);
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   color: var(--color-secondary);
+}
+
+.detail-view :deep(.requirement-card) {
+  padding: 18px;
+  gap: 14px;
+}
+
+.detail-view :deep(.card-title) {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+
+.detail-view :deep(.req-id) {
+  font-size: 0.9375rem;
+}
+
+.detail-view :deep(.req-title) {
+  font-size: 1.125rem;
+  line-height: 1.35;
+}
+
+.detail-view :deep(.section-label),
+.detail-view :deep(.meta-label),
+.detail-view :deep(.profile-label),
+.detail-view :deep(.path-label),
+.detail-view :deep(.tier-label) {
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+}
+
+.detail-view :deep(.section-text),
+.detail-view :deep(.criterion),
+.detail-view :deep(.bullet-list li),
+.detail-view :deep(.meta-value),
+.detail-view :deep(.source-title),
+.detail-view :deep(.stage-title),
+.detail-view :deep(.trace-row),
+.detail-view :deep(.run-meta),
+.detail-view :deep(.artifact-list a),
+.detail-view :deep(.empty),
+.detail-view :deep(.section-error) {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.detail-view :deep(.priority-badge),
+.detail-view :deep(.status-text),
+.detail-view :deep(.category-badge),
+.detail-view :deep(.source-badge),
+.detail-view :deep(.freshness-chip),
+.detail-view :deep(.criterion-id),
+.detail-view :deep(.stage-path),
+.detail-view :deep(.stage-meta),
+.detail-view :deep(.source-type),
+.detail-view :deep(.source-meta),
+.detail-view :deep(.viewer-meta),
+.detail-view :deep(.run-id),
+.detail-view :deep(.run-status) {
+  font-size: 0.6875rem;
+}
+
+.detail-view :deep(.profile-select),
+.detail-view :deep(.skill-btn),
+.detail-view :deep(.path-value),
+.detail-view :deep(.path-placeholder),
+.detail-view :deep(.tier-value),
+.detail-view :deep(.tier-placeholder) {
+  font-size: 0.75rem;
+}
+
+.detail-view :deep(.criterion-check) {
+  width: 18px;
+  height: 18px;
+  font-size: 0.75rem;
+}
+
+.detail-view :deep(.markdown-viewer pre) {
+  font-size: 0.8125rem;
+  line-height: 1.6;
 }
 
 /* Row 2-3: Description (left, span 2 rows) */
@@ -264,12 +343,12 @@ function handleInvokeProfileSkill(skillId: string) {
   animation: spin 1s linear infinite;
 }
 
-.error-text { color: var(--color-incident-crimson); font-size: 0.75rem; }
+.error-text { color: var(--color-incident-crimson); font-size: 0.8125rem; }
 
 .retry-btn {
   background: var(--color-surface-container-high); border: 1px solid var(--color-secondary);
   color: var(--color-secondary); padding: 6px 16px; border-radius: var(--radius-sm);
-  cursor: pointer; font-family: var(--font-ui); font-size: 0.6875rem;
+  cursor: pointer; font-family: var(--font-ui); font-size: 0.75rem;
   text-transform: uppercase; letter-spacing: 0.04em;
 }
 
