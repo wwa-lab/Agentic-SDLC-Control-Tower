@@ -42,6 +42,30 @@ All 13 SDLC slices are implemented. The app is a fully navigable control tower w
 - Flyway migration numbering: V1-V11 (foundation), V20-V26 (project mgmt), V30-V36 (design), V37-V39 (reports), V40-V47 (code & build), V50-V53 (testing), V60-V61 (AI center), V70-V77 (deployment)
 - Table name prefix: `dp_` for deployment management tables (avoids reserved word conflicts with `release`, `deploy`, etc.)
 
+## General Execution Discipline
+
+These rules adapt general LLM coding guidance to this repository. They are meant to reduce over-building, hidden assumptions, and noisy diffs. They should be applied with judgment: trivial tasks do not need ceremony, but non-trivial changes must be explicit and verifiable.
+
+### 1. Think before coding
+
+Before implementing, identify assumptions, unclear scope, and tradeoffs. If a request has multiple plausible interpretations, surface them instead of silently choosing one. If the simpler path is enough, say so. If the requested direction conflicts with the platform design principles or SDD contract, push back respectfully before coding.
+
+### 2. Prefer the minimum sufficient change
+
+Implement the smallest change that satisfies the request and the relevant SDD contract. Do not add speculative features, one-off abstractions, broad configurability, or defensive handling for scenarios that cannot occur in the current design. If a solution starts growing much larger than the problem, simplify before committing it.
+
+### 3. Keep changes surgical
+
+Touch only the files needed for the requested outcome. Do not refactor adjacent code, restyle unrelated files, or clean up pre-existing dead code unless explicitly asked. Match the local style even when a different style would be personally preferable. If a change creates unused imports, variables, or helpers, remove only the orphaned code created by that change.
+
+### 4. Make success criteria verifiable
+
+For multi-step tasks, define what "done" means and how each step will be checked. Prefer tests or concrete verification over visual inspection alone. For bug fixes, reproduce the failure or identify the failing contract before fixing it. For refactors, verify behavior before and after when practical.
+
+### 5. Keep every changed line accountable
+
+Every changed line should trace to one of: the user's request, an SDD requirement, an API/data contract, a failing test, or a necessary integration boundary. If a useful unrelated issue is discovered, mention it separately instead of folding it into the current diff.
+
 ## Platform Design Principles
 
 These principles define the long-term operating model for Control Tower. They apply across Requirement, Design, Code, Test, Deploy, Incident, and future domains.
