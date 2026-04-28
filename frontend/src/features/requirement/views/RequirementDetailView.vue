@@ -119,7 +119,10 @@ function handleRetryControlPlane() {
         :document-error="store.selectedDocumentError"
         :is-loading="store.controlPlaneLoading"
         :error="store.controlPlaneError"
+        :sync-loading="store.githubSyncLoading"
+        :sync-error="store.githubSyncError"
         @open-document="store.openSddDocument"
+        @refresh-documents="store.refreshGitHubDocuments([requirementId])"
         @retry="handleRetryControlPlane"
       />
 

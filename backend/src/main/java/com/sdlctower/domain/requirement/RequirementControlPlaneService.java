@@ -25,6 +25,7 @@ import com.sdlctower.domain.requirement.persistence.RequirementArtifactLinkEntit
 import com.sdlctower.domain.requirement.persistence.RequirementArtifactLinkRepository;
 import com.sdlctower.domain.requirement.persistence.RequirementDocumentReviewEntity;
 import com.sdlctower.domain.requirement.persistence.RequirementDocumentReviewRepository;
+import com.sdlctower.domain.requirement.persistence.RequirementEntity;
 import com.sdlctower.domain.requirement.persistence.RequirementRepository;
 import com.sdlctower.domain.requirement.persistence.RequirementSddDocumentIndexEntity;
 import com.sdlctower.domain.requirement.persistence.RequirementSddDocumentIndexRepository;
@@ -36,11 +37,14 @@ import com.sdlctower.platform.profile.PipelineProfileService;
 import com.sdlctower.shared.exception.ResourceNotFoundException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -144,6 +148,42 @@ public class RequirementControlPlaneService {
                 .map(stage -> toDocumentStageDto(stage, byType.get(stage.sddType())))
                 .toList();
         return new SddDocumentIndexDto(requirementId, profile.id(), resolveWorkspace(requirementId, documents), stages);
+    }
+
+    @Transactional
+    public SddDocumentIndexDto syncSddDocuments(String requirementId, String requestedProfileId) {
+        RequirementEntity requirement = getRequirementEntity(requirementId);
+        List<RequirementSddDocumentIndexEntity> documents = documentRepository.findByRequirementIdOrderByIndexedAtAsc(requirementId);
+        String profileId = firstNonBlank(
+                requestedProfileId,
+                documents.stream().findFirst().map(RequirementSddDocumentIndexEntity::getProfileId).orElse("standard-sdd")
+        );
+        PipelineProfileDto profile = pipelineProfileService.getProfile(profileId);
+        SddWorkspaceDto workspace = resolveWorkspace(requirementId, documents);
+        List<SourceReferenceDto> sources = sourceRepository.findByRequirementIdOrderByCreatedAtAsc(requirementId).stream().map(this::toSourceDto).toList();
+        List<GitHubDocumentGateway.GitHubDocumentMetadata> markdownFiles = githubDocumentGateway.listMarkdownDocuments(
+                workspace.sddRepoFullName(),
+                workspace.workingBranch(),
+                workspace.docsRoot()
+        );
+        Map<String, RequirementSddDocumentIndexEntity> byType = new LinkedHashMap<>();
+        for (RequirementSddDocumentIndexEntity document : documents) {
+            if (profile.id().equals(document.getProfileId())) {
+                byType.put(document.getSddType(), document);
+            }
+        }
+        Instant now = Instant.now();
+        for (PipelineDocumentStageDto stage : profile.documentStages()) {
+            RequirementSddDocumentIndexEntity existing = byType.get(stage.sddType());
+            Optional<GitHubDocumentGateway.GitHubDocumentMetadata> match = findBestDocumentMatch(markdownFiles, stage, existing, requirement, sources);
+            if (match.isPresent()) {
+                documentRepository.save(upsertDocument(requirementId, profile.id(), workspace, stage, existing, match.get(), now));
+            } else if (existing != null) {
+                existing.markMissing(now);
+                documentRepository.save(existing);
+            }
+        }
+        return listSddDocuments(requirementId, profile.id());
     }
 
     public SddDocumentContentDto getDocument(String documentId) {
@@ -385,9 +425,128 @@ public class RequirementControlPlaneService {
         if (document == null) {
             return new SddDocumentStageDto(null, stage.sddType(), stage.label(), stage.label(), null, null, stage.pathPattern(), null, null, null, "MISSING", "MISSING_DOCUMENT", true);
         }
+        if (stage != null && "MISSING".equals(document.getStatus())) {
+            return new SddDocumentStageDto(null, stage.sddType(), stage.label(), stage.label(), null, null, stage.pathPattern(), null, null, null, "MISSING", "MISSING_DOCUMENT", true);
+        }
         String freshness = reviewRepository.findByDocumentIdOrderByCreatedAtDesc(document.getId()).stream()
                 .anyMatch(review -> !document.getLatestBlobSha().equals(review.getBlobSha())) ? "DOCUMENT_CHANGED_AFTER_REVIEW" : "FRESH";
         return new SddDocumentStageDto(document.getId(), document.getSddType(), document.getStageLabel(), document.getTitle(), document.getRepoFullName(), document.getBranchOrRef(), document.getPath(), document.getLatestCommitSha(), document.getLatestBlobSha(), document.getGithubUrl(), document.getStatus(), freshness, false);
+    }
+
+    private RequirementSddDocumentIndexEntity upsertDocument(
+            String requirementId,
+            String profileId,
+            SddWorkspaceDto workspace,
+            PipelineDocumentStageDto stage,
+            RequirementSddDocumentIndexEntity existing,
+            GitHubDocumentGateway.GitHubDocumentMetadata metadata,
+            Instant indexedAt
+    ) {
+        String status = existing == null || "MISSING".equals(existing.getStatus()) ? "IN_REVIEW" : existing.getStatus();
+        String title = firstNonBlank(metadata.title(), stage.label());
+        if (existing == null) {
+            return RequirementSddDocumentIndexEntity.create(
+                    buildDocumentId(requirementId, stage.sddType()),
+                    requirementId,
+                    profileId,
+                    workspace.id(),
+                    stage.sddType(),
+                    stage.label(),
+                    title,
+                    workspace.sddRepoFullName(),
+                    workspace.workingBranch(),
+                    metadata.path(),
+                    metadata.commitSha(),
+                    metadata.blobSha(),
+                    metadata.githubUrl(),
+                    status,
+                    indexedAt
+            );
+        }
+        existing.refreshFromGitHub(
+                workspace.id(),
+                stage.label(),
+                title,
+                workspace.sddRepoFullName(),
+                workspace.workingBranch(),
+                metadata.path(),
+                metadata.commitSha(),
+                metadata.blobSha(),
+                metadata.githubUrl(),
+                status,
+                indexedAt
+        );
+        return existing;
+    }
+
+    private Optional<GitHubDocumentGateway.GitHubDocumentMetadata> findBestDocumentMatch(
+            List<GitHubDocumentGateway.GitHubDocumentMetadata> files,
+            PipelineDocumentStageDto stage,
+            RequirementSddDocumentIndexEntity existing,
+            RequirementEntity requirement,
+            List<SourceReferenceDto> sources
+    ) {
+        if (existing != null) {
+            Optional<GitHubDocumentGateway.GitHubDocumentMetadata> exact = files.stream()
+                    .filter(file -> existing.getPath().equals(file.path()))
+                    .findFirst();
+            if (exact.isPresent()) {
+                return exact;
+            }
+        }
+        Pattern pattern = compilePathPattern(stage.pathPattern());
+        return files.stream()
+                .filter(file -> pattern.matcher(file.path()).matches())
+                .max(Comparator.comparingInt(file -> scoreDocumentMatch(file, requirement, sources)));
+    }
+
+    private Pattern compilePathPattern(String pathPattern) {
+        StringBuilder regex = new StringBuilder("^");
+        StringBuilder literal = new StringBuilder();
+        boolean inPlaceholder = false;
+        for (int index = 0; index < pathPattern.length(); index++) {
+            char ch = pathPattern.charAt(index);
+            if (ch == '{') {
+                regex.append(Pattern.quote(literal.toString()));
+                literal.setLength(0);
+                inPlaceholder = true;
+            } else if (ch == '}' && inPlaceholder) {
+                regex.append("[^/]+");
+                inPlaceholder = false;
+            } else if (!inPlaceholder) {
+                literal.append(ch);
+            }
+        }
+        regex.append(Pattern.quote(literal.toString()));
+        regex.append("$");
+        return Pattern.compile(regex.toString());
+    }
+
+    private int scoreDocumentMatch(
+            GitHubDocumentGateway.GitHubDocumentMetadata file,
+            RequirementEntity requirement,
+            List<SourceReferenceDto> sources
+    ) {
+        String path = file.path().toLowerCase(Locale.ROOT);
+        String title = file.title() == null ? "" : file.title().toLowerCase(Locale.ROOT);
+        int score = 0;
+        if (path.contains(slugify(requirement.getId()))) score += 20;
+        if (path.contains(slugify(requirement.getTitle())) || title.contains(requirement.getTitle().toLowerCase(Locale.ROOT))) score += 20;
+        for (SourceReferenceDto source : sources) {
+            String externalId = slugify(source.externalId());
+            if (!isBlank(externalId) && path.contains(externalId)) score += 15;
+        }
+        return score;
+    }
+
+    private String buildDocumentId(String requirementId, String sddType) {
+        String candidate = "DOC-" + requirementId + "-" + sddType.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]+", "-");
+        return candidate.length() <= 64 ? candidate : candidate.substring(0, 64);
+    }
+
+    private String slugify(String value) {
+        if (value == null) return "";
+        return value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
     }
 
     private SourceReferenceDto toSourceDto(RequirementSourceReferenceEntity source) {
@@ -414,6 +573,11 @@ public class RequirementControlPlaneService {
 
     private void validateRequirement(String requirementId) {
         if (!requirementRepository.existsById(requirementId)) throw new ResourceNotFoundException("Requirement not found: " + requirementId);
+    }
+
+    private RequirementEntity getRequirementEntity(String requirementId) {
+        return requirementRepository.findById(requirementId)
+                .orElseThrow(() -> new ResourceNotFoundException("Requirement not found: " + requirementId));
     }
 
     private String normalizeSourceType(String value, String url) {

@@ -158,6 +158,10 @@ export const requirementApi = {
     return fetchJson<SddDocumentIndex>(`/requirements/${requirementId}/sdd-documents${buildProfileQuery(profileId)}`);
   },
 
+  async refreshSddDocuments(requirementId: string, profileId?: string): Promise<SddDocumentIndex> {
+    return postJson<SddDocumentIndex>(`/requirements/${requirementId}/sdd-documents/refresh${buildProfileQuery(profileId)}`);
+  },
+
   async getSddDocument(documentId: string): Promise<SddDocumentContent> {
     return fetchJson<SddDocumentContent>(`/requirements/documents/${documentId}`);
   },

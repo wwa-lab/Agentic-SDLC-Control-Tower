@@ -35,6 +35,7 @@ public final class ApiConstants {
     public static final String REQUIREMENT_SOURCES = REQUIREMENT_DETAIL + "/sources";
     public static final String REQUIREMENT_SOURCE_REFRESH = REQUIREMENTS + "/sources/{sourceId}/refresh";
     public static final String REQUIREMENT_SDD_DOCUMENTS = REQUIREMENT_DETAIL + "/sdd-documents";
+    public static final String REQUIREMENT_SDD_DOCUMENTS_REFRESH = REQUIREMENT_SDD_DOCUMENTS + "/refresh";
     public static final String REQUIREMENT_SDD_DOCUMENT_DETAIL = REQUIREMENTS + "/documents/{documentId}";
     public static final String REQUIREMENT_DOCUMENT_REVIEWS = REQUIREMENT_SDD_DOCUMENT_DETAIL + "/reviews";
     public static final String REQUIREMENT_REVIEWS = REQUIREMENT_DETAIL + "/reviews";

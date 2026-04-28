@@ -201,6 +201,14 @@ public class RequirementController {
         return ApiResponse.ok(controlPlaneService.listSddDocuments(requirementId, profileId));
     }
 
+    @PostMapping(ApiConstants.REQUIREMENT_SDD_DOCUMENTS_REFRESH)
+    public ApiResponse<SddDocumentIndexDto> refreshSddDocuments(
+            @PathVariable String requirementId,
+            @RequestParam(required = false) String profileId
+    ) {
+        return ApiResponse.ok(controlPlaneService.syncSddDocuments(requirementId, profileId));
+    }
+
     @GetMapping(ApiConstants.REQUIREMENT_SDD_DOCUMENT_DETAIL)
     public ApiResponse<SddDocumentContentDto> getDocument(@PathVariable String documentId) {
         return ApiResponse.ok(controlPlaneService.getDocument(documentId));

@@ -71,6 +71,21 @@ class RequirementControlPlaneControllerTest {
     }
 
     @Test
+    void refreshSddDocumentsReindexesFromGitHubBranch() throws Exception {
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_SDD_DOCUMENTS_REFRESH, "REQ-0005")
+                        .param("profileId", "ibm-i"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.profileId").value("ibm-i"))
+                .andExpect(jsonPath("$.data.workspace.sddRepoFullName").value("wwa-lab/sdlc-tower-sdd"))
+                .andExpect(jsonPath("$.data.workspace.workingBranch").value("project/TOWER-2026-audit-trail"))
+                .andExpect(jsonPath("$.data.stages.length()").value(10))
+                .andExpect(jsonPath("$.data.stages[0].missing").value(false))
+                .andExpect(jsonPath("$.data.stages[0].path").value("docs/01-requirements/BR-AUDIT-001-normalizer.md"))
+                .andExpect(jsonPath("$.data.stages[3].title").value("AUDITRPT Program Spec"))
+                .andExpect(jsonPath("$.data.stages[9].latestCommitSha", containsString("sync-")));
+    }
+
+    @Test
     void reviewCreationIsBoundToCommitAndBlobVersion() throws Exception {
         mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "DOC-REQ-0001-SPEC")
                         .contentType(MediaType.APPLICATION_JSON)

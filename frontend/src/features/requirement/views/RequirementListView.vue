@@ -5,6 +5,7 @@ import { useRequirementStore } from '../stores/requirementStore';
 import StatusDistribution from '../components/StatusDistribution.vue';
 import RequirementListTable from '../components/RequirementListTable.vue';
 import PriorityMatrix from '../components/PriorityMatrix.vue';
+import SddKnowledgeGraph from '../components/SddKnowledgeGraph.vue';
 import ProfileSelector from '../components/ProfileSelector.vue';
 import ProfileWorkflowMap from '../components/ProfileWorkflowMap.vue';
 import ControlPlaneSummaryStrip from '../components/ControlPlaneSummaryStrip.vue';
@@ -133,8 +134,13 @@ function handleStatusFilter(status: RequirementStatus) {
     <ProfileWorkflowMap
       :profile="store.activeProfile"
       compact
-      @primary-action="store.fetchRequirementList()"
+      :primary-action-loading="store.githubSyncLoading"
+      @primary-action="store.refreshGitHubDocuments()"
     />
+
+    <div v-if="store.githubSyncError" class="sync-error">
+      {{ store.githubSyncError }}
+    </div>
 
     <ControlPlaneSummaryStrip
       :total="store.controlPlaneOverview.total"
@@ -154,7 +160,9 @@ function handleStatusFilter(status: RequirementStatus) {
     <!-- Filter Bar -->
     <div class="filter-bar">
       <div class="filter-group">
-        <button class="import-btn" @click="store.fetchRequirementList()">Refresh GitHub</button>
+        <button class="import-btn" :disabled="store.githubSyncLoading" @click="store.refreshGitHubDocuments()">
+          {{ store.githubSyncLoading ? 'Refreshing GitHub' : 'Refresh GitHub' }}
+        </button>
         <select class="filter-select" @change="setFilterPriority(($event.target as HTMLSelectElement).value)">
           <option value="">All Priorities</option>
           <option value="Critical">Critical</option>
@@ -218,6 +226,11 @@ function handleStatusFilter(status: RequirementStatus) {
             :class="{ 'view-btn--active': store.viewMode === 'matrix' }"
             @click="switchView('matrix')"
           >Matrix</button>
+          <button
+            class="view-btn"
+            :class="{ 'view-btn--active': store.viewMode === 'graph' }"
+            @click="switchView('graph')"
+          >Graph</button>
         </div>
       </div>
     </div>
@@ -298,6 +311,15 @@ function handleStatusFilter(status: RequirementStatus) {
       @select="handleSelect"
     />
 
+    <!-- Knowledge Graph View -->
+    <SddKnowledgeGraph
+      v-else-if="store.viewMode === 'graph'"
+      :profile="store.activeProfile"
+      :requirements="store.sortedRequirements"
+      :summaries="store.controlPlaneSummaries"
+      :loading="store.controlPlaneSummaryLoading"
+    />
+
   </div>
 </template>
 
@@ -367,6 +389,21 @@ function handleStatusFilter(status: RequirementStatus) {
 .import-btn:hover {
   background: var(--color-secondary);
   color: var(--color-on-secondary-container);
+}
+
+.import-btn:disabled {
+  cursor: progress;
+  opacity: 0.65;
+}
+
+.sync-error {
+  padding: 9px 12px;
+  border: 1px solid rgba(239, 83, 80, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(239, 83, 80, 0.08);
+  color: var(--color-error);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
 }
 
 .skill-flow-btn {

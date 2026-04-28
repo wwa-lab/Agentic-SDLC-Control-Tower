@@ -8,6 +8,8 @@ interface Props {
   profile: PipelineProfile;
   fullWidth?: boolean;
   compact?: boolean;
+  primaryActionLoading?: boolean;
+  primaryActionDisabled?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -23,7 +25,7 @@ const skillSectionLabel = computed(() => props.profile.usesOrchestrator ? 'Agent
 const routeSectionLabel = computed(() => props.profile.usesOrchestrator ? 'Possible Orchestrator Routes' : 'Entry Paths');
 const routeHint = computed(() => props.profile.usesOrchestrator ? 'Auto-selected by orchestrator' : 'Profile-defined path');
 const executionHub = computed(() => props.profile.chainNodes.find(node => node.isExecutionHub));
-const primaryActionLabel = computed(() => 'Refresh GitHub');
+const primaryActionLabel = computed(() => props.primaryActionLoading ? 'Refreshing GitHub' : 'Refresh GitHub');
 
 const compactChainNodes = computed<ReadonlyArray<PipelineProfile['chainNodes'][number]>>(() => {
   const nodes = props.profile.chainNodes;
@@ -71,7 +73,7 @@ function stageThresholdLabel(tier?: SpecTier | null): string {
         </ol>
       </div>
 
-      <button class="primary-action" @click="emit('primaryAction')">
+      <button class="primary-action" :disabled="primaryActionDisabled || primaryActionLoading" @click="emit('primaryAction')">
         <RefreshCw :size="15" />
         <span>{{ primaryActionLabel }}</span>
       </button>
@@ -336,6 +338,12 @@ function stageThresholdLabel(tier?: SpecTier | null): string {
 
 .primary-action:hover {
   box-shadow: 0 0 12px var(--color-secondary-glow);
+}
+
+.primary-action:disabled {
+  cursor: progress;
+  opacity: 0.65;
+  box-shadow: none;
 }
 
 .workflow-details {

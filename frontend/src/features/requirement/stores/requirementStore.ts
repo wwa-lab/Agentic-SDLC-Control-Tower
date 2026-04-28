@@ -195,6 +195,8 @@ export const useRequirementStore = defineStore('requirement', () => {
   const controlPlaneError = ref<string | null>(null);
   const controlPlaneSummaries = ref<Record<string, RequirementControlPlaneListSummary>>({});
   const controlPlaneSummaryLoading = ref(false);
+  const githubSyncLoading = ref(false);
+  const githubSyncError = ref<string | null>(null);
 
   const INITIAL_IMPORT: ImportState = {
     isOpen: false,
@@ -646,6 +648,48 @@ export const useRequirementStore = defineStore('requirement', () => {
     const updated = await requirementApi.refreshSourceReference(sourceId);
     sourceReferences.value = sourceReferences.value.map(source => source.id === sourceId ? updated : source);
     if (selectedRequirementId.value) await fetchControlPlane(selectedRequirementId.value);
+  }
+
+  async function refreshGitHubDocuments(requirementIds?: ReadonlyArray<string>) {
+    const ids = [...new Set((requirementIds && requirementIds.length > 0
+      ? requirementIds
+      : sortedRequirements.value.map(requirement => requirement.id)
+    ).filter(Boolean))];
+
+    githubSyncLoading.value = true;
+    githubSyncError.value = null;
+    skillMessage.value = null;
+
+    try {
+      if (ids.length === 0) {
+        await fetchRequirementList();
+        return;
+      }
+
+      if (USE_MOCK) {
+        if (selectedRequirementId.value && ids.includes(selectedRequirementId.value)) {
+          buildMockControlPlane(selectedRequirementId.value);
+        }
+        skillMessage.value = ids.length === 1
+          ? 'GitHub SDD index refreshed from the selected branch.'
+          : `${ids.length} GitHub SDD indexes refreshed from selected branches.`;
+        return;
+      }
+
+      await Promise.all(ids.map(id => requirementApi.refreshSddDocuments(id, activeProfile.value.id)));
+      if (selectedRequirementId.value && ids.includes(selectedRequirementId.value)) {
+        await fetchControlPlane(selectedRequirementId.value);
+      }
+      await fetchRequirementList();
+      skillMessage.value = ids.length === 1
+        ? 'GitHub SDD index refreshed from the selected branch.'
+        : `${ids.length} GitHub SDD indexes refreshed from selected branches.`;
+    } catch (error) {
+      console.error('Failed to refresh GitHub SDD documents:', error);
+      githubSyncError.value = toUserMessage(error, 'Failed to refresh GitHub SDD documents.');
+    } finally {
+      githubSyncLoading.value = false;
+    }
   }
 
   async function openSddDocument(documentId: string) {
@@ -1255,12 +1299,15 @@ export const useRequirementStore = defineStore('requirement', () => {
     controlPlaneError,
     controlPlaneSummaries,
     controlPlaneSummaryLoading,
+    githubSyncLoading,
+    githubSyncError,
     importState,
     fetchRequirementList,
     fetchRequirementDetail,
     fetchControlPlane,
     fetchControlPlaneSummaries,
     refreshSourceReference,
+    refreshGitHubDocuments,
     openSddDocument,
     createReview,
     requestAgentRun,
