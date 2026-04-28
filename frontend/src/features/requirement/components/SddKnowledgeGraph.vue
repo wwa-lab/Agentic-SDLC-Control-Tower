@@ -43,10 +43,14 @@ const props = defineProps<{
 
 const selectedNodeId = ref<string | null>(null);
 
-const columnGap = 296;
-const rowGap = 82;
-const marginX = 76;
-const marginY = 54;
+const graphNodeWidth = 264;
+const graphNodeHeight = 68;
+const graphNodeHalfWidth = graphNodeWidth / 2;
+const graphNodeHalfHeight = graphNodeHeight / 2;
+const columnGap = 340;
+const rowGap = 96;
+const marginX = 100;
+const marginY = 68;
 
 const summaries = computed(() => Object.values(props.summaries));
 
@@ -168,7 +172,7 @@ const backendNodes = computed<RenderGraphNode[]>(() => {
 const nodes = computed<RenderGraphNode[]>(() => backendNodes.value.length > 0 ? backendNodes.value : profileNodes.value);
 const renderMaxLevel = computed(() => Math.max(0, ...nodes.value.map(node => node.level)));
 
-const graphWidth = computed(() => Math.max(980, marginX * 2 + renderMaxLevel.value * columnGap + 260));
+const graphWidth = computed(() => Math.max(980, marginX * 2 + renderMaxLevel.value * columnGap + graphNodeWidth));
 
 const nodeById = computed(() => new Map(nodes.value.map(node => [node.id, node])));
 
@@ -196,7 +200,7 @@ const edges = computed(() => backendEdges.value.length > 0 ? backendEdges.value 
 
 const graphHeight = computed(() => {
   const maxY = nodes.value.reduce((max, node) => Math.max(max, node.y), 0);
-  return Math.max(420, maxY + marginY);
+  return Math.max(460, maxY + marginY + graphNodeHalfHeight);
 });
 
 const selectedNode = computed(() =>
@@ -212,9 +216,9 @@ const selectedOutgoing = computed(() =>
 );
 
 function edgePath(edge: RenderGraphEdge) {
-  const startX = edge.from.x + 112;
+  const startX = edge.from.x + graphNodeHalfWidth;
   const startY = edge.from.y;
-  const endX = edge.to.x - 112;
+  const endX = edge.to.x - graphNodeHalfWidth;
   const endY = edge.to.y;
   const curve = Math.max(52, Math.abs(endX - startX) * 0.5);
   return `M ${startX} ${startY} C ${startX + curve} ${startY}, ${endX - curve} ${endY}, ${endX} ${endY}`;
@@ -256,6 +260,7 @@ function nodeClass(node: RenderGraphNode) {
         <svg
           class="graph-svg"
           :viewBox="`0 0 ${graphWidth} ${graphHeight}`"
+          :style="{ width: `${graphWidth}px`, height: `${graphHeight}px` }"
           role="img"
           aria-label="SDD document relationship graph"
         >
@@ -279,18 +284,18 @@ function nodeClass(node: RenderGraphNode) {
             :key="node.id"
             class="graph-node"
             :class="nodeClass(node)"
-            :transform="`translate(${node.x - 112}, ${node.y - 28})`"
+            :transform="`translate(${node.x - graphNodeHalfWidth}, ${node.y - graphNodeHalfHeight})`"
             tabindex="0"
             role="button"
             @click="selectedNodeId = node.id"
             @keydown.enter.prevent="selectedNodeId = node.id"
           >
-            <rect width="224" height="56" rx="6" />
-            <text x="14" y="22" class="node-title">{{ node.label }}</text>
-            <text x="14" y="40" class="node-meta">
+            <rect :width="graphNodeWidth" :height="graphNodeHeight" rx="6" />
+            <text x="18" y="27" class="node-title">{{ node.label }}</text>
+            <text x="18" y="49" class="node-meta">
               {{ node.meta }}
             </text>
-            <text v-if="node.tier" x="188" y="22" class="node-tier">{{ node.tier }}</text>
+            <text v-if="node.tier" :x="graphNodeWidth - 46" y="27" class="node-tier">{{ node.tier }}</text>
           </g>
         </svg>
       </div>
@@ -368,7 +373,7 @@ function nodeClass(node: RenderGraphNode) {
   margin: 0;
   color: var(--color-on-surface);
   font-family: var(--font-ui);
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 700;
 }
 
@@ -376,7 +381,7 @@ function nodeClass(node: RenderGraphNode) {
   margin: 4px 0 0;
   color: var(--color-on-surface-variant);
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .graph-metrics {
@@ -395,7 +400,7 @@ function nodeClass(node: RenderGraphNode) {
   background: var(--color-surface-container-high);
   color: var(--color-on-surface-variant);
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .graph-metrics strong { color: var(--color-secondary); font-family: var(--font-tech); }
@@ -410,7 +415,7 @@ function nodeClass(node: RenderGraphNode) {
   background: var(--color-surface-container-high);
   color: var(--color-on-surface-variant);
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .graph-alert--warning {
@@ -444,7 +449,6 @@ function nodeClass(node: RenderGraphNode) {
 .graph-svg {
   display: block;
   min-width: 940px;
-  width: 100%;
   height: auto;
 }
 
@@ -482,7 +486,7 @@ function nodeClass(node: RenderGraphNode) {
 .node-title {
   fill: var(--color-on-surface);
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -490,7 +494,7 @@ function nodeClass(node: RenderGraphNode) {
 .node-tier {
   fill: var(--color-on-surface-variant);
   font-family: var(--font-tech);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .node-tier { fill: var(--color-secondary); font-weight: 700; }
@@ -518,7 +522,7 @@ function nodeClass(node: RenderGraphNode) {
   margin: -6px 0 2px;
   color: var(--color-on-surface);
   font-family: var(--font-ui);
-  font-size: 0.9375rem;
+  font-size: 1rem;
 }
 
 .detail-row {
@@ -527,7 +531,7 @@ function nodeClass(node: RenderGraphNode) {
   gap: 12px;
   color: var(--color-on-surface-variant);
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .detail-row strong {
@@ -542,7 +546,7 @@ function nodeClass(node: RenderGraphNode) {
   background: var(--color-surface-container-low);
   color: var(--color-on-surface-variant);
   font-family: var(--font-tech);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   line-height: 1.4;
 }
 
@@ -557,7 +561,7 @@ function nodeClass(node: RenderGraphNode) {
   margin: 0;
   color: var(--color-on-surface-variant);
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .relation-block button {
@@ -568,7 +572,7 @@ function nodeClass(node: RenderGraphNode) {
   color: var(--color-secondary);
   cursor: pointer;
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   text-align: left;
   padding: 6px 8px;
 }
