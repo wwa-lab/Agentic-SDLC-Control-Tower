@@ -1,18 +1,23 @@
 <script setup lang="ts">
-import type { RequirementListItem, SortField } from '../types/requirement';
+import type { RequirementControlPlaneListSummary, RequirementListItem, SortField } from '../types/requirement';
 import PriorityBadge from './PriorityBadge.vue';
 import RequirementStatusBadge from './RequirementStatusBadge.vue';
 import CategoryBadge from './CategoryBadge.vue';
+import FreshnessChip from './FreshnessChip.vue';
 
 interface Props {
   requirements: ReadonlyArray<RequirementListItem>;
   sortField?: SortField;
   sortAsc?: boolean;
+  controlPlaneSummaries?: Record<string, RequirementControlPlaneListSummary>;
+  controlPlaneLoading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   sortField: 'priority',
   sortAsc: true,
+  controlPlaneSummaries: () => ({}),
+  controlPlaneLoading: false,
 });
 
 const emit = defineEmits<{
@@ -29,6 +34,10 @@ function sortIndicator(field: SortField): string {
   if (props.sortField !== field) return '';
   return props.sortAsc ? ' \u25B2' : ' \u25BC';
 }
+
+function summaryFor(requirementId: string): RequirementControlPlaneListSummary | undefined {
+  return props.controlPlaneSummaries[requirementId];
+}
 </script>
 
 <template>
@@ -41,6 +50,7 @@ function sortIndicator(field: SortField): string {
       <span class="col-category">Category</span>
       <span class="col-stories">Stories</span>
       <span class="col-specs">Specs</span>
+      <span class="col-control-plane">Control Plane</span>
       <span class="col-completeness">Completeness</span>
       <span class="col-updated col-sortable" @click="emit('sort', 'recency')">Updated{{ sortIndicator('recency') }}</span>
     </div>
@@ -57,6 +67,18 @@ function sortIndicator(field: SortField): string {
       <span class="col-category"><CategoryBadge :category="req.category" /></span>
       <span class="col-stories cell-tech">{{ req.storyCount }}</span>
       <span class="col-specs cell-tech">{{ req.specCount }}</span>
+      <span class="col-control-plane">
+        <span v-if="controlPlaneLoading && !summaryFor(req.id)" class="control-loading">Loading</span>
+        <span v-else-if="summaryFor(req.id)" class="control-cell">
+          <FreshnessChip :status="summaryFor(req.id)!.status" />
+          <span class="control-meta">
+            {{ summaryFor(req.id)!.sourceCount }} src ·
+            {{ summaryFor(req.id)!.documentCount }} docs
+            <template v-if="summaryFor(req.id)!.missingDocumentCount"> · {{ summaryFor(req.id)!.missingDocumentCount }} missing</template>
+          </span>
+        </span>
+        <span v-else class="control-loading">Pending</span>
+      </span>
       <span class="col-completeness">
         <div class="progress-bar">
           <div class="progress-fill" :style="{ width: `${req.completeness}%` }"></div>
@@ -78,15 +100,15 @@ function sortIndicator(field: SortField): string {
 
 .table-header, .table-row {
   display: grid;
-  grid-template-columns: 80px 1fr 70px 100px 100px 50px 50px 110px 100px;
+  grid-template-columns: 80px minmax(180px, 1fr) 70px 100px 100px 50px 50px minmax(170px, 0.8fr) 110px 100px;
   gap: 8px;
   align-items: center;
-  padding: 10px 16px;
+  padding: 12px 16px;
 }
 
 .table-header {
   font-family: var(--font-ui);
-  font-size: 0.5625rem;
+  font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-on-surface-variant);
@@ -112,13 +134,13 @@ function sortIndicator(field: SortField): string {
 
 .cell-tech {
   font-family: var(--font-tech);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--color-secondary);
 }
 
 .cell-body {
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--color-on-surface);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -127,7 +149,7 @@ function sortIndicator(field: SortField): string {
 
 .cell-muted {
   font-family: var(--font-ui);
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   color: var(--color-on-surface-variant);
 }
 
@@ -153,12 +175,34 @@ function sortIndicator(field: SortField): string {
 }
 
 .progress-text {
-  font-size: 0.5625rem;
+  font-size: 0.6875rem;
   min-width: 28px;
   text-align: right;
 }
 
 .col-stories, .col-specs {
   text-align: center;
+}
+
+.col-control-plane {
+  min-width: 0;
+}
+
+.control-cell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.control-meta, .control-loading {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-tech);
+  font-size: 0.6875rem;
+  color: var(--color-on-surface-variant);
 }
 </style>

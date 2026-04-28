@@ -1,13 +1,19 @@
 import { fetchJson, postFormData, postJson } from '@/shared/api/client';
 import type {
   PipelineProfile,
+  AgentRun,
+  DocumentReview,
+  RequirementTraceability,
   RequirementDetail,
   RequirementDraft,
   RequirementImportStatus,
   RequirementList,
   RequirementListItem,
   RequirementSourceInput,
+  SddDocumentContent,
+  SddDocumentIndex,
   SkillExecutionResult,
+  SourceReference,
 } from '../types/requirement';
 
 export interface GenerationResult {
@@ -51,6 +57,12 @@ function buildQueryString(filters: RequirementListFilters): string {
   if (filters.sortDirection) params.set('sortDirection', filters.sortDirection);
   const query = params.toString();
   return query ? `?${query}` : '';
+}
+
+function buildProfileQuery(profileId?: string): string {
+  if (!profileId) return '';
+  const params = new URLSearchParams({ profileId });
+  return `?${params.toString()}`;
 }
 
 export const requirementApi = {
@@ -128,5 +140,45 @@ export const requirementApi = {
 
   async createRequirement(request: CreateRequirementRequest): Promise<RequirementListItem> {
     return postJson<RequirementListItem>('/requirements', request);
+  },
+
+  async getSourceReferences(requirementId: string): Promise<ReadonlyArray<SourceReference>> {
+    return fetchJson<ReadonlyArray<SourceReference>>(`/requirements/${requirementId}/sources`);
+  },
+
+  async createSourceReference(requirementId: string, request: { sourceType: string; url: string; title?: string; externalId?: string }): Promise<SourceReference> {
+    return postJson<SourceReference>(`/requirements/${requirementId}/sources`, request);
+  },
+
+  async refreshSourceReference(sourceId: string): Promise<SourceReference> {
+    return postJson<SourceReference>(`/requirements/sources/${sourceId}/refresh`);
+  },
+
+  async getSddDocuments(requirementId: string, profileId?: string): Promise<SddDocumentIndex> {
+    return fetchJson<SddDocumentIndex>(`/requirements/${requirementId}/sdd-documents${buildProfileQuery(profileId)}`);
+  },
+
+  async getSddDocument(documentId: string): Promise<SddDocumentContent> {
+    return fetchJson<SddDocumentContent>(`/requirements/documents/${documentId}`);
+  },
+
+  async createDocumentReview(documentId: string, request: { decision: string; comment?: string; commitSha: string; blobSha: string }): Promise<DocumentReview> {
+    return postJson<DocumentReview>(`/requirements/documents/${documentId}/reviews`, request);
+  },
+
+  async getDocumentReviews(requirementId: string): Promise<ReadonlyArray<DocumentReview>> {
+    return fetchJson<ReadonlyArray<DocumentReview>>(`/requirements/${requirementId}/reviews`);
+  },
+
+  async createAgentRun(requirementId: string, request: { skillKey: string; targetStage: string; profileId?: string; notes?: string }): Promise<AgentRun> {
+    return postJson<AgentRun>(`/requirements/${requirementId}/agent-runs`, request);
+  },
+
+  async getAgentRun(executionId: string): Promise<AgentRun> {
+    return fetchJson<AgentRun>(`/requirements/agent-runs/${executionId}`);
+  },
+
+  async getTraceability(requirementId: string, profileId?: string): Promise<RequirementTraceability> {
+    return fetchJson<RequirementTraceability>(`/requirements/${requirementId}/traceability${buildProfileQuery(profileId)}`);
   },
 };

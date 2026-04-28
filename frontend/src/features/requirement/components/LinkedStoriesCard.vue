@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import type { SectionResult, LinkedStoriesSection } from '../types/requirement';
+import { computed } from 'vue';
+import { ExternalLink, RefreshCw } from 'lucide-vue-next';
+import type { SectionResult, LinkedStoriesSection, SourceReference } from '../types/requirement';
 import RequirementCard from './RequirementCard.vue';
+import FreshnessChip from './FreshnessChip.vue';
 
 interface Props {
   requirementId: string;
   linkedStories: SectionResult<LinkedStoriesSection>;
+  jiraSources?: ReadonlyArray<SourceReference>;
   isLoading?: boolean;
+  isRefreshing?: boolean;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<{
-  generateStories: [];
   navigate: [path: string];
+  refreshJira: [sourceId: string];
 }>();
 
 const STATUS_COLORS: Record<string, string> = {
@@ -20,22 +25,89 @@ const STATUS_COLORS: Record<string, string> = {
   'In Progress': 'status--amber',
   Done: 'status--green',
 };
+
+const primaryJiraSource = computed(() => props.jiraSources?.find(source => source.sourceType === 'JIRA') ?? null);
+
+const jiraLinkTarget = computed(() => {
+  const rawUrl = primaryJiraSource.value?.url?.trim();
+  if (!rawUrl) return null;
+
+  try {
+    const parsed = new URL(rawUrl);
+    const isHttp = parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    const isPlaceholderHost = parsed.hostname === 'example.com' || parsed.hostname.endsWith('.example.com');
+    return isHttp && !isPlaceholderHost ? rawUrl : null;
+  } catch {
+    return null;
+  }
+});
+
+const syncLabel = computed(() => {
+  const fetchedAt = primaryJiraSource.value?.fetchedAt;
+  if (!primaryJiraSource.value) return 'No Jira source linked';
+  if (!fetchedAt) return 'Not synced yet';
+  return `Last synced ${formatSyncTime(fetchedAt)}`;
+});
+
+function formatSyncTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function refreshJira() {
+  const sourceId = primaryJiraSource.value?.id;
+  if (sourceId) emit('refreshJira', sourceId);
+}
 </script>
 
 <template>
   <RequirementCard
-    title="Linked Stories"
+    title="Jira Stories"
     :is-loading="isLoading"
     :error="linkedStories.error"
   >
     <div v-if="linkedStories.data" class="stories-content">
+      <div class="jira-sync">
+        <div class="jira-sync-copy">
+          <span class="sync-kicker">Synced from Jira</span>
+          <span class="sync-label">{{ syncLabel }}</span>
+        </div>
+        <div class="jira-sync-actions">
+          <FreshnessChip v-if="primaryJiraSource" :status="primaryJiraSource.freshnessStatus" />
+          <a
+            v-if="jiraLinkTarget"
+            class="icon-btn"
+            :href="jiraLinkTarget"
+            target="_blank"
+            rel="noreferrer"
+            title="Open source in Jira"
+          >
+            <ExternalLink :size="14" />
+          </a>
+          <button
+            class="icon-btn"
+            type="button"
+            title="Refresh Jira stories"
+            :disabled="!primaryJiraSource || isRefreshing"
+            @click="refreshJira"
+          >
+            <RefreshCw :size="14" />
+          </button>
+        </div>
+      </div>
+
       <div class="stories-header">
-        <span class="stories-count">{{ linkedStories.data.totalCount }} stories</span>
-        <button class="action-btn" @click="emit('generateStories')">Generate Stories</button>
+        <span class="stories-count">{{ linkedStories.data.totalCount }} Jira stories</span>
       </div>
 
       <div v-if="linkedStories.data.stories.length === 0" class="empty">
-        No stories derived yet
+        No Jira stories linked yet
       </div>
 
       <div v-else class="stories-list">
@@ -48,10 +120,8 @@ const STATUS_COLORS: Record<string, string> = {
         >
           <span class="story-id">{{ story.id }}</span>
           <span class="story-title">{{ story.title }}</span>
+          <span class="story-source">Jira status</span>
           <span class="story-status" :class="STATUS_COLORS[story.status]">{{ story.status }}</span>
-          <span v-if="story.specId" class="spec-link">
-            → {{ story.specId }}
-          </span>
         </div>
       </div>
     </div>
@@ -65,6 +135,48 @@ const STATUS_COLORS: Record<string, string> = {
   gap: 10px;
 }
 
+.jira-sync {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: var(--border-ghost);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-low);
+}
+
+.jira-sync-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sync-kicker {
+  font-family: var(--font-ui);
+  font-size: 0.5625rem;
+  color: var(--color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sync-label {
+  overflow: hidden;
+  color: var(--color-on-surface);
+  font-family: var(--font-tech);
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jira-sync-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
 .stories-header {
   display: flex;
   justify-content: space-between;
@@ -75,25 +187,6 @@ const STATUS_COLORS: Record<string, string> = {
   font-family: var(--font-tech);
   font-size: 0.625rem;
   color: var(--color-on-surface-variant);
-}
-
-.action-btn {
-  background: none;
-  border: 1px solid var(--color-secondary);
-  color: var(--color-secondary);
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-ui);
-  font-size: 0.5625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.action-btn:hover {
-  background: var(--color-secondary);
-  color: var(--color-on-secondary-container);
 }
 
 .stories-list {
@@ -131,6 +224,14 @@ const STATUS_COLORS: Record<string, string> = {
   white-space: nowrap;
 }
 
+.story-source {
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-tech);
+  font-size: 0.5625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .story-status {
   font-family: var(--font-ui);
   font-size: 0.5rem;
@@ -144,11 +245,26 @@ const STATUS_COLORS: Record<string, string> = {
 .status--amber { color: var(--color-approval-amber); background: rgba(245, 158, 11, 0.1); }
 .status--muted { color: var(--color-on-surface-variant); background: rgba(148, 163, 184, 0.1); }
 
-.spec-link {
-  font-family: var(--font-tech);
-  font-size: 0.5625rem;
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: var(--border-ghost);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-on-surface-variant);
+  cursor: pointer;
+}
+
+.icon-btn:hover:not(:disabled) {
   color: var(--color-secondary);
-  opacity: 0.7;
+  border-color: var(--color-secondary);
+}
+
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .empty {

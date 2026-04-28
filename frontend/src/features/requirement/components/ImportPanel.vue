@@ -51,7 +51,7 @@ function handleUpdateMapping(column: string, target: string) {
     <div v-if="importState.isOpen" class="import-overlay" @click.self="handleClose">
       <div class="import-panel">
         <div class="panel-header">
-          <h2 class="panel-title">Import Requirement</h2>
+          <h2 class="panel-title">Assisted Intake</h2>
           <button class="close-btn" @click="handleClose">&times;</button>
         </div>
 
@@ -80,7 +80,7 @@ function handleUpdateMapping(column: string, target: string) {
             <span>
               {{ importState.step === 'processing'
                 ? (importState.importMessage || 'Uploading files to the knowledge base and waiting for indexing...')
-                : 'AI is analyzing your input...' }}
+                : 'Creating draft...' }}
             </span>
             <div v-if="importState.step === 'processing'" class="import-progress-card">
               <div class="import-progress-row">
@@ -88,7 +88,7 @@ function handleUpdateMapping(column: string, target: string) {
                 <strong>{{ importState.kbName }}</strong>
               </div>
               <div v-if="importState.importId" class="import-progress-row">
-                <span>Import ID</span>
+                <span>Intake ID</span>
                 <strong>{{ importState.importId }}</strong>
               </div>
               <div v-if="importState.importDatasetId" class="import-progress-row">

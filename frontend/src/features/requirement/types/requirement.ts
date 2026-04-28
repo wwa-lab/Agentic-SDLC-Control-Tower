@@ -173,9 +173,33 @@ export interface SkillBinding {
   readonly triggerPoint: string;
 }
 
+export interface SkillDocumentContract {
+  readonly skillId: string;
+  readonly label: string;
+  readonly description: string;
+  readonly inputDocuments: ReadonlyArray<string>;
+  readonly outputDocuments: ReadonlyArray<string>;
+  readonly dependsOnSkills: ReadonlyArray<string>;
+}
+
+export interface DocumentDependencyDefinition {
+  readonly from: string;
+  readonly to: string;
+  readonly reason: string;
+}
+
 export interface SpecTiering {
   readonly tiers: ReadonlyArray<SpecTier>;
   readonly defaultTier: SpecTier;
+}
+
+export interface DocumentStageDefinition {
+  readonly sddType: string;
+  readonly label: string;
+  readonly pathPattern: string;
+  readonly artifactType: string;
+  readonly expectedTier?: SpecTier | null;
+  readonly traceabilityKey?: string | null;
 }
 
 export interface PipelineProfile {
@@ -184,10 +208,165 @@ export interface PipelineProfile {
   readonly description: string;
   readonly chainNodes: ReadonlyArray<ChainNode>;
   readonly skills: ReadonlyArray<SkillBinding>;
+  readonly skillDocumentContracts?: ReadonlyArray<SkillDocumentContract>;
+  readonly skillFlowDocuments?: ReadonlyArray<DocumentStageDefinition>;
+  readonly documentDependencies?: ReadonlyArray<DocumentDependencyDefinition>;
   readonly entryPaths: ReadonlyArray<EntryPath>;
+  readonly documentStages: ReadonlyArray<DocumentStageDefinition>;
   readonly specTiering: SpecTiering | null;
   readonly usesOrchestrator: boolean;
   readonly traceabilityMode: 'per-layer' | 'shared-br';
+}
+
+export type FreshnessStatus =
+  | 'FRESH'
+  | 'SOURCE_CHANGED'
+  | 'DOCUMENT_CHANGED_AFTER_REVIEW'
+  | 'MISSING_DOCUMENT'
+  | 'MISSING_SOURCE'
+  | 'UNKNOWN'
+  | 'ERROR';
+
+export type RequirementControlSourceType = 'JIRA' | 'CONFLUENCE' | 'GITHUB' | 'KB' | 'UPLOAD' | 'URL';
+
+export interface SourceReference {
+  readonly id: string;
+  readonly requirementId: string;
+  readonly sourceType: RequirementControlSourceType;
+  readonly externalId: string | null;
+  readonly title: string;
+  readonly url: string;
+  readonly sourceUpdatedAt: string | null;
+  readonly fetchedAt: string | null;
+  readonly freshnessStatus: FreshnessStatus;
+  readonly errorMessage: string | null;
+}
+
+export interface SddDocumentStage {
+  readonly id: string | null;
+  readonly sddType: string;
+  readonly stageLabel: string;
+  readonly title: string;
+  readonly repoFullName: string | null;
+  readonly branchOrRef: string | null;
+  readonly path: string | null;
+  readonly latestCommitSha: string | null;
+  readonly latestBlobSha: string | null;
+  readonly githubUrl: string | null;
+  readonly status: string;
+  readonly freshnessStatus: FreshnessStatus;
+  readonly missing: boolean;
+}
+
+export interface SddWorkspace {
+  readonly id: string;
+  readonly applicationId: string;
+  readonly applicationName: string;
+  readonly snowGroup: string;
+  readonly sourceRepoFullName: string;
+  readonly sddRepoFullName: string;
+  readonly baseBranch: string;
+  readonly workingBranch: string;
+  readonly lifecycleStatus: string;
+  readonly docsRoot: string;
+  readonly releasePrUrl: string | null;
+  readonly kbRepoFullName: string;
+  readonly kbMainBranch: string;
+  readonly kbPreviewBranch: string;
+  readonly graphManifestPath: string;
+}
+
+export interface SddDocumentIndex {
+  readonly requirementId: string;
+  readonly profileId: string;
+  readonly workspace: SddWorkspace | null;
+  readonly stages: ReadonlyArray<SddDocumentStage>;
+}
+
+export interface SddDocumentContent {
+  readonly document: SddDocumentStage;
+  readonly markdown: string;
+  readonly commitSha: string;
+  readonly blobSha: string;
+  readonly githubUrl: string;
+  readonly fetchedAt: string;
+}
+
+export type ReviewDecision = 'COMMENT' | 'APPROVED' | 'CHANGES_REQUESTED' | 'REJECTED';
+
+export interface DocumentReview {
+  readonly id: string;
+  readonly documentId: string;
+  readonly requirementId: string;
+  readonly decision: ReviewDecision;
+  readonly comment: string | null;
+  readonly reviewerId: string;
+  readonly reviewerType: string;
+  readonly commitSha: string;
+  readonly blobSha: string;
+  readonly anchorType: string | null;
+  readonly anchorValue: string | null;
+  readonly stale: boolean;
+  readonly createdAt: string;
+}
+
+export interface ArtifactLink {
+  readonly id: string;
+  readonly executionId: string;
+  readonly requirementId: string;
+  readonly artifactType: string;
+  readonly storageType: string;
+  readonly title: string;
+  readonly uri: string;
+  readonly repoFullName: string | null;
+  readonly path: string | null;
+  readonly commitSha: string | null;
+  readonly blobSha: string | null;
+  readonly status: string;
+  readonly createdAt: string;
+}
+
+export interface AgentRun {
+  readonly executionId: string;
+  readonly requirementId: string;
+  readonly profileId: string;
+  readonly skillKey: string;
+  readonly targetStage: string | null;
+  readonly status: 'MANIFEST_READY' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'STALE_CONTEXT' | string;
+  readonly manifest: Record<string, unknown>;
+  readonly outputSummary: string | null;
+  readonly errorMessage: string | null;
+  readonly artifactLinks: ReadonlyArray<ArtifactLink>;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface FreshnessItem {
+  readonly subjectType: string;
+  readonly subjectId: string;
+  readonly status: FreshnessStatus;
+  readonly message: string;
+}
+
+export interface RequirementTraceability {
+  readonly requirementId: string;
+  readonly sources: ReadonlyArray<SourceReference>;
+  readonly documents: SddDocumentIndex;
+  readonly reviews: ReadonlyArray<DocumentReview>;
+  readonly agentRuns: ReadonlyArray<AgentRun>;
+  readonly artifactLinks: ReadonlyArray<ArtifactLink>;
+  readonly freshness: ReadonlyArray<FreshnessItem>;
+}
+
+export interface RequirementControlPlaneListSummary {
+  readonly requirementId: string;
+  readonly sourceCount: number;
+  readonly documentCount: number;
+  readonly missingDocumentCount: number;
+  readonly staleReviewCount: number;
+  readonly artifactCount: number;
+  readonly status: FreshnessStatus;
+  readonly message: string;
 }
 
 export interface OrchestratorResult {

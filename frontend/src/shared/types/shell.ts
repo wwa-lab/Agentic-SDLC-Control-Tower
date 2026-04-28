@@ -19,6 +19,7 @@ export interface ShellPageConfig {
   title: string;
   subtitle?: string;
   actions?: ReadonlyArray<ShellAction>;
+  showAiPanel?: boolean;
 }
 
 export interface ShellAction {

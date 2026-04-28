@@ -5,9 +5,11 @@ import { useRequirementStore } from '../stores/requirementStore';
 import StatusDistribution from '../components/StatusDistribution.vue';
 import RequirementListTable from '../components/RequirementListTable.vue';
 import PriorityMatrix from '../components/PriorityMatrix.vue';
-import ImportPanel from '../components/ImportPanel.vue';
-import ProfileBadge from '../components/ProfileBadge.vue';
+import ProfileSelector from '../components/ProfileSelector.vue';
+import ProfileWorkflowMap from '../components/ProfileWorkflowMap.vue';
+import ControlPlaneSummaryStrip from '../components/ControlPlaneSummaryStrip.vue';
 import type { RequirementPriority, RequirementStatus, RequirementCategory, ViewMode, SortField } from '../types/requirement';
+import { Workflow } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -71,6 +73,10 @@ function handleSelect(requirementId: string) {
   router.push({ name: 'requirement-detail', params: { requirementId } });
 }
 
+function openSkillFlow() {
+  router.push({ name: 'requirement-skill-flow' });
+}
+
 function setFilterPriority(value: string) {
   store.setFilters({ priority: (value || undefined) as RequirementPriority | undefined });
 }
@@ -110,9 +116,37 @@ function handleStatusFilter(status: RequirementStatus) {
     </div>
 
     <div class="profile-row">
-      <ProfileBadge :profile="store.activeProfile" />
-      <span class="profile-caption">{{ store.activeProfile.description }}</span>
+      <div class="profile-row-main">
+        <ProfileSelector
+          :profiles="store.availableProfiles"
+          :model-value="store.activeProfile.id"
+          @update:model-value="store.setActiveProfile"
+        />
+        <span class="profile-caption">{{ store.activeProfile.description }}</span>
+      </div>
+      <button class="skill-flow-btn" type="button" @click="openSkillFlow">
+        <Workflow :size="14" />
+        <span>Skill & Doc Flow</span>
+      </button>
     </div>
+
+    <ProfileWorkflowMap
+      :profile="store.activeProfile"
+      compact
+      @primary-action="store.fetchRequirementList()"
+    />
+
+    <ControlPlaneSummaryStrip
+      :total="store.controlPlaneOverview.total"
+      :fresh="store.controlPlaneOverview.fresh"
+      :stale="store.controlPlaneOverview.stale"
+      :missing="store.controlPlaneOverview.missing"
+      :errors="store.controlPlaneOverview.errors"
+      :sources="store.controlPlaneOverview.sources"
+      :documents="store.controlPlaneOverview.documents"
+      :artifacts="store.controlPlaneOverview.artifacts"
+      :is-loading="store.controlPlaneSummaryLoading"
+    />
 
     <!-- Status Distribution Strip -->
     <StatusDistribution :distribution="store.statusDistribution" @filter="handleStatusFilter" />
@@ -120,7 +154,7 @@ function handleStatusFilter(status: RequirementStatus) {
     <!-- Filter Bar -->
     <div class="filter-bar">
       <div class="filter-group">
-        <button class="import-btn" @click="store.openImport()">+ Import</button>
+        <button class="import-btn" @click="store.fetchRequirementList()">Refresh GitHub</button>
         <select class="filter-select" @change="setFilterPriority(($event.target as HTMLSelectElement).value)">
           <option value="">All Priorities</option>
           <option value="Critical">Critical</option>
@@ -212,6 +246,8 @@ function handleStatusFilter(status: RequirementStatus) {
       :requirements="store.sortedRequirements"
       :sort-field="store.sortField"
       :sort-asc="store.sortAsc"
+      :control-plane-summaries="store.controlPlaneSummaries"
+      :control-plane-loading="store.controlPlaneSummaryLoading"
       @select="handleSelect"
       @sort="handleSort"
     />
@@ -244,6 +280,9 @@ function handleStatusFilter(status: RequirementStatus) {
               <span>{{ req.storyCount }} stories</span>
               <span>{{ req.specCount }} specs</span>
             </div>
+            <div v-if="store.controlPlaneSummaries[req.id]" class="kanban-control-plane">
+              {{ store.controlPlaneSummaries[req.id].status.replaceAll('_', ' ') }}
+            </div>
           </div>
           <div v-if="store.sortedRequirements.filter(r => r.status === col).length === 0" class="kanban-empty">
             No items
@@ -259,8 +298,6 @@ function handleStatusFilter(status: RequirementStatus) {
       @select="handleSelect"
     />
 
-    <!-- Import Panel -->
-    <ImportPanel />
   </div>
 </template>
 
@@ -283,7 +320,16 @@ function handleStatusFilter(status: RequirementStatus) {
 .profile-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .profile-caption {
@@ -303,13 +349,14 @@ function handleStatusFilter(status: RequirementStatus) {
 .filter-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .import-btn {
-  background: linear-gradient(135deg, var(--color-secondary), #a78bfa);
-  border: none;
-  color: #0b1326;
-  padding: 6px 14px;
+  background: var(--color-surface-container-high);
+  border: 1px solid var(--color-secondary);
+  color: var(--color-secondary);
+  min-height: 34px;
+  padding: 7px 14px;
   border-radius: var(--radius-sm);
   font-family: var(--font-ui);
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -317,21 +364,47 @@ function handleStatusFilter(status: RequirementStatus) {
   transition: opacity 0.2s ease;
 }
 
-.import-btn:hover { opacity: 0.85; }
+.import-btn:hover {
+  background: var(--color-secondary);
+  color: var(--color-on-secondary-container);
+}
+
+.skill-flow-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid rgba(137, 206, 255, 0.45);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-high);
+  color: var(--color-secondary);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.skill-flow-btn:hover {
+  background: var(--color-secondary-tint);
+}
 
 .filter-select, .filter-search {
   background: var(--color-surface-container-high);
   border: var(--border-ghost);
   border-radius: var(--radius-sm);
-  padding: 6px 12px;
+  min-height: 34px;
+  padding: 7px 12px;
   font-family: var(--font-ui);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--color-on-surface);
   cursor: pointer;
 }
 
 .filter-search {
-  min-width: 180px;
+  min-width: 220px;
   cursor: text;
 }
 
@@ -348,9 +421,10 @@ function handleStatusFilter(status: RequirementStatus) {
   background: var(--color-surface-container-high);
   border: var(--border-ghost);
   border-radius: var(--radius-sm);
-  padding: 6px 12px;
+  min-height: 34px;
+  padding: 7px 12px;
   font-family: var(--font-ui);
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-on-surface-variant);
@@ -371,9 +445,10 @@ function handleStatusFilter(status: RequirementStatus) {
 .view-btn {
   background: none;
   border: none;
-  padding: 6px 12px;
+  min-height: 34px;
+  padding: 7px 12px;
   font-family: var(--font-ui);
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-on-surface-variant);
@@ -499,6 +574,19 @@ function handleStatusFilter(status: RequirementStatus) {
   font-family: var(--font-ui);
   font-size: 0.5rem;
   color: var(--color-on-surface-variant);
+}
+
+.kanban-control-plane {
+  align-self: flex-start;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.5rem;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .kanban-empty {

@@ -64,7 +64,7 @@ function handleFileInput(e: Event) {
         KB-compatible formats: TXT, MD, PDF, HTML, HTM, XLSX, XLS, DOCX, CSV, ZIP
       </span>
       <span class="drop-formats">
-        ZIP packages are expanded during normalization; inner files that still need manual review are called out in the import report
+        ZIP packages are expanded during intake; inner files that still need manual review are called out in the intake report
       </span>
       <span class="drop-limit">Upload one or many files, total up to {{ MAX_TOTAL_SIZE_MB }} MB per request</span>
       <input
