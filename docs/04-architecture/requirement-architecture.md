@@ -151,7 +151,7 @@ Each profile defines:
 
 | Property | Standard SDD | IBM i |
 |----------|-------------|-------|
-| chainNodes | Req → Story → Spec → Arch → Design → Tasks → Code → Test → Deploy → Incident → Learning (11) | Req → ReqPackage → FuncSpec → TechDesign → ProgSpec/FileSpec → Code → Test → Deploy → Incident → Learning (10) |
+| chainNodes | Req → Story → Spec → Arch → Design → Tasks → Code → Test → Deploy → Incident → Learning (11) | Requirement Normalizer → Functional Spec → Technical Design → Program Spec → File Spec → UT Plan → Test Scaffold → Spec Review → DDS Review → Code Review (10) |
 | executionHub | Spec | Program Spec |
 | skills | req-to-user-story, user-story-to-spec | ibm-i-workflow-orchestrator (single entry point) |
 | specTiering | null (none) | L1 Lite, L2 Standard, L3 Full (orchestrator-determined) |

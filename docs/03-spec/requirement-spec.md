@@ -36,7 +36,7 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 | S1 | View Requirement List with Filtering and Sorting | Requirement list with priority, status, category, filtering |
 | S2 | View Requirements in Kanban Board Layout | Kanban board grouped by status with card summaries |
 | S3 | Visualize Priority Matrix (Impact vs Effort) | Scatter/quadrant chart of requirements by impact and effort |
-| S4 | View Requirement Detail with Business Context | Detail view with description, acceptance criteria, business context |
+| S4 | View Requirement Detail Control Plane | Detail view with source evidence, GitHub-backed SDD documents, reviews, CLI runs, and traceability |
 | S5 | Derive User Stories from a Requirement (AI-Assisted) | AI-assisted story derivation via req-to-user-story skill |
 | S6 | Link and Track Specs for a Requirement | Spec linkage, tracking, and generation entry via user-story-to-spec skill |
 | S7 | Trace Requirement Through the Full SDLC Chain | End-to-end traceability from Requirement to Learning |
@@ -73,7 +73,7 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 - **Requirement List & Filtering**: List, filter, sort requirements; status distribution summary
 - **Kanban Board**: Visual board grouped by requirement status with drag-read (display-only) cards
 - **Priority Matrix**: Impact vs effort scatter/quadrant visualization
-- **Requirement Detail**: Full requirement with description, acceptance criteria, business context, metadata
+- **Requirement Detail**: Control-plane view for source evidence, GitHub-backed SDD documents, reviews, CLI runs, linked records, traceability, and metadata
 - **User Story Derivation**: AI-assisted story generation from requirements (req-to-user-story skill)
 - **Spec Linkage & Tracking**: Linked specs per requirement, spec status tracking, generation entry (user-story-to-spec skill)
 - **SDLC Chain Traceability**: Full 11-node chain from Requirement through Learning
@@ -121,6 +121,7 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 
 - **FR-20**: The page provides a priority matrix view as an alternative to list and kanban views. *(Source: S3)*
 - **FR-21**: The matrix plots requirements on a 2D grid: X-axis = Effort (Low to High), Y-axis = Impact (Low to High). *(Source: S3)*
+- **FR-21a**: Until explicit impact and effort estimates are present in the list payload, the matrix discloses V1 proxy scoring: priority maps to impact, and completeness maps inversely to remaining effort. *(Source: S3)*
 - **FR-22**: Quadrants are labeled: Quick Wins (high impact, low effort), Strategic (high impact, high effort), Fill-In (low impact, low effort), Deprioritize (low impact, high effort). *(Source: S3)*
 - **FR-23**: Each plotted point shows the requirement ID and is color-coded by priority. *(Source: S3)*
 - **FR-24**: Hovering a point shows a tooltip with title, priority, status, story count. *(Source: S3)*
@@ -212,7 +213,7 @@ The system ships with a "Standard SDD" profile as the default. This profile defi
 > Stories: S13
 
 #### F-REQ-PROFILE-3: Built-in IBM i profile
-The system ships with a single "IBM i" profile. This profile defines a 10-node chain (Requirement → Req Package → Functional Spec → Technical Design → Program Spec / File Spec → Code → Test → Deploy → Incident → Learning), binds a single skill (`ibm-i-workflow-orchestrator`) that serves as the sole entry point for all IBM i workflows, uses shared BR-xx traceability, and supports L1/L2/L3 spec tiering. The orchestrator automatically determines the workflow path (Full Chain / Enhancement / Fast-Path) and spec tier based on input analysis.
+The system ships with a single "IBM i" profile. This profile defines a 10-node IBM i chain (Requirement Normalizer → Functional Spec → Technical Design → Program Spec → File Spec → UT Plan → Test Scaffold → Spec Review → DDS Review → Code Review), binds a single skill (`ibm-i-workflow-orchestrator`) that serves as the sole entry point for all IBM i workflows, uses shared BR-xx traceability, and supports L1/L2/L3 spec tiering. The orchestrator automatically determines the workflow path (Full Chain / Enhancement / Fast-Path) and spec tier based on input analysis.
 > Stories: S13, S14, S15
 
 #### F-REQ-PROFILE-4: Profile-specific chain rendering
@@ -232,7 +233,7 @@ For profiles with spec tiering enabled (e.g., IBM i), the `ibm-i-workflow-orches
 > Stories: S15
 
 #### F-REQ-PROFILE-8: Profile inheritance
-The active profile is determined by workspace/project configuration inheritance (Platform Default → Application Default → SNOW Group Override → Project Override). The page reads the resolved profile; it does not allow inline switching.
+The canonical active profile is determined by workspace/project configuration inheritance (Platform Default → Application Default → SNOW Group Override → Project Override). Requirement pages may expose a local profile preview override for prototype and authoring workflows, but persistent default profile changes belong to Platform Center configuration.
 > Stories: S13
 
 ### F-REQ-INTAKE: Requirement Intake and Import
@@ -346,16 +347,12 @@ flowchart TD
 4. User filters or sorts requirements by priority, status, category, search text, or the Active / Completed toggle
 5. User optionally switches to kanban or priority matrix view
 6. User clicks a requirement to open the detail view
-7. Detail view loads all cards: header, description, acceptance criteria, business context, stories, specs, SDLC chain, AI analysis
+7. Detail view loads all control-plane cards: header, source evidence, SDD documents, reviews, CLI runs, traceability, linked stories/specs, SDLC chain, and persisted analysis snapshot
 8. Each card loads independently — partial failure shows per-card error state (SectionResult pattern)
-9. User reviews description and acceptance criteria to understand the requirement
-10. User clicks "Derive Stories" to invoke the req-to-user-story AI skill
-11. AI-generated stories appear in the stories card with "Generated by AI" badge
-12. User clicks "Generate Spec" on a story to invoke the user-story-to-spec AI skill
-13. AI-generated spec appears in the specs card with "Generated by AI" badge
-14. User reviews SDLC chain to trace downstream artifacts
-15. User runs AI analysis to check completeness, find gaps, and detect duplicates
-16. User navigates back to the requirement list or to a linked SDLC artifact page
+9. User opens the relevant SDD document to read the canonical normalized requirement or downstream spec content
+10. User reviews source evidence and freshness to understand whether the document set is current
+11. User reviews linked stories, specs, SDLC chain, reviews, CLI runs, and analysis snapshots to trace downstream artifacts
+12. User navigates back to the requirement list or to a linked SDLC artifact page
 
 ---
 

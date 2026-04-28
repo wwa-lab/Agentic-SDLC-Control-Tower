@@ -20,121 +20,175 @@ profiles, agent manifests, and freshness.
 
 ## Phase 0: Alignment and Contracts
 
-- [ ] Confirm this SDD package is accepted as the next-stage Requirement
+- [x] Confirm this SDD package is accepted as the next-stage Requirement
       Management adjustment scope
-- [ ] Keep existing Requirement Management behavior during transition
-- [ ] Decide initial source providers for Day 1: manual URL metadata first,
+- [x] Keep existing Requirement Management behavior during transition
+- [x] Decide initial source providers for Day 1: manual URL metadata first,
       provider fetch second
-- [ ] Decide initial GitHub access path: GitHub app connector, PAT-backed
+- [x] Decide initial GitHub access path: GitHub app connector, PAT-backed
       backend gateway, or existing internal gateway
-- [ ] Decide default repo/branch resolution for a requirement/project
+- [x] Decide default repo/branch resolution for a requirement/project
+- [x] Define central SDD repo branch model: `main` as released baseline,
+      project branch as in-flight review workspace
+- [x] Define Central Knowledge Base repo as generated graph output, not a
+      second SDD source of truth
 
 ## Phase 1: Data Model and Backend Foundations
 
-- [ ] Add Flyway migration for `requirement_source_reference`
-- [ ] Add Flyway migration for `requirement_sdd_document_index`
-- [ ] Add Flyway migration for `requirement_document_review`
-- [ ] Add Flyway migration for `requirement_agent_run`
-- [ ] Add Flyway migration for `requirement_artifact_link`
-- [ ] Create source reference entity/repository/service/DTO
-- [ ] Create SDD document index entity/repository/service/DTO
-- [ ] Create document review entity/repository/service/DTO
-- [ ] Create agent run and artifact link entities/repositories/services/DTOs
-- [ ] Add freshness service projection
+- [x] Add Flyway migration for `project_sdd_workspace`
+- [x] Add Flyway migration for `requirement_source_reference`
+- [x] Add Flyway migration for `requirement_sdd_document_index`
+- [x] Add Flyway migration for `requirement_document_review`
+- [x] Add Flyway migration for `requirement_agent_run`
+- [x] Add Flyway migration for `requirement_artifact_link`
+- [x] Create source reference entity/repository/service/DTO
+- [x] Create SDD document index entity/repository/service/DTO
+- [x] Create document review entity/repository/service/DTO
+- [x] Create agent run and artifact link entities/repositories/services/DTOs
+- [x] Create SDD workspace entity/repository/DTO
+- [x] Add freshness service projection
 
 ## Phase 2: Source References
 
-- [ ] Add `GET /requirements/{id}/sources`
-- [ ] Add `POST /requirements/{id}/sources`
-- [ ] Add `POST /requirements/sources/{sourceId}/refresh`
-- [ ] Add `SourceReferencesPanel.vue`
-- [ ] Add `SourceReferenceCard.vue`
-- [ ] Support Jira, Confluence, GitHub, KB, upload, and generic URL source
+- [x] Add `GET /requirements/{id}/sources`
+- [x] Add `POST /requirements/{id}/sources`
+- [x] Add `POST /requirements/sources/{sourceId}/refresh`
+- [x] Add `SourceReferencesPanel.vue`
+- [x] Add `SourceReferenceCard.vue`
+- [x] Support Jira, Confluence, GitHub, KB, upload, and generic URL source
       types in DTOs
-- [ ] Add mocked source refs for DEV mode
-- [ ] Add section-level error and retry states
+- [x] Add mocked source refs for DEV mode
+- [x] Add section-level error and retry states
 
 ## Phase 3: GitHub SDD Document Index and Viewer
 
-- [ ] Add GitHub document gateway abstraction
-- [ ] Add `GET /requirements/{id}/sdd-documents`
-- [ ] Add `GET /requirements/documents/{documentId}`
-- [ ] Add `SddDocumentsPanel.vue`
-- [ ] Add `SddDocumentStageRow.vue`
-- [ ] Add `GitHubMarkdownViewer.vue`
-- [ ] Render profile expected stages with present/missing document state
-- [ ] Show GitHub URL, repo, path, commit SHA, and blob SHA
-- [ ] Ensure Markdown content is fetched from GitHub and not treated as DB
+- [x] Add GitHub document gateway abstraction
+- [x] Add `GET /requirements/{id}/sdd-documents`
+- [x] Add `GET /requirements/documents/{documentId}`
+- [x] Add `SddDocumentsPanel.vue`
+- [x] Add `SddDocumentStageRow.vue`
+- [x] Add `GitHubMarkdownViewer.vue`
+- [x] Render profile expected stages with present/missing document state
+- [x] Show GitHub URL, repo, path, commit SHA, and blob SHA
+- [x] Show Application, SNOW Group, source repo, SDD repo, working branch, and
+      Knowledge Base repo context in the document panel
+- [x] Ensure Markdown content is fetched from GitHub and not treated as DB
       source of truth
 
 ## Phase 4: Business Review
 
-- [ ] Add `POST /requirements/documents/{documentId}/reviews`
-- [ ] Add `GET /requirements/{id}/reviews`
-- [ ] Validate commit SHA and blob SHA for review creation
-- [ ] Add `BusinessReviewPanel.vue`
-- [ ] Add `ReviewHistoryList.vue`
-- [ ] Support COMMENT, APPROVED, CHANGES_REQUESTED, REJECTED decisions
-- [ ] Mark approval stale when latest blob differs from reviewed blob
-- [ ] Add tests for version-bound review behavior
+- [x] Add `POST /requirements/documents/{documentId}/reviews`
+- [x] Add `GET /requirements/{id}/reviews`
+- [x] Validate commit SHA and blob SHA for review creation
+- [x] Add `BusinessReviewPanel.vue`
+- [x] Add `ReviewHistoryList.vue`
+- [x] Support COMMENT, APPROVED, CHANGES_REQUESTED, REJECTED decisions
+- [x] Mark approval stale when latest blob differs from reviewed blob
+- [x] Add tests for version-bound review behavior
 
 ## Phase 5: Profile-Driven Stage Rendering
 
-- [ ] Extend frontend profile model with document stage definitions
-- [ ] Update Standard Java profile stages and path patterns
-- [ ] Rewrite IBM i profile based on `build-agent-skill` workflow:
+- [x] Extend frontend profile model with document stage definitions
+- [x] Update Standard Java profile stages and path patterns
+- [x] Rewrite IBM i profile based on `build-agent-skill` workflow:
       Requirement Normalizer, Functional Spec, Technical Design, Program Spec,
       File Spec, UT Plan, Test Scaffold, Spec Review, DDS Review, Code Review
-- [ ] Include IBM i BR-xx traceability and L1/L2/L3 tiering metadata
-- [ ] Make Requirement detail document stages entirely profile-driven
-- [ ] Remove hardcoded Java labels from new control-plane sections
+- [x] Include IBM i BR-xx traceability and L1/L2/L3 tiering metadata
+- [x] Make Requirement detail document stages entirely profile-driven
+- [x] Remove hardcoded Java labels from new control-plane sections
+- [x] Add `RequirementSkillFlowView.vue` for profile-owned skill inputs,
+      skill outputs, skill dependencies, and document dependencies
+- [x] Expand IBM i Skill & Document Flow from orchestrator-only to all 16
+      `build-agent-skill` skills with flow-only source/code/report artifacts
+- [x] Add Skill & Document Flow entry points from Requirement list and detail
 
 ## Phase 6: Agent Run Manifest
 
-- [ ] Add `POST /requirements/{id}/agent-runs`
-- [ ] Add `GET /requirements/agent-runs/{executionId}`
-- [ ] Add `POST /requirements/agent-runs/{executionId}/callback`
-- [ ] Generate manifest with requirement, profile, repo, branch/ref, source
+- [x] Add `POST /requirements/{id}/agent-runs`
+- [x] Add `GET /requirements/agent-runs/{executionId}`
+- [x] Add `POST /requirements/agent-runs/{executionId}/callback`
+- [x] Generate manifest with requirement, profile, repo, branch/ref, source
       references, document references, output expectations, and constraints
-- [ ] Pin source/document versions at manifest creation time
-- [ ] Add `AgentRunsPanel.vue`
-- [ ] Add `AgentRunCard.vue`
-- [ ] Show MANIFEST_READY, RUNNING, COMPLETED, FAILED, STALE_CONTEXT states
-- [ ] Store artifact links from callbacks
+- [x] Include source repo, central SDD workspace branch, and Knowledge Base
+      graph context in the manifest
+- [x] Pin source/document versions at manifest creation time
+- [x] Keep agent run status available for backend audit and developer
+      diagnostics instead of showing a standalone CLI Runs card in the
+      BA-facing Requirement Detail page
+- [x] Store artifact links from callbacks
 
 ## Phase 7: Freshness and Traceability
 
-- [ ] Add `GET /requirements/{id}/traceability`
-- [ ] Compute source-to-document freshness
-- [ ] Compute review-to-document freshness
-- [ ] Add `RequirementTraceabilityPanel.vue`
-- [ ] Use common freshness states:
+- [x] Add `GET /requirements/{id}/traceability`
+- [x] Compute source-to-document freshness
+- [x] Compute review-to-document freshness
+- [x] Add `RequirementTraceabilityPanel.vue`
+- [x] Use common freshness states:
       FRESH, SOURCE_CHANGED, DOCUMENT_CHANGED_AFTER_REVIEW, MISSING_DOCUMENT,
       MISSING_SOURCE, UNKNOWN, ERROR
-- [ ] Add visual freshness chips in source and document panels
-- [ ] Add tests for stale source and stale review scenarios
+- [x] Add visual freshness chips in source and document panels
+- [x] Add tests for stale source and stale review scenarios
 
 ## Phase 8: Integration With Existing Requirement Features
 
-- [ ] Keep existing import/normalize flow operational
-- [ ] Reposition Normalize with AI as assisted intake
-- [ ] Add source reference creation from confirmed import draft
-- [ ] Transition Generate Stories / Generate Spec actions toward Request Agent
+- [x] Keep existing import/normalize flow operational
+- [x] Reposition Normalize with AI as assisted intake
+- [x] Add source reference creation from confirmed import draft
+- [x] Transition Generate Stories / Generate Spec actions toward Request Agent
       Run in the new document panel
-- [ ] Keep existing linked stories/specs cards during migration
-- [ ] Update Requirement detail ordering to emphasize sources and GitHub docs
+- [x] Keep Jira user story links visible while removing the legacy Linked Specs
+      card from Requirement Detail; SDD/spec documents are represented by the
+      GitHub SDD Documents panel
+- [x] Render Jira stories as read-only Jira projections with source freshness,
+      last synced metadata, Open in Jira, and Refresh from Jira actions
+- [x] Remove the legacy SDLC Chain card from Requirement Detail; traceability is
+      represented by Source References, GitHub SDD Documents, Business Review,
+      and Review Readiness until a branch-aware delivery trace is introduced
+- [x] Remove the legacy Analysis Snapshot card from Requirement Detail; AI
+      analysis belongs in intake/normalize or agent output flows, not the
+      document review surface
+- [x] Update Requirement detail ordering to emphasize sources and GitHub docs
 
 ## Phase 9: Verification
 
-- [ ] Backend unit tests for services and freshness calculations
-- [ ] Backend controller tests for all new endpoints
-- [ ] Frontend store tests for source refs, document viewer, reviews, and agent
+- [x] Backend unit tests for services and freshness calculations
+- [x] Backend controller tests for all new endpoints
+- [x] Frontend store tests for source refs, document viewer, reviews, and agent
       runs
-- [ ] UI smoke test for Requirement detail with Standard Java profile
-- [ ] UI smoke test for Requirement detail with IBM i profile
-- [ ] Verify GitHub fetch section-level failure does not break page
-- [ ] Verify review decision is tied to commit/blob metadata
-- [ ] Verify agent callback creates artifact links and updates run status
+- [x] UI smoke test for Requirement detail with Standard Java profile
+- [x] UI smoke test for Requirement detail with IBM i profile
+- [x] Verify GitHub fetch section-level failure does not break page
+- [x] Verify review decision is tied to commit/blob metadata
+- [x] Verify agent callback creates artifact links and updates run status
+
+## Phase 10: Knowledge Base Graph Publishing
+
+- [x] Define Central Knowledge Base repo context in workspace metadata
+- [x] Expose Knowledge Base repo, main branch, preview branch, and graph
+      manifest path in SDD document index DTOs
+- [ ] Add deterministic sync job that reads central SDD `main` and publishes
+      Obsidian-compatible Markdown nodes plus `_graph/nodes.jsonl` and
+      `_graph/edges.jsonl`
+- [ ] Add project preview graph generation from SDD project branch to matching
+      Knowledge Base preview branch
+- [ ] Add Control Tower Knowledge Node view and graph navigation
+
+## Phase 11: Document Instance Resolution
+
+- [ ] Add `documentInstanceKey`, `titleSource`, `pathPattern`,
+      `pathVariables`, and `unresolvedTokens` to SDD document DTOs and index
+      persistence.
+- [ ] Resolve profile path tokens from requirement metadata, source references,
+      project metadata, and latest agent manifest before rendering missing
+      documents.
+- [ ] Add `stageGroups[].documents[]` response shape while preserving flattened
+      `stages[]` during UI transition.
+- [ ] Support one-to-many profile stages, especially IBM i Program Spec and
+      File Spec instances.
+- [ ] Update the GitHub indexer to derive display title from frontmatter
+      `title`, then first H1, then normalized path basename.
+- [ ] Add controller tests for branch-based document identity and resolved
+      missing document paths.
 
 ## Rollout Notes
 
@@ -144,4 +198,3 @@ profiles, agent manifests, and freshness.
 - Start with manual source metadata and mocked GitHub documents if integration
   credentials are not ready.
 - Use feature flags if demo environments must keep the current simplified flow.
-

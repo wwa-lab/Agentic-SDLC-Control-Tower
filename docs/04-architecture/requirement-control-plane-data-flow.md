@@ -94,8 +94,8 @@ Rules:
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant UI as AgentRunsPanel
+    participant Developer
+    participant Tool as CLI / Developer Action
     participant API as Requirement API
     participant AgentSvc as RequirementAgentRunService
     participant Docs as SddDocumentService
@@ -103,8 +103,8 @@ sequenceDiagram
     participant Profile as PipelineProfileService
     participant DB as DB
 
-    User->>UI: Request agent run
-    UI->>API: POST /requirements/{id}/agent-runs
+    Developer->>Tool: Request agent run
+    Tool->>API: POST /requirements/{id}/agent-runs
     API->>AgentSvc: createRun(request)
     AgentSvc->>Profile: Resolve active profile
     AgentSvc->>Source: Resolve latest source refs
@@ -193,4 +193,3 @@ sequenceDiagram
 ```
 
 The UI renders missing expected documents rather than hiding gaps.
-

@@ -126,7 +126,7 @@ document chain, so that BAU enhancement work is not forced into a Java SDD shape
 
 **Acceptance criteria:**
 
-- Given the active profile is `ibm-i-sdd`, then the UI shows Requirement
+- Given the active profile is `ibm-i`, then the UI shows Requirement
   Normalizer, Functional Spec, Technical Design, Program Spec, File Spec, UT
   Plan, Test Scaffold, and Review stages.
 - Given an IBM i stage has tier information, then the UI shows L1/L2/L3 where
@@ -213,4 +213,3 @@ system type gets the right document chain and skill guidance.
   default.
 - Given a profile defines stages and skills, then UI renders stages from the
   profile and creates manifests using those skill bindings.
-

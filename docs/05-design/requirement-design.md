@@ -38,18 +38,19 @@ frontend/src/
 │       │   ├── RequirementListTable.vue      # requirement table rows
 │       │   ├── StatusDistribution.vue        # status distribution summary strip
 │       │   ├── RequirementHeaderCard.vue     # header with priority, status, assignee
-│       │   ├── DescriptionCard.vue           # description + acceptance criteria
-│       │   ├── LinkedStoriesCard.vue         # derived user stories list
-│       │   ├── LinkedSpecsCard.vue           # linked specs with generation entry
+│       │   ├── SourceReferencesPanel.vue     # upstream evidence linked from GitHub/control-plane sync
+│       │   ├── SddDocumentsPanel.vue         # canonical GitHub-backed SDD document entry point
+│       │   ├── LinkedStoriesCard.vue         # read-only derived user stories list
+│       │   ├── LinkedSpecsCard.vue           # read-only linked specs
 │       │   ├── SdlcChainCard.vue             # SDLC chain traceability (reuse pattern)
-│       │   ├── AiAnalysisCard.vue            # AI completeness, gaps, impact analysis
+│       │   ├── AiAnalysisCard.vue            # read-only analysis snapshot from persisted records
 │       │   ├── PriorityMatrix.vue            # 2x2 impact vs effort matrix
 │       │   ├── KanbanColumn.vue              # single kanban column
-│       │   ├── ImportPanel.vue               # import modal/drawer host
+│       │   ├── ImportPanel.vue               # legacy intake modal; not mounted in GitHub/CLI control-plane mode
 │       │   ├── ImportDropZone.vue            # drag-and-drop multi-file upload zone
 │       │   ├── ImportTextInput.vue           # paste text textarea
 │       │   ├── ImportSourceTabs.vue          # source type tabs (Text/File/Email/Meeting)
-│       │   ├── NormalizationResultCard.vue   # AI draft review with editable fields
+│       │   ├── NormalizationResultCard.vue   # legacy draft review, not used in GitHub/CLI control-plane mode
 │       │   ├── ImportInspectionCard.vue      # parsed/manual-review file inspection summary
 │       │   ├── MissingInfoBanner.vue         # amber warnings for missing fields
 │       │   ├── BatchPreviewTable.vue         # reserved for future row-based spreadsheet intake
@@ -66,11 +67,12 @@ frontend/src/
 │       │   ├── standardSddProfile.ts         # Standard SDD profile definition
 │       │   └── ibmIProfile.ts               # IBM i profile definition (orchestrator-routed)
 │       ├── components/
-│       │   ├── ProfileBadge.vue              # shows active profile name in header
+│       │   ├── ProfileSelector.vue           # local profile preview override
+│       │   ├── ProfileWorkflowMap.vue        # visible profile chain/docs/execution preview
 │       │   ├── ProfileChainCard.vue          # profile-adaptive SDLC chain card
 │       │   ├── EntryPathSelector.vue         # read-only badge showing orchestrator-determined path
 │       │   ├── SpecTierSelector.vue          # read-only badge showing orchestrator-determined tier
-│       │   └── ProfileSkillActions.vue       # profile-specific action buttons (IBM i: single "Send to Orchestrator")
+│       │   └── ProfileSkillActions.vue       # legacy profile action buttons, not mounted in detail control-plane mode
 │       └── mockData.ts                       # Phase A mocked data
 ```
 
@@ -221,30 +223,30 @@ backend/src/main/java/com/sdlctower/
 │  │  Source: Manual | Created: 2026-04-10 | Updated: 2026-04-15 ││
 │  └──────────────────────────────────────────────────────────────┘│
 │                                                                  │
-│  ┌────────────────────────────┐  ┌──────────────────────────────┐│
-│  │  Description Card          │  │  Linked Stories Card         ││
-│  │  (left column, spans 2     │  │  (right column)              ││
-│  │   rows)                    │  ├──────────────────────────────┤│
-│  │                            │  │  Linked Specs Card           ││
-│  │  Full description          │  │  ┌─────────────────────────┐ ││
-│  │  Business context          │  │  │ SPEC-0018 (Approved)    │ ││
-│  │  Acceptance criteria       │  │  │ [GENERATE SPEC]         │ ││
-│  │   ☑ Criterion 1            │  │  └─────────────────────────┘ ││
-│  │   ☐ Criterion 2            │  │                              ││
-│  └────────────────────────────┘  └──────────────────────────────┘│
+│  ┌──────────────────────────────────────────────────────────────┐│
+│  │  Source Evidence                                             ││
+│  │  Linked Jira / Confluence / manual source references          ││
+│  └──────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────────┐│
+│  │  SDD Documents                                               ││
+│  │  Requirement Normalizer | Functional Spec | Design | Review  ││
+│  │  User opens the GitHub-backed document to read full content   ││
+│  └──────────────────────────────────────────────────────────────┘│
 │                                                                  │
 │  ┌────────────────────────────┐  ┌──────────────────────────────┐│
-│  │  AI Analysis Card          │  │  SDLC Chain Card             ││
-│  │  Completeness | Gaps       │  │  Req → Story → Spec → ...   ││
-│  │  Impact | Suggestions      │  │  [Expand full chain]         ││
+│  │  Linked Stories / Specs    │  │  SDLC Chain / Analysis       ││
+│  │  Read-only linked records  │  │  Persisted trace signals     ││
 │  └────────────────────────────┘  └──────────────────────────────┘│
 └──────────────────────────────────────────────────────────────────┘
 ```
 
 Detail view uses CSS grid:
 - **Row 1**: Header card (full width)
-- **Row 2-3**: Description card (left, spans 2 rows) + Linked Stories (right top) + Linked Specs (right bottom)
-- **Row 4**: AI Analysis (left) + SDLC Chain (right)
+- **Row 2**: Profile strip (full width)
+- **Row 3**: Source Evidence (full width)
+- **Row 4**: SDD Documents (full width, canonical content entry point)
+- **Row 5+**: Reviews, CLI runs, traceability, linked records, chain, and persisted analysis snapshots
 
 ---
 
@@ -322,13 +324,15 @@ Visual: Horizontal strip of status segments similar to SeverityDistribution in i
 
 Renders: ID (JetBrains Mono), title, priority badge, status badge, category badge, assignee, source indicator (Manual/Imported/AI-Generated), created and updated timestamps, story count, spec count and coverage indicator.
 
-### 3.7 DescriptionCard
+### 3.7 SourceReferencesPanel
 
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|
-| `description` | `SectionResult<RequirementDescription>` | Yes | Description + acceptance criteria |
+| `sources` | `readonly SourceReference[]` | Yes | Authoritative upstream evidence linked to the requirement |
+| `isLoading` | `boolean` | No | Section loading state |
+| `error` | `string \| null` | No | Source loading error |
 
-Renders: Full requirement description text, business context and rationale section, business value justification, acceptance criteria list with pass/fail checkmarks. Criteria use `--color-tertiary` for passed and `--color-on-surface-variant` for not yet evaluated.
+Renders as `Source Evidence`, the provenance and freshness record for the requirement. The detail view does not render a separate DB/mock requirement body card because canonical normalized content lives in the GitHub-backed SDD document set. Users read the full requirement body by opening the `Requirement Normalizer` document in `SddDocumentsPanel`. Shows compact counts for linked sources, fresh sources, and sources needing attention. Source titles are clickable only when the URL is a real `http`/`https` target; placeholder hosts such as `*.example.com` and internal source pointers such as `jira://PAY-123`, `manual://intake`, or `upload://file.md` render as non-clickable evidence labels.
 
 ### 3.8 LinkedStoriesCard
 
@@ -339,9 +343,8 @@ Renders: Full requirement description text, business context and rationale secti
 | Event | Payload | Description |
 |-------|---------|-------------|
 | `@navigate` | `storyId: string` | User clicks a story row |
-| `@generate` | `void` | User clicks "Generate Stories" |
 
-Renders: List of derived user stories showing story ID (JetBrains Mono), title, status badge, linked spec indicator. Decomposition completeness bar at the top. "Generate Stories" button uses the secondary/cyan AI styling with outer glow.
+Renders: Read-only list of linked user stories discovered from persisted records/GitHub-backed traces. Story generation is not triggered from the UI; story creation is performed by CLI workflows and reflected here after refresh.
 
 ### 3.9 LinkedSpecsCard
 
@@ -352,9 +355,8 @@ Renders: List of derived user stories showing story ID (JetBrains Mono), title, 
 | Event | Payload | Description |
 |-------|---------|-------------|
 | `@navigate` | `specId: string` | User clicks a spec row |
-| `@generate` | `{ sourceType: 'requirement' \| 'story', sourceId: string }` | User clicks "Generate Spec" |
 
-Renders: List of linked specs showing spec ID (JetBrains Mono), title, version, status badge. Spec coverage indicator. "Generate Spec" button is prominent (AI-styled, secondary color with glow) per REQ-REQ-40 — Spec generation is a primary workflow, never buried.
+Renders: Read-only list of linked specs discovered from persisted records/GitHub-backed traces. Spec generation is not triggered from the UI; spec creation is performed by CLI workflows and reflected here after refresh.
 
 ### 3.10 SdlcChainCard
 
@@ -372,25 +374,25 @@ Renders: Compressed SDLC chain with Spec node always visible per REQ-REQ-52. Exp
 
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|
-| `analysis` | `SectionResult<AiAnalysis>` | Yes | AI analysis results |
+| `analysis` | `SectionResult<AiAnalysis>` | Yes | Persisted analysis snapshot |
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `@runAnalysis` | `void` | User requests AI analysis |
+| none | — | UI does not invoke analysis |
 
-Renders: Completeness score (circular progress), quality assessment (clarity, testability, ambiguity scores), gap analysis results, impact assessment summary, improvement suggestions list. If no analysis has been run, shows "Run AI Analysis" call-to-action button (AI-styled). Scores use green/amber/red color mapping.
+Renders: Read-only analysis snapshot such as completeness score, missing elements, similar requirements, impact assessment summary, and suggestions if already persisted. The card has no run/re-run action because analysis is performed by CLI workflows and saved back to GitHub/backing records.
 
 ### 3.12 PriorityMatrix
 
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|
-| `requirements` | `readonly RequirementListItem[]` | Yes | Requirements with impact/effort scores |
+| `requirements` | `readonly RequirementListItem[]` | Yes | Filtered requirements; V1 derives matrix position from priority and completeness proxy fields |
 
 | Event | Payload | Description |
 |-------|---------|-------------|
 | `@select` | `requirementId: string` | User clicks a requirement dot |
 
-Renders: 2x2 grid with quadrant labels (Quick Wins, Strategic, Fill-ins, Reconsider). Requirement dots positioned by impact (y-axis) and effort (x-axis). Dots colored by priority. Quadrant backgrounds use subtle tints on `--color-surface-container-low`.
+Renders: 2x2 grid with quadrant labels (Quick Wins, Strategic, Fill-ins, Deprioritize). Requirement dots are positioned by V1 proxy scoring until explicit impact/effort estimates are added: `Critical`/`High` priority maps to high impact, `Medium`/`Low` maps to low impact, `completeness > 50%` maps to low remaining effort, and `completeness <= 50%` maps to high remaining effort. Dots are colored by priority and tooltips disclose the derived impact/effort inputs.
 
 ### 3.13 KanbanColumn
 
@@ -428,12 +430,22 @@ Renders: Card wrapper following design.md section 5 — `surface-container-high`
 
 ### Profile-Adaptive Components
 
-#### ProfileBadge.vue
+#### ProfileSelector.vue
+| Prop | Type | Description |
+|------|------|-------------|
+| `profiles` | `PipelineProfile[]` | Built-in profile options |
+| `modelValue` | `string` | Active profile ID |
+
+Renders a compact profile selector in Requirement list and detail headers. Selection is a local preview override persisted in browser storage; Platform Center remains responsible for persistent workspace/project profile defaults.
+
+#### ProfileWorkflowMap.vue
 | Prop | Type | Description |
 |------|------|-------------|
 | `profile` | `PipelineProfile` | Active profile object |
+| `fullWidth` | `boolean` | Span the detail grid when embedded near the top of the detail page |
+| `compact` | `boolean` | Render the list-page command surface with a short chain, key metrics, primary intake action, and collapsed details |
 
-Renders a subtle badge in the page header showing the active profile name (e.g., "Standard SDD", "IBM i"). Uses `label-md` typography in uppercase with HUD styling.
+Renders the profile workflow. The Requirement list uses compact mode by default so the first screen stays control-plane oriented: active workflow, execution summary, shortened chain, and a primary `Refresh GitHub` action. Full chain and document catalog remain available inside collapsed details. Requirement detail pages do not render the full map by default; the detail profile strip is a read-only profile/result surface for profile selection and orchestrator path/tier results, while the rest of the page focuses on the selected requirement's sources, GitHub SDD documents, reviews, CLI runs, and traceability. IBM i document stage tier markers render as applicability thresholds such as `From L2+`, not as the current document's status or final requirement tier. The UI does not invoke profile skills or orchestrator workflows; those run in CLI and appear here after refresh.
 
 #### ProfileChainCard.vue
 | Prop | Type | Description |
@@ -460,7 +472,7 @@ Shows only when the active profile has >1 entry path AND the orchestrator has re
 
 Shows only when `activeProfile.specTiering` is not null AND the orchestrator has returned a result. Renders as a read-only badge showing the orchestrator-determined tier (e.g., "L2 Standard") with a description tooltip. This is not an interactive selector — the tier is determined by `ibm-i-workflow-orchestrator`, not by the user. Before the orchestrator has been invoked, this area shows a placeholder: "Tier will be determined by orchestrator".
 
-#### ProfileSkillActions.vue
+#### ProfileSkillActions.vue (legacy)
 | Prop | Type | Description |
 |------|------|-------------|
 | `skills` | `SkillBinding[]` | From `activeProfile.skills` |
@@ -469,11 +481,9 @@ Shows only when `activeProfile.specTiering` is not null AND the orchestrator has
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `invoke` | `{ skillId: string }` | Emitted when user clicks a skill action |
+| none in current UI | — | Skill/orchestrator execution happens in CLI |
 
-For Standard SDD: renders action buttons from the profile's skill bindings (e.g., "Generate Stories", "Generate Spec"). Button labels come from `SkillBinding.label`.
-
-For IBM i (when `usesOrchestrator` is true): renders a single "Send to Orchestrator" button that invokes `ibm-i-workflow-orchestrator`. The orchestrator determines path and tier internally. No entry path selector or tier selector is shown as user input.
+Legacy action component retained for compatibility but not mounted in Requirement list/detail control-plane surfaces. Standard SDD and IBM i workflows are executed by CLI skills, with output persisted to GitHub/backing records and displayed after refresh.
 
 ### Intake Components
 
@@ -636,16 +646,15 @@ Active states (In Review, In Progress) use a subtle CSS pulse animation matching
 - Typography: `label-md` uppercase, 0.05em letter-spacing
 - Icon: small pipeline icon before text
 
-#### Import Panel Styling
+#### Import Panel Styling (legacy)
 - Overlay: `surface_variant` at 60% opacity with 20px backdrop blur (glassmorphism per design system)
 - Panel background: `surface-container-low`
 - Drop zone: ghost border (`outline_variant` at 20%), dashed, 4px radius
 - Drop zone active: `secondary` border, subtle outer glow
 - Source tabs: HUD-style label-md uppercase
-- "Normalize with AI" button: AI gradient (secondary → on_secondary_container at 135°)
-- "Confirm & Create" button: same AI gradient
+- Normalize / create actions are not mounted in GitHub/CLI control-plane mode.
 - "Discard" button: tertiary style (transparent, outline text)
-- AI badge on suggested values: small cyan pill with "AI" text in label-sm
+- Suggested-value badges are legacy only.
 - Missing info banners: amber (#F59E0B) at 10% opacity background
 
 #### Entry Path Display Styling (read-only badge)
@@ -695,11 +704,8 @@ requirementStore
 
 | Action | Triggers | Effect |
 |--------|----------|--------|
-| `fetchRequirementList()` | List view mount, filter change | Fetches list from API or mock |
+| `fetchRequirementList()` | List view mount, filter change, Refresh GitHub | Fetches list and control-plane summaries from API or mock |
 | `fetchRequirementDetail(id)` | Detail view mount | Fetches detail from API or mock |
-| `generateStories(requirementId)` | User clicks Generate Stories | POST generate, refresh linked stories |
-| `generateSpec(sourceType, sourceId)` | User clicks Generate Spec | POST generate, refresh linked specs |
-| `runAiAnalysis(requirementId)` | User clicks Run AI Analysis | POST analysis, refresh AI analysis card |
 | `moveRequirement(id, newStatus)` | Kanban drag-and-drop | PATCH status, refresh kanban columns |
 | `setFilters(filters)` | User changes filters | Updates filter state, re-fetches list |
 | `setActiveView(view)` | User toggles view mode | Updates activeView |
@@ -1043,16 +1049,13 @@ else if section.data -> render card content
 else -> render loading skeleton
 ```
 
-### 10.5 AI Action States
+### 10.5 Analysis Snapshot States
 
 | State | Behavior |
 |-------|----------|
-| No analysis run | "Run AI Analysis" call-to-action (AI-styled button) |
-| Analysis running | Loading spinner with "Analyzing requirement..." text |
-| Analysis complete | Full analysis card with scores and suggestions |
-| Analysis failed | Error message with retry |
-| Story generation in progress | Loading state on LinkedStoriesCard |
-| Spec generation in progress | Loading state on LinkedSpecsCard |
+| No analysis linked | Empty read-only state |
+| Analysis linked | Snapshot card with stored scores and suggestions |
+| Analysis load failed | Error message from the section result |
 
 ### 10.6 Import Flow States
 
@@ -1086,8 +1089,6 @@ else -> render loading skeleton
 | Endpoint | Validation | Error Response |
 |----------|-----------|----------------|
 | `GET /requirements/:id` | ID exists in workspace | 404 with "Requirement not found" |
-| `POST /generate-stories` | Requirement exists, status is Approved or later | 400 with "Requirement must be Approved before generating stories" |
-| `POST /generate-spec` | Requirement or story exists | 400 with validation message |
 | `PATCH /status` | Valid status transition per state machine | 400 with "Invalid status transition from X to Y" |
 
 ---
@@ -1098,7 +1099,7 @@ else -> render loading skeleton
 
 | System | Integration |
 |--------|-------------|
-| Shared App Shell | Provides navigation rail, context bar, AI command panel |
+| Shared App Shell | Provides navigation rail and context bar; Requirement pages suppress the AI command panel because source references, SDD documents, business reviews, agent runs, and freshness evidence are rendered in the main control-plane workspace |
 | Dashboard | Links to `/requirements` from requirement health card |
 | Incident Module | SDLC chain links back to originating requirement (REQ-REQ-51) |
 
@@ -1124,7 +1125,7 @@ else -> render loading skeleton
 | System | Integration |
 |--------|-------------|
 | **Pipeline Profile Registry** | V1 uses hardcoded profiles in `profiles/index.ts`. V2 will load from Platform Center API (`GET /api/v1/pipeline-profiles/active`) |
-| **build-agent-skill (IBM i)** | IBM i skills are external. The Requirement Management page triggers them via the skill invocation API but does not execute them directly. |
+| **build-agent-skill (IBM i)** | IBM i skills are external. Requirement Management does not trigger them; CLI runs the skills and the page displays GitHub documents, linked manifests, reviews, and freshness after refresh. |
 
 ---
 
@@ -1139,8 +1140,6 @@ else -> render loading skeleton
 | GET /requirements/:id returns 200 | Response contains all 6 sections |
 | GET /requirements/:id with invalid ID returns 404 | Error response |
 | GET /requirements/:id/chain returns 200 | Chain links are present |
-| POST /generate-stories returns 200 | Stories created and linked |
-| POST /generate-spec returns 200 | Spec created and linked |
 | PATCH /status with valid transition returns 200 | Status updated |
 | PATCH /status with invalid transition returns 400 | Error with message |
 
@@ -1152,11 +1151,10 @@ else -> render loading skeleton
 | Priority badges use correct colors | Critical uses crimson |
 | Status distribution shows all statuses | All segments rendered |
 | View toggle switches between list/kanban/matrix | Correct view component rendered |
-| Detail view loads all 6 cards | All cards render from mock data |
+| Detail view loads control-plane cards | Header, source evidence, SDD documents, reviews, CLI runs, traceability, linked records, chain, and analysis snapshot render |
 | Empty state shows guidance message | "No requirements yet" text visible |
 | Kanban drag triggers status update | Store action invoked with new status |
-| Generate Stories button calls store action | Store method invoked |
-| Generate Spec button calls store action | Store method invoked |
+| Refresh GitHub button calls store refresh | Requirement list and summaries reload |
 
 ---
 
@@ -1166,8 +1164,8 @@ else -> render loading skeleton
 |---|----------|----------|
 | 1 | Nested routes vs. single view with conditional rendering | Nested routes — cleaner URL support, code splitting, browser back works naturally |
 | 2 | Three view modes (list/kanban/matrix) on same route vs. separate routes | Same route with state toggle — avoids URL confusion, shared filters |
-| 3 | Description + Acceptance Criteria in one card vs. two | One card — they are conceptually linked (description defines what, criteria defines done) |
-| 4 | AI Analysis as separate card vs. inline in header | Separate card — analysis can be heavy and should not block header rendering |
+| 3 | DB-backed requirement snapshot vs. GitHub SDD document entry | No separate snapshot card — the GitHub-backed SDD documents are canonical, and the UI should not duplicate or reinterpret long requirement text |
+| 4 | Analysis snapshot as separate card vs. inline in header | Separate card — persisted signals can be heavy and should not block header rendering |
 | 5 | Kanban drag-and-drop vs. status dropdown | Drag-and-drop with state machine validation — more intuitive but requires transition guard |
 | 6 | Priority matrix as view mode vs. separate card in detail | View mode in list — matrix is a list-level visualization, not a detail property |
 | 7 | Spec generation on requirement vs. only on story | Both — requirement can generate spec directly or through story, per REQ-REQ-40 |

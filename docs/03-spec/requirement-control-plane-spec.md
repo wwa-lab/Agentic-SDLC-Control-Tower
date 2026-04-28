@@ -8,8 +8,9 @@ GitHub-backed SDD document review, profile-driven document chains, CLI-agent
 execution requests, and freshness tracking.
 
 The system does not make Control Tower the document repository. It treats
-Jira/Confluence/uploads/KB as source references and GitHub `docs/` as the SDD
-artifact source of truth.
+Jira/Confluence/uploads/KB as source references, central SDD repositories as the
+SDD artifact source of truth, and central Knowledge Base repositories as
+generated knowledge graph outputs derived from released SDD baselines.
 
 ## Source Documents
 
@@ -27,6 +28,9 @@ artifact source of truth.
   Requirement domain.
 - Allow manual refresh of source metadata.
 - Show freshness status against indexed SDD documents.
+- Render Jira stories as a read-only projection from Jira references or JQL
+  mappings. Control Tower may cache title/status and sync metadata, but Jira
+  remains the source of truth for story content and workflow state.
 - Preserve existing Normalize with AI as assisted intake, not as canonical SDD
   document generation.
 
@@ -34,15 +38,50 @@ artifact source of truth.
 
 - Index SDD documents by repo, branch/ref, path, SDD type, profile, commit SHA,
   blob SHA, status, and GitHub URL.
+- Resolve document context from Application, SNOW Group, central SDD repo, base
+  branch, and project working branch.
+- Treat Application and SNOW Group as selected filter context in Requirement
+  detail. Ownership mapping is configured in Platform Center/workspace
+  administration, then resolved into the SDD document index.
+- Accept the currently selected SDD profile when resolving document stages so
+  IBM i, Standard SDD, and future profiles render their own expected document
+  chain instead of falling back to whatever profile was indexed first.
 - Fetch latest Markdown content from GitHub on document open.
 - Render Markdown inside Control Tower with version metadata.
 - Provide Open in GitHub link.
 - Show missing expected documents from profile definitions.
+- Resolve known path tokens before rendering missing documents, so users see
+  `docs/.../BR-123.md` when `BR-123` is known instead of only `{br-id}`.
+- Display the indexed Markdown title as the document name; keep profile stage
+  label as classification metadata.
+- Support one-to-many stage groups where a stage such as IBM i Program Spec or
+  File Spec contains multiple document instances.
+
+### F-RCP-WORKSPACE: Project SDD Workspace
+
+- Treat central SDD repo `main` as the released baseline.
+- Create or select a project working branch from `main` for in-flight work.
+- Show the selected Application, SNOW Group, source repo, central SDD repo, base
+  branch, and working branch in Requirement detail.
+- Keep Application and SNOW Group read-only in the Requirement SDD workspace
+  panel; users change those mappings in the platform configuration surface.
+- Require document review and agent manifests to use the selected working
+  branch during project development.
+
+### F-RCP-KB: Central Knowledge Base Handoff
+
+- Treat the Central Knowledge Base repo as generated output, not as a manually
+  edited SDD source.
+- Expose Knowledge Base repo, main branch, preview branch, and graph manifest
+  path in the SDD document index response.
+- Allow released `main` SDD content to drive Knowledge Base `main` sync.
+- Allow project SDD branches to drive Knowledge Base preview branches.
 
 ### F-RCP-REVIEW: Business Review
 
 - Allow document-level comments.
 - Allow decisions: Approved, Changes Requested, Rejected.
+- Require a non-empty reason when the decision is Rejected.
 - Bind each review action to commit SHA and blob SHA.
 - Show review history grouped by document and version.
 - Mark approvals stale when a newer blob exists.
@@ -51,9 +90,20 @@ artifact source of truth.
 
 - Use active SDD profile to render document stages.
 - Standard Java profile renders existing Java SDD chain.
-- IBM i profile renders IBM i chain from `build-agent-skill` concepts.
+- IBM i profile renders IBM i chain from `build-agent-skill` concepts and
+  exposes all 16 IBM i skills as separate flow nodes, not just the workflow
+  orchestrator.
 - Profile defines document stages, default path patterns, skill bindings, review
   gates, traceability key rules, and optional tiering.
+- Profile path patterns are templates only. Runtime document instances resolve
+  token values from requirement/source/project context and agent manifests.
+- Provide a Skill & Document Flow page that displays each profile skill's input
+  documents, output documents, skill dependencies, document dependencies, and
+  path patterns as a reusable capability map.
+- Allow the Skill & Document Flow page to use profile-specific flow artifacts
+  separate from Requirement Detail SDD stages, so source code, DDS source,
+  generated code, reports, and manifests can be mapped without appearing as
+  missing SDD documents.
 
 ### F-RCP-AGENT: CLI Agent Run Request
 
@@ -96,6 +146,29 @@ Standard-Java-only labels are not allowed in profile-aware sections.
 Normalize with AI may create structured drafts and source metadata, but it must
 not be represented as the canonical SDD artifact. Canonical SDD artifacts are
 GitHub documents.
+
+### DR-RCP-06: Branch-aware latest
+
+"Latest" always means latest within the selected SDD workspace branch or pinned
+commit, not unconditionally the central SDD repository `main` branch.
+
+### DR-RCP-07: Knowledge graph derivation
+
+Knowledge graph nodes and edges must be derived from SDD documents and structured
+metadata. They must not override the central SDD repository as the document
+authority.
+
+### DR-RCP-08: Document identity
+
+An SDD document identity is `sddRepoFullName + workingBranch + path +
+commitSha/blobSha`. The final file name is not sufficient to distinguish
+projects or review versions.
+
+### DR-RCP-09: Generated display names
+
+Document display names are generated from indexed Markdown metadata. The
+preferred order is frontmatter `title`, first Markdown H1, normalized path
+basename, then profile stage label as a last fallback.
 
 ## State Models
 
@@ -170,7 +243,7 @@ traceability:
 ### IBM i SDD
 
 ```yaml
-profileId: ibm-i-sdd
+profileId: ibm-i
 stages:
   - requirement-normalizer
   - functional-spec
@@ -198,4 +271,3 @@ tiering:
 | Performance | Requirement detail renders without waiting for all external refreshes |
 | Resilience | GitHub fetch failures are section-level errors |
 | Extensibility | New source systems and profiles do not require per-profile schema changes |
-

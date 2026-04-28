@@ -489,7 +489,7 @@ The system must ship with a built-in "Standard SDD" profile that implements the 
 
 ### REQ-REQ-122: Legacy system profile support
 
-The system must support registering custom pipeline profiles for legacy technology stacks. For IBM i / iSeries, a single "IBM i" profile is registered. This profile delegates all skill execution to a single entry point — `ibm-i-workflow-orchestrator` — which automatically determines the workflow path (Full Chain / Enhancement / Fast-Path) and spec tier (L1/L2/L3) based on input analysis. The profile defines its own chain nodes, traceability model, and the orchestrator as the sole skill binding. Example: IBM i profile uses Requirement → Requirement Package → Functional Spec → Technical Design → Program Spec / File Spec → Code → Test chain with shared BR-xx traceability; the orchestrator determines path and tier without user selection.
+The system must support registering custom pipeline profiles for legacy technology stacks. For IBM i / iSeries, a single "IBM i" profile is registered. This profile delegates all skill execution to a single entry point — `ibm-i-workflow-orchestrator` — which automatically determines the workflow path (Full Chain / Enhancement / Fast-Path) and spec tier (L1/L2/L3) based on input analysis. The profile defines its own chain nodes, traceability model, and the orchestrator as the sole skill binding. Example: IBM i profile uses Requirement Normalizer → Functional Spec → Technical Design → Program Spec → File Spec → UT Plan → Test Scaffold → Spec Review → DDS Review → Code Review with shared BR-xx traceability; the orchestrator determines path and tier without user selection.
 
 > Source: PRD §7.8, §14
 

@@ -26,6 +26,11 @@ slice with the platform design principles in `CLAUDE.md`.
 
 Requirement Control Plane covers:
 
+- Application and SNOW Group ownership context for multi-team support
+- Central SDD repository workspace resolution for each project
+- Project SDD branches created from the central SDD repository `main` branch
+- Central Knowledge Base repository references for generated knowledge graph
+  outputs
 - Business source intake from Jira, Confluence, uploads, and KB references
 - Source reference registration, metadata refresh, and freshness checks
 - GitHub `docs/` document discovery and rendering
@@ -75,6 +80,19 @@ diffs in GitHub.
 Every comment, approval, and change request must be associated with the Git
 commit SHA and blob SHA of the document version being reviewed.
 
+### REQ-RCP-06: Project branches are the development SDD workspace
+
+The central SDD repository `main` branch represents the released baseline.
+In-flight projects must use a project branch created from `main`. Control Tower
+must display and review documents using the selected project branch, not always
+the central repository `main` branch.
+
+### REQ-RCP-07: Knowledge Base is a generated layer
+
+The Central Knowledge Base repository must be treated as a generated knowledge
+graph layer derived from released SDD content. It must not become a second
+manual source of truth for SDD Markdown.
+
 ## 3. Source Reference Requirements
 
 ### REQ-RCP-10: Source reference registration
@@ -105,6 +123,13 @@ Requirement detail must include a Source References section showing source
 system, title, link, last fetched time, source updated time, freshness state, and
 refresh action.
 
+### REQ-RCP-14: Jira story projection
+
+Requirement detail may show linked Jira stories, but Jira remains the source of
+truth for story title, status, assignee, sprint, and workflow state. Control
+Tower must treat Jira stories as a read-only projection with cached sync
+metadata, Open in Jira, and Refresh from Jira actions.
+
 ## 4. GitHub SDD Document Requirements
 
 ### REQ-RCP-20: Document index
@@ -112,6 +137,49 @@ refresh action.
 The platform must index GitHub SDD documents associated with a requirement. The
 index must store repo, branch/ref, path, SDD type, profile ID, latest commit SHA,
 latest blob SHA, status, and GitHub URL.
+
+### REQ-RCP-20A: SDD workspace context
+
+The document index must be associated with an SDD workspace context containing
+application ID, application name, SNOW Group, source repo, central SDD repo,
+base branch, working branch, docs root, lifecycle status, release PR URL when
+available, and Knowledge Base repo metadata.
+
+Application and SNOW Group ownership must be configurable through Platform
+Center or equivalent workspace administration surfaces. Requirement detail uses
+these values as selected filter context only; it must not become the edit
+surface for ownership mapping.
+
+### REQ-RCP-20B: Profile-selected document chain
+
+Requirement detail must resolve expected SDD document stages from the profile
+selected by the user. If the user selects the IBM i profile, the document panel
+must render the IBM i chain and mark missing IBM i documents explicitly instead
+of falling back to Standard SDD stages.
+
+### REQ-RCP-20C: Project document identity
+
+The platform must identify a reviewable SDD document by central SDD repository,
+project working branch, path, commit SHA, and blob SHA. File name alone is not a
+project boundary. Multiple projects may use similar document names safely
+because each project is isolated by its SDD workspace branch until release.
+
+### REQ-RCP-20D: Resolved expected paths
+
+Profile path patterns may contain tokens such as `{br-id}`, `{program}`,
+`{file}`, or `{slug}`. Before showing missing documents, the platform should
+resolve tokens from requirement metadata, source references, project metadata,
+or the latest agent manifest. If a token is not yet known, the UI may show the
+template path, but known tokens must be substituted so users see the expected
+future document path.
+
+### REQ-RCP-20E: Stage groups and document instances
+
+A profile stage may produce more than one document. IBM i examples include
+multiple Program Specs and File Specs for one BR. The document model must
+support stage groups containing zero, one, or many document instances. Each
+instance must have a stable instance key, resolved path, title, repo/ref
+metadata when present, and missing state when absent.
 
 ### REQ-RCP-21: Latest document rendering
 
@@ -134,6 +202,26 @@ Every rendered document must provide a link to open the same document in GitHub.
 The UI must show the current commit SHA, document path, last updated time when
 available, and whether the user is viewing latest or a pinned reviewed version.
 
+The clickable document name must use the indexed Markdown title. The profile
+stage label may be shown as secondary metadata so users can distinguish the
+document's role without confusing it with the actual document name.
+
+Document titles should be auto-populated by the indexer from Markdown
+frontmatter `title` first, then the first Markdown H1, then a normalized file
+name fallback. Manual title edits in Control Tower are not the normal workflow.
+
+### REQ-RCP-25: Branch-aware document rendering
+
+Requirement detail must show which SDD workspace branch is being reviewed.
+Document links and Markdown fetches must use that branch or the pinned commit
+from the document index.
+
+### REQ-RCP-26: Knowledge graph handoff metadata
+
+The platform must expose the configured Knowledge Base repository, main branch,
+project preview branch, and graph manifest path so downstream sync jobs and UI
+surfaces can connect SDD documents to knowledge graph nodes.
+
 ## 5. Business Review Requirements
 
 ### REQ-RCP-30: Business comment
@@ -146,6 +234,9 @@ deferred.
 
 Business users must be able to mark a document version as Approved, Changes
 Requested, or Rejected.
+
+Rejected decisions must require a non-empty business reason so delivery teams
+know what must change before the document can be approved.
 
 ### REQ-RCP-32: Version-bound decision
 
@@ -175,6 +266,9 @@ The IBM i profile must support Requirement Normalizer, Functional Spec,
 Technical Design, Program Spec, File Spec, UT Plan, Test Scaffold, Spec Review,
 DDS Review, and Code Review stages. It must support BR-xx continuity, L1/L2/L3
 tiering, fast-path enhancement work, program chain, and file chain concepts.
+Its Skill & Document Flow must expose the full `wwa-lab/build-agent-skill`
+family as individual skills, including analyzer, generator, reviewer, precheck,
+and workflow-orchestrator skills.
 
 ### REQ-RCP-43: Profile-owned document paths
 
@@ -187,6 +281,20 @@ documents.
 Each profile may define CLI-agent skill IDs and review gates. The UI may request
 an agent run, but must not execute repo-aware skills synchronously.
 
+### REQ-RCP-45: Skill and document dependency map
+
+Requirement Management must provide a profile-driven page that shows each
+skill's input documents, output documents, upstream skill dependencies, and
+document-to-document dependencies. The page must derive this map from the active
+SDD profile so Standard Java, IBM i, and future legacy profiles can expose their
+own workflow without hardcoded UI chains.
+
+The dependency map may include source and generated artifacts that are not
+Requirement Detail SDD stages, such as raw Jira input, existing RPGLE/CLLE
+source, DDS source, generated code, compile precheck reports, and workflow
+routing manifests. These flow artifacts must not pollute the GitHub SDD
+Documents panel.
+
 ## 7. Agent Execution Requirements
 
 ### REQ-RCP-50: Agent run request
@@ -198,7 +306,8 @@ generation inside the UI.
 ### REQ-RCP-51: Execution manifest
 
 The manifest must include execution ID, project ID, requirement ID, active SDD
-profile, repo, branch/ref, source references, known document references, output
+profile, source repo, central SDD workspace, project working branch, Knowledge
+Base repo context, source references, known document references, output
 expectations, and constraints.
 
 ### REQ-RCP-52: Latest resolved, then pinned execution
@@ -265,4 +374,3 @@ Document content fetches and source refreshes may be lazy or user-triggered.
 
 The model must support additional SDD profiles and source systems without
 schema changes for every new profile-specific stage.
-

@@ -16,11 +16,16 @@ graph TD
     RUN["AgentRun"]
     ART["ArtifactLink"]
     PROF["SddProfile"]
+    WS["ProjectSddWorkspace"]
+    KG["KnowledgeBaseGraph"]
 
     REQ --> SRC
     REQ --> DOC
     REQ --> RUN
     REQ --> PROF
+    REQ --> WS
+    WS --> DOC
+    WS --> KG
     DOC --> REV
     RUN --> ART
     RUN --> DOC
@@ -56,16 +61,101 @@ Represents an SDD document stored in GitHub.
 | id | string | UUID |
 | requirementId | string | Requirement ID |
 | profileId | string | SDD profile |
+| sddWorkspaceId | string | Project SDD workspace ID |
 | sddType | string | Profile-defined stage key |
+| documentInstanceKey | string | Stable key inside the stage, e.g. BR ID, program name, file name, or slug |
 | title | string | Display title |
+| titleSource | enum | FRONTMATTER, H1, PATH_BASENAME, PROFILE_LABEL |
 | repoFullName | string | owner/repo |
 | branchOrRef | string | main, branch, tag, or SHA |
 | path | string | GitHub path under docs/ |
+| pathPattern | string | Profile template path used to resolve the path |
+| pathVariablesJson | json | Resolved tokens such as br-id, program, file, slug |
 | latestCommitSha | string | Last resolved commit |
 | latestBlobSha | string | Last resolved blob |
 | githubUrl | string | Browser URL |
 | status | enum | DRAFT, IN_REVIEW, APPROVED, SUPERSEDED, MISSING |
 | lastFetchedAt | instant | Last GitHub metadata fetch |
+
+Document index records are document instances, not only stage definitions. The
+same `sddType` may appear multiple times for one requirement when a profile
+stage produces multiple files, such as IBM i Program Specs for several programs.
+The project boundary is the SDD workspace branch; the final file name is only a
+human-readable path component.
+
+### ExpectedDocumentInstance
+
+Represents an expected document that may not exist in GitHub yet. It can be
+computed from profile stage definitions, requirement metadata, source references,
+and the latest agent manifest. It does not have to be persisted on Day 1, but
+the API should expose equivalent fields for missing documents.
+
+| Field | Type | Notes |
+|---|---|---|
+| sddType | string | Profile-defined stage key |
+| stageLabel | string | Profile stage label |
+| documentInstanceKey | string | Stable key when known |
+| title | string | Generated display title |
+| titleSource | enum | PROFILE_LABEL, TOKEN_CONTEXT, PATH_BASENAME |
+| pathPattern | string | Profile template path |
+| resolvedPath | string | Path with known tokens substituted |
+| unresolvedTokens | string[] | Tokens still unknown |
+| required | boolean | Whether profile expects this document |
+| missing | boolean | True until indexed GitHub document exists |
+
+### SddDocumentStageGroup
+
+Represents UI grouping for profile stages. Stage groups allow one profile stage
+to contain zero, one, or many document instances.
+
+| Field | Type | Notes |
+|---|---|---|
+| sddType | string | Profile-defined stage key |
+| stageLabel | string | Display label such as Program Spec |
+| required | boolean | Profile requirement flag |
+| expectedTier | string | Optional profile tier |
+| documents | list | Indexed or expected document instances |
+
+### ProjectSddWorkspace
+
+Represents the branch-aware SDD workspace for a project/application/SNOW Group.
+The central SDD repository `main` branch is the released baseline; in-flight
+projects use a project working branch.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | string | Stable workspace ID |
+| applicationId | string | Application key |
+| applicationName | string | Display name |
+| snowGroup | string | Owning support group |
+| sourceRepoFullName | string | Code/source repo the CLI agent reads |
+| sddRepoFullName | string | Central SDD repo the CLI agent writes |
+| baseBranch | string | Usually `main`; released SDD baseline |
+| workingBranch | string | Project branch reviewed in Control Tower |
+| lifecycleStatus | enum | IN_DEVELOPMENT, RELEASED, ARCHIVED |
+| docsRoot | string | Usually `docs/` |
+| releasePrUrl | string | Project branch to main PR after release |
+| kbRepoFullName | string | Central Knowledge Base repo |
+| kbMainBranch | string | Released graph baseline |
+| kbPreviewBranch | string | Optional project graph preview branch |
+| graphManifestPath | string | Path such as `_graph/manifest.json` |
+
+### KnowledgeBaseGraph
+
+Represents generated graph artifacts in the Central Knowledge Base repo. Day 1
+does not require a graph database; Markdown nodes and JSONL graph files are
+sufficient.
+
+| Field | Type | Notes |
+|---|---|---|
+| repoFullName | string | Knowledge Base repository |
+| branchOrRef | string | `main` or project preview branch |
+| manifestPath | string | Graph manifest path |
+| nodesPath | string | Usually `_graph/nodes.jsonl` |
+| edgesPath | string | Usually `_graph/edges.jsonl` |
+| sourceSddRepoFullName | string | Central SDD repo used as input |
+| sourceSddCommitSha | string | SDD baseline or preview commit |
+| generatedAt | instant | Sync time |
 
 ### DocumentReview
 
@@ -151,16 +241,21 @@ export interface SourceReference {
   readonly errorMessage?: string | null;
 }
 
-export interface SddDocumentIndex {
+export interface SddDocumentStage {
   readonly id: string;
   readonly requirementId: string;
   readonly profileId: string;
   readonly sddType: string;
   readonly stageLabel: string;
+  readonly documentInstanceKey: string | null;
   readonly title: string;
+  readonly titleSource: 'FRONTMATTER' | 'H1' | 'PATH_BASENAME' | 'PROFILE_LABEL' | 'TOKEN_CONTEXT';
   readonly repoFullName: string;
   readonly branchOrRef: string;
   readonly path: string;
+  readonly pathPattern: string | null;
+  readonly pathVariables: Record<string, string> | null;
+  readonly unresolvedTokens: ReadonlyArray<string>;
   readonly latestCommitSha: string | null;
   readonly latestBlobSha: string | null;
   readonly githubUrl: string | null;
@@ -169,8 +264,42 @@ export interface SddDocumentIndex {
   readonly missing: boolean;
 }
 
+export interface SddDocumentStageGroup {
+  readonly sddType: string;
+  readonly stageLabel: string;
+  readonly expectedTier: string | null;
+  readonly required: boolean;
+  readonly documents: ReadonlyArray<SddDocumentStage>;
+}
+
+export interface SddDocumentIndex {
+  readonly requirementId: string;
+  readonly profileId: string;
+  readonly workspace: SddWorkspace | null;
+  readonly stageGroups: ReadonlyArray<SddDocumentStageGroup>;
+  readonly stages: ReadonlyArray<SddDocumentStage>;
+}
+
+export interface SddWorkspace {
+  readonly id: string;
+  readonly applicationId: string;
+  readonly applicationName: string;
+  readonly snowGroup: string;
+  readonly sourceRepoFullName: string;
+  readonly sddRepoFullName: string;
+  readonly baseBranch: string;
+  readonly workingBranch: string;
+  readonly lifecycleStatus: string;
+  readonly docsRoot: string;
+  readonly releasePrUrl: string | null;
+  readonly kbRepoFullName: string;
+  readonly kbMainBranch: string;
+  readonly kbPreviewBranch: string;
+  readonly graphManifestPath: string;
+}
+
 export interface DocumentContent {
-  readonly document: SddDocumentIndex;
+  readonly document: SddDocumentStage;
   readonly markdown: string;
   readonly commitSha: string;
   readonly blobSha: string;
@@ -214,6 +343,7 @@ create table requirement_sdd_document_index (
   id varchar(64) primary key,
   requirement_id varchar(32) not null,
   profile_id varchar(128) not null,
+  sdd_workspace_id varchar(64),
   sdd_type varchar(128) not null,
   title varchar(512) not null,
   repo_full_name varchar(255) not null,
@@ -224,6 +354,26 @@ create table requirement_sdd_document_index (
   github_url varchar(2048),
   status varchar(64) not null,
   last_fetched_at timestamp
+);
+
+create table project_sdd_workspace (
+  id varchar(64) primary key,
+  application_id varchar(64) not null,
+  application_name varchar(255) not null,
+  snow_group varchar(128) not null,
+  source_repo_full_name varchar(255) not null,
+  sdd_repo_full_name varchar(255) not null,
+  base_branch varchar(128) not null,
+  working_branch varchar(255) not null,
+  lifecycle_status varchar(64) not null,
+  docs_root varchar(128) not null,
+  release_pr_url varchar(1024),
+  kb_repo_full_name varchar(255) not null,
+  kb_main_branch varchar(128) not null,
+  kb_preview_branch varchar(255) not null,
+  graph_manifest_path varchar(512) not null,
+  created_at timestamp not null,
+  updated_at timestamp not null
 );
 
 create table requirement_document_review (
@@ -280,4 +430,3 @@ create table requirement_artifact_link (
   but should not be the only representation for GitHub SDD docs.
 - `RequirementImportTask` remains useful for KB-backed source ingestion.
 - New tables are additive.
-

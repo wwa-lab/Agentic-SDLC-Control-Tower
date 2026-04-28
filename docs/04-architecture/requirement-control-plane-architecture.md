@@ -6,7 +6,9 @@ Requirement Control Plane extends the Requirement Management slice with a
 platform-oriented architecture:
 
 - External BAU systems provide business source references
-- GitHub `docs/` provides SDD document content and version history
+- Central SDD repositories provide SDD document content and version history
+- Project branches provide in-flight SDD review workspaces
+- Central Knowledge Base repositories publish generated knowledge graph outputs
 - Control Tower indexes metadata, renders documents, records reviews, creates
   agent manifests, and reports freshness
 - CLI agents perform repo-aware and long-running work
@@ -22,7 +24,10 @@ graph TD
     CT["Control Tower Requirement Page"]
     API["Control Tower Backend"]
     DB["Control Tower DB<br/>metadata and reviews"]
-    GH["GitHub<br/>repo docs and PRs"]
+    SRCREPO["Source Repo<br/>code truth"]
+    SDDREPO["Central SDD Repo<br/>main and project branches"]
+    KBREPO["Central Knowledge Base Repo<br/>graph nodes and edges"]
+    GH["GitHub<br/>PRs and reviews"]
     JIRA["Jira"]
     CONF["Confluence"]
     KB["KB / Upload Store"]
@@ -36,7 +41,8 @@ graph TD
 
     CT --> API
     API --> DB
-    API --> GH
+    API --> SDDREPO
+    API --> KBREPO
     API --> JIRA
     API --> CONF
     API --> KB
@@ -44,8 +50,12 @@ graph TD
     AGENT --> MCP
     MCP --> JIRA
     MCP --> CONF
-    MCP --> GH
-    AGENT --> GH
+    MCP --> SRCREPO
+    MCP --> SDDREPO
+    AGENT --> SRCREPO
+    AGENT --> SDDREPO
+    AGENT --> KBREPO
+    DEV --> GH
     AGENT --> API
 ```
 
@@ -59,7 +69,6 @@ graph TD
         DocPanel["SddDocumentsPanel"]
         Viewer["GitHubMarkdownViewer"]
         ReviewPanel["BusinessReviewPanel"]
-        AgentPanel["AgentRunsPanel"]
         TracePanel["RequirementTraceabilityPanel"]
         Store["requirementStore"]
         ApiClient["requirementApi"]
@@ -78,6 +87,7 @@ graph TD
         ProfileSvc["PipelineProfileService"]
         GitHubGateway["GitHubDocumentGateway"]
         SourceGateway["SourceMetadataGateway"]
+        WorkspaceSvc["SddWorkspaceResolver"]
     end
 
     Detail --> SourcePanel
@@ -95,6 +105,7 @@ graph TD
     Controller --> AgentSvc
     Controller --> FreshSvc
     DocSvc --> GitHubGateway
+    DocSvc --> WorkspaceSvc
     SourceSvc --> SourceGateway
     DocSvc --> ProfileSvc
 ```
@@ -122,9 +133,14 @@ com.sdlctower.platform.source
 | Data | Owner | Notes |
 |---|---|---|
 | Jira / Confluence body | Source system | Referenced and optionally summarized, not copied as source of truth |
-| SDD Markdown body | GitHub | Fetched on open |
+| Source code | Source repository | Read by CLI agents, not copied into Control Tower |
+| SDD Markdown body | Central SDD repo project branch or main | Fetched on open |
+| Released SDD baseline | Central SDD repo `main` | Post-release PR merge target |
+| In-flight SDD workspace | Central SDD repo project branch | Business review and CLI output during project |
+| Knowledge graph nodes and edges | Central Knowledge Base repo | Generated from released SDD main or project preview branch |
 | Source reference metadata | Control Tower DB | URL, external ID, source updated time, fetched time |
-| Document index metadata | Control Tower DB | repo/path/ref/SHA/status/profile |
+| SDD workspace metadata | Control Tower DB | application, SNOW Group, source repo, SDD repo, branches, KB repo |
+| Document index metadata | Control Tower DB | repo/path/ref/SHA/status/profile/workspace/document instance key |
 | Business comments and approvals | Control Tower DB | version-bound |
 | Engineering review | GitHub | PR review and diff |
 | Agent execution manifest | Control Tower DB | Context handoff |
@@ -141,16 +157,26 @@ graph TD
     Gates["Review Gates"]
     UI["Requirement Detail UI"]
     Manifest["Agent Manifest"]
+    Tokens["Resolved Path Tokens"]
+    Instances["Document Instances"]
 
     Profile --> Stages
     Profile --> Paths
     Profile --> Skills
     Profile --> Gates
-    Stages --> UI
-    Paths --> UI
+    Stages --> Instances
+    Paths --> Tokens
+    Tokens --> Instances
+    Instances --> UI
     Skills --> Manifest
+    Manifest --> Tokens
     Gates --> UI
 ```
+
+Profiles define stage templates; runtime context resolves them into document
+instances. The same stage can produce multiple instances, such as IBM i Program
+Specs for several programs. Missing document rows should use resolved expected
+paths whenever token values are known.
 
 ## Agent Boundary
 
@@ -163,18 +189,39 @@ sequenceDiagram
     participant API as Control Tower API
     participant DB as Control Tower DB
     participant Agent as CLI Agent
-    participant GH as GitHub
+    participant SRC as Source Repo
+    participant SDD as Central SDD Repo
+    participant KB as Central KB Repo
 
     UI->>API: Request agent run
     API->>DB: Create execution + manifest
     API-->>UI: Manifest ready
     Agent->>API: Fetch manifest
-    Agent->>GH: Read repo and write docs/ branch
-    Agent->>GH: Open PR
+    Agent->>SRC: Read source repo context
+    Agent->>SDD: Write docs to project branch
+    Agent->>SDD: Open post-release PR when requested
+    Agent->>KB: Optionally publish project graph preview
     Agent->>API: Callback with PR and artifacts
     API->>DB: Update execution and artifact links
     UI->>API: Refresh run status
 ```
+
+## Branch and Knowledge Strategy
+
+Central SDD repositories use `main` as the released baseline. Each in-flight
+project creates a working branch from `main`, for example
+`project/PAY-2026-sso-upgrade`. Business users review that project branch in
+Control Tower. After release, engineering opens a GitHub PR from the project
+branch back to `main`; once merged, `main` becomes the new SDD baseline.
+
+Document identity is branch-aware: `central SDD repo + project branch + path +
+commit/blob`. File names are generated for readability and traceability, but do
+not define the project boundary.
+
+Central Knowledge Base repositories are generated from SDD content. The released
+knowledge graph is generated from central SDD `main`. Project preview graphs may
+be generated from the SDD project branch into a matching Knowledge Base preview
+branch. The Knowledge Base repo is not a second manual document source.
 
 ## Freshness Strategy
 
@@ -195,4 +242,3 @@ systems. The first implementation can compare timestamps and Git blob versions:
 | Business comments drift after doc change | Bind comments to commit/blob |
 | IBM i stages do not match Java SDD | Use profile-defined stages |
 | Agent executes against wrong context | Manifest pinning and stale-context callback |
-
