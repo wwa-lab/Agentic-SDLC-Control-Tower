@@ -746,6 +746,7 @@ Static registry.
 {
   "data": [
     { "kind": "jira",          "label": "Jira",           "supportedModes": ["pull","push","both"], "capabilities": ["requirement","issue-status"] },
+    { "kind": "confluence",    "label": "Confluence",     "supportedModes": ["pull"],               "capabilities": ["requirement-source","business-context"] },
     { "kind": "gitlab",        "label": "GitLab",         "supportedModes": ["pull","both"],        "capabilities": ["code-change","merge-request","branch"] },
     { "kind": "jenkins",       "label": "Jenkins",        "supportedModes": ["push","both"],        "capabilities": ["build","pipeline","quality-gate"] },
     { "kind": "servicenow",    "label": "ServiceNow",     "supportedModes": ["pull","push","both"], "capabilities": ["incident","change","oncall"] },
@@ -758,7 +759,7 @@ Static registry.
 
 ## 27. `GET /integrations/connections`
 
-**Query:** `kind`, `scopeWorkspaceId`, `status`, `syncMode`, `limit`, `cursor`.
+**Query:** `kind`, `scopeWorkspaceId`, `applicationId`, `snowGroupId`, `status`, `syncMode`, `limit`, `cursor`.
 
 **Response 200:**
 
@@ -769,6 +770,11 @@ Static registry.
       "id": "conn-jira-ws1",
       "kind": "jira",
       "scopeWorkspaceId": "ws-default",
+      "applicationId": "app-payment-gateway-pro",
+      "applicationName": "Payment-Gateway-Pro",
+      "snowGroupId": "snow-fin-tech-ops",
+      "snowGroupName": "FIN-TECH-OPS",
+      "baseUrl": "https://jira.company.com",
       "credentialRef": "cred-jira-demo",
       "syncMode": "both",
       "pullSchedule": "0 */15 * * * *",
@@ -795,6 +801,11 @@ Credentials are NEVER returned in plain text.
 {
   "kind": "jira",
   "scopeWorkspaceId": "ws-default",
+  "applicationId": "app-payment-gateway-pro",
+  "applicationName": "Payment-Gateway-Pro",
+  "snowGroupId": "snow-fin-tech-ops",
+  "snowGroupName": "FIN-TECH-OPS",
+  "baseUrl": "https://jira.company.com",
   "credentialRef": "cred-jira-demo",
   "syncMode": "both",
   "pullSchedule": "0 */15 * * * *",

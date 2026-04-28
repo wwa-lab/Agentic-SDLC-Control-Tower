@@ -21,6 +21,7 @@ export const POLICY_CATEGORY_LABELS: Record<PolicyCategory, string> = {
 
 export const ADAPTER_KIND_LABELS: Record<AdapterKind, string> = {
   jira: 'Jira',
+  confluence: 'Confluence',
   gitlab: 'GitLab',
   jenkins: 'Jenkins',
   servicenow: 'ServiceNow',

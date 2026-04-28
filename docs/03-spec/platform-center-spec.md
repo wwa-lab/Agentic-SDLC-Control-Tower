@@ -191,7 +191,7 @@ Revoking an assignment with `role = PLATFORM_ADMIN` where the mutation would lea
 
 ### FR-60: Adapter registry API
 
-`GET /api/v1/platform/integrations/adapters` returns a static list of supported adapter kinds: `jira`, `gitlab`, `jenkins`, `servicenow`, `custom-webhook`. Each entry includes a capability descriptor (what the adapter can sync, supported modes).
+`GET /api/v1/platform/integrations/adapters` returns a static list of supported adapter kinds: `jira`, `confluence`, `gitlab`, `jenkins`, `servicenow`, `custom-webhook`. Each entry includes a capability descriptor (what the adapter can sync, supported modes).
 
 **Source:** S-PC-60; REQ-PC-60
 

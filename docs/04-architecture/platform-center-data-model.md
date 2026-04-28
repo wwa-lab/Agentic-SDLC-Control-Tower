@@ -29,7 +29,7 @@ graph LR
     P -. category enum .-> PCAT[action / approval / autonomy / risk-threshold / exception]
 
     CN[Connection] -->|credential_ref| CR[CredentialRef]
-    CN -. kind enum .-> CKIND[jira / gitlab / jenkins / servicenow / custom-webhook]
+    CN -. kind enum .-> CKIND[jira / confluence / gitlab / jenkins / servicenow / custom-webhook]
 
     AU[AuditRecord] -. actor .-> ACTOR[user or system or skill]
     AU -. references .-> T
@@ -271,7 +271,7 @@ interface PolicyException {
 ### 3.6 Integrations
 
 ```typescript
-type AdapterKind = "jira" | "gitlab" | "jenkins" | "servicenow" | "custom-webhook";
+type AdapterKind = "jira" | "confluence" | "gitlab" | "jenkins" | "servicenow" | "custom-webhook";
 type SyncMode = "pull" | "push" | "both";
 type ConnectionStatus = "enabled" | "disabled" | "error";
 
@@ -286,6 +286,11 @@ interface Connection {
   id: string;
   kind: AdapterKind;
   scopeWorkspaceId: string;
+  applicationId: string | null;
+  applicationName: string | null;
+  snowGroupId: string | null;
+  snowGroupName: string | null;
+  baseUrl: string | null;
   credentialRef: string;
   syncMode: SyncMode;
   pullSchedule: string | null;   // cron
@@ -838,8 +843,13 @@ CREATE TABLE PLATFORM_CREDENTIAL_REF (
 
 CREATE TABLE PLATFORM_CONNECTION (
     id                  VARCHAR(64)  PRIMARY KEY,
-    kind                VARCHAR(32)  NOT NULL,     -- jira/gitlab/jenkins/servicenow/custom-webhook
+    kind                VARCHAR(32)  NOT NULL,     -- jira/confluence/gitlab/jenkins/servicenow/custom-webhook
     scope_workspace_id  VARCHAR(64)  NOT NULL,
+    application_id      VARCHAR(128)          ,
+    application_name    VARCHAR(255)          ,
+    snow_group_id       VARCHAR(128)          ,
+    snow_group_name     VARCHAR(255)          ,
+    base_url            VARCHAR(512)          ,
     credential_ref      VARCHAR(128) NOT NULL,
     sync_mode           VARCHAR(16)  NOT NULL,     -- pull/push/both
     pull_schedule       VARCHAR(128)          ,    -- cron
@@ -909,18 +919,20 @@ INSERT INTO PLATFORM_POLICY (id, policy_key, name, category, scope_type, scope_i
 -- Credential references (stub storage only; no real secrets)
 INSERT INTO PLATFORM_CREDENTIAL_REF (ref, storage_kind, encrypted_value, created_at) VALUES
   ('cred-jira-demo',       'stub', NULL, CURRENT_TIMESTAMP),
+  ('cred-confluence-demo', 'stub', NULL, CURRENT_TIMESTAMP),
   ('cred-gitlab-demo',     'stub', NULL, CURRENT_TIMESTAMP),
   ('cred-jenkins-demo',    'stub', NULL, CURRENT_TIMESTAMP),
   ('cred-servicenow-demo', 'stub', NULL, CURRENT_TIMESTAMP);
 
 -- Connections (disabled by default)
-INSERT INTO PLATFORM_CONNECTION (id, kind, scope_workspace_id, credential_ref, sync_mode,
+INSERT INTO PLATFORM_CONNECTION (id, kind, scope_workspace_id, application_id, application_name, snow_group_id, snow_group_name, base_url, credential_ref, sync_mode,
                                  pull_schedule, push_url, status, last_sync_at, last_test_at,
                                  last_test_ok, created_at) VALUES
-  ('conn-jira-ws1',       'jira',       'ws-default', 'cred-jira-demo',       'both', '0 */15 * * * *', 'https://webhook.local/jira',    'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
-  ('conn-gitlab-ws1',     'gitlab',     'ws-default', 'cred-gitlab-demo',     'pull', '0 */10 * * * *', NULL,                            'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
-  ('conn-jenkins-ws1',    'jenkins',    'ws-default', 'cred-jenkins-demo',    'push', NULL,             'https://webhook.local/jenkins', 'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
-  ('conn-servicenow-ws1', 'servicenow', 'ws-default', 'cred-servicenow-demo', 'both', '0 */30 * * * *', 'https://webhook.local/snow',    'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP);
+  ('conn-jira-ws1',       'jira',       'ws-default', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://jira.company.com',        'cred-jira-demo',       'both', '0 */15 * * * *', 'https://webhook.local/jira',    'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
+  ('conn-confluence-ws1', 'confluence', 'ws-default', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://confluence.company.com',  'cred-confluence-demo', 'pull', '0 */15 * * * *', NULL,                            'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
+  ('conn-gitlab-ws1',     'gitlab',     'ws-default', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://gitlab.company.com',      'cred-gitlab-demo',     'pull', '0 */10 * * * *', NULL,                            'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
+  ('conn-jenkins-ws1',    'jenkins',    'ws-default', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://jenkins.company.com',     'cred-jenkins-demo',    'push', NULL,             'https://webhook.local/jenkins', 'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
+  ('conn-servicenow-ws1', 'servicenow', 'ws-default', NULL,                      NULL,                  'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://company.service-now.com', 'cred-servicenow-demo', 'both', '0 */30 * * * *', 'https://webhook.local/snow',    'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP);
 
 -- One bootstrap audit record so the Audit catalog is not empty on first load
 INSERT INTO PLATFORM_AUDIT (id, timestamp, actor, actor_type, category, action, object_type, object_id,
