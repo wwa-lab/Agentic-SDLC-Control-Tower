@@ -295,10 +295,10 @@ public class RequirementService {
 
         if ("ibm-i-workflow-orchestrator".equals(skillId)) {
             orchestratorResult = new OrchestratorResultDto(
-                    "modification",
+                    "enhancement",
                     "L2",
                     "High",
-                    "Existing program modification detected — source analysis required before spec generation."
+                    "Existing RPG/COBOL source modification detected — source analysis required before Program Spec generation."
             );
             message = "IBM i orchestrator triggered for " + requirementId;
         }
@@ -468,7 +468,7 @@ public class RequirementService {
             openQuestions.add("Which files inside the ZIP package should be treated as the source of truth?");
         }
         if (profile.usesOrchestrator()) {
-            openQuestions.add("Should IBM i orchestration classify this as new program, modification, or conversion?");
+            openQuestions.add("Should IBM i orchestration classify this as full-chain, enhancement, or fast-path?");
         }
 
         RequirementDraftDto draft = new RequirementDraftDto(

@@ -32,6 +32,16 @@ public final class ApiConstants {
     public static final String REQUIREMENT_NORMALIZE = REQUIREMENTS + "/normalize";
     public static final String REQUIREMENT_IMPORTS = REQUIREMENTS + "/imports";
     public static final String REQUIREMENT_IMPORT_DETAIL = REQUIREMENT_IMPORTS + "/{importId}";
+    public static final String REQUIREMENT_SOURCES = REQUIREMENT_DETAIL + "/sources";
+    public static final String REQUIREMENT_SOURCE_REFRESH = REQUIREMENTS + "/sources/{sourceId}/refresh";
+    public static final String REQUIREMENT_SDD_DOCUMENTS = REQUIREMENT_DETAIL + "/sdd-documents";
+    public static final String REQUIREMENT_SDD_DOCUMENT_DETAIL = REQUIREMENTS + "/documents/{documentId}";
+    public static final String REQUIREMENT_DOCUMENT_REVIEWS = REQUIREMENT_SDD_DOCUMENT_DETAIL + "/reviews";
+    public static final String REQUIREMENT_REVIEWS = REQUIREMENT_DETAIL + "/reviews";
+    public static final String REQUIREMENT_AGENT_RUNS = REQUIREMENT_DETAIL + "/agent-runs";
+    public static final String REQUIREMENT_AGENT_RUN_DETAIL = REQUIREMENTS + "/agent-runs/{executionId}";
+    public static final String REQUIREMENT_AGENT_RUN_CALLBACK = REQUIREMENT_AGENT_RUN_DETAIL + "/callback";
+    public static final String REQUIREMENT_TRACEABILITY = REQUIREMENT_DETAIL + "/traceability";
 
     public static final String PIPELINE_PROFILES = API_V1 + "/pipeline-profiles";
     public static final String PIPELINE_PROFILES_ACTIVE = PIPELINE_PROFILES + "/active";
