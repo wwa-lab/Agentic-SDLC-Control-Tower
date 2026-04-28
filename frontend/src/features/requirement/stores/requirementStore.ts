@@ -5,6 +5,8 @@ import type {
   ImportSourceType,
   AgentRun,
   DocumentReview,
+  GraphNode,
+  KnowledgeGraph,
   ImportState,
   OrchestratorResult,
   PipelineProfile,
@@ -197,6 +199,9 @@ export const useRequirementStore = defineStore('requirement', () => {
   const controlPlaneSummaryLoading = ref(false);
   const githubSyncLoading = ref(false);
   const githubSyncError = ref<string | null>(null);
+  const knowledgeGraph = ref<KnowledgeGraph | null>(null);
+  const knowledgeGraphLoading = ref(false);
+  const knowledgeGraphError = ref<string | null>(null);
 
   const INITIAL_IMPORT: ImportState = {
     isOpen: false,
@@ -484,6 +489,73 @@ export const useRequirementStore = defineStore('requirement', () => {
         ? 'Document changed after business review'
         : `${missingDocumentCount} expected docs missing`,
     };
+  }
+
+  function buildMockKnowledgeGraph(): KnowledgeGraph {
+    const nodes: GraphNode[] = activeProfile.value.documentStages.map(stage => ({
+      id: `doc-type:${activeProfile.value.id}:${stage.sddType}`,
+      kind: 'DOCUMENT',
+      label: stage.label,
+      properties: {
+        docType: stage.sddType,
+        profile: activeProfile.value.id,
+        artifactType: stage.artifactType,
+        pathPattern: stage.pathPattern,
+        traceabilityKey: stage.traceabilityKey,
+        expectedTier: stage.expectedTier,
+        freshnessStatus: 'UNKNOWN',
+      },
+    }));
+    const edges = nodes.slice(1).map((node, index) => ({
+      id: `edge:${node.id}:DEPENDS_ON:${nodes[index].id}`,
+      type: 'DEPENDS_ON',
+      from: node.id,
+      to: nodes[index].id,
+      source: 'profile',
+      confidence: 0.75,
+      properties: { profile: activeProfile.value.id },
+    }));
+    return {
+      scope: { profileId: activeProfile.value.id, provider: 'profile' },
+      health: {
+        nodeCount: nodes.length,
+        edgeCount: edges.length,
+        issueCount: 0,
+        errorCount: 0,
+        warningCount: 0,
+        suggestionCount: 0,
+        stale: false,
+        lastGeneratedAt: null,
+        lastImportedAt: null,
+      },
+      nodes,
+      edges,
+      issues: [],
+      suggestions: [],
+      lastSync: null,
+    };
+  }
+
+  async function fetchKnowledgeGraph() {
+    knowledgeGraphLoading.value = true;
+    knowledgeGraphError.value = null;
+    try {
+      if (USE_MOCK) {
+        knowledgeGraph.value = buildMockKnowledgeGraph();
+        return;
+      }
+      knowledgeGraph.value = await requirementApi.getKnowledgeGraph({
+        profileId: activeProfile.value.id,
+        includeIssues: true,
+        includeSuggestions: true,
+      });
+    } catch (error) {
+      console.error('Failed to fetch SDD knowledge graph:', error);
+      knowledgeGraphError.value = toUserMessage(error, 'Backend graph is unavailable. Showing profile fallback.');
+      knowledgeGraph.value = buildMockKnowledgeGraph();
+    } finally {
+      knowledgeGraphLoading.value = false;
+    }
   }
 
   async function fetchControlPlaneSummaries(requirementIds: ReadonlyArray<string>) {
@@ -830,6 +902,9 @@ export const useRequirementStore = defineStore('requirement', () => {
 
   function setViewMode(mode: ViewMode) {
     viewMode.value = mode;
+    if (mode === 'graph') {
+      void fetchKnowledgeGraph();
+    }
   }
 
   function setSortField(field: SortField) {
@@ -886,6 +961,9 @@ export const useRequirementStore = defineStore('requirement', () => {
 
     if (listData.value) {
       void fetchControlPlaneSummaries(listData.value.requirements.map(requirement => requirement.id));
+    }
+    if (viewMode.value === 'graph') {
+      void fetchKnowledgeGraph();
     }
     if (selectedRequirementId.value) {
       void fetchControlPlane(selectedRequirementId.value);
@@ -1301,11 +1379,15 @@ export const useRequirementStore = defineStore('requirement', () => {
     controlPlaneSummaryLoading,
     githubSyncLoading,
     githubSyncError,
+    knowledgeGraph,
+    knowledgeGraphLoading,
+    knowledgeGraphError,
     importState,
     fetchRequirementList,
     fetchRequirementDetail,
     fetchControlPlane,
     fetchControlPlaneSummaries,
+    fetchKnowledgeGraph,
     refreshSourceReference,
     refreshGitHubDocuments,
     openSddDocument,

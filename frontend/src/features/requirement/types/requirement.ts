@@ -34,7 +34,7 @@ export type AnalysisConfidence = 'High' | 'Medium' | 'Low';
 
 export type SortField = 'priority' | 'status' | 'recency' | 'title';
 
-export type ViewMode = 'list' | 'kanban' | 'matrix';
+export type ViewMode = 'list' | 'kanban' | 'matrix' | 'graph';
 
 // ── List Types ──
 
@@ -471,6 +471,136 @@ export interface RequirementImportStatus {
   readonly draft?: RequirementDraft | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+// ── SDD Knowledge Graph Types ──
+
+export type GraphNodeKind = 'DOCUMENT' | 'PROGRAM' | 'FILE' | 'REQUIREMENT' | string;
+export type GraphIssueSeverity = 'ERROR' | 'WARNING' | 'INFO' | string;
+export type GraphImpactDirection = 'upstream' | 'downstream' | 'both';
+
+export interface GraphScope {
+  readonly workspaceId?: string | null;
+  readonly applicationId?: string | null;
+  readonly snowGroup?: string | null;
+  readonly projectId?: string | null;
+  readonly profileId?: string | null;
+  readonly branch?: string | null;
+  readonly provider: string;
+}
+
+export interface GraphHealth {
+  readonly nodeCount: number;
+  readonly edgeCount: number;
+  readonly issueCount: number;
+  readonly errorCount: number;
+  readonly warningCount: number;
+  readonly suggestionCount?: number;
+  readonly stale: boolean;
+  readonly lastGeneratedAt?: string | null;
+  readonly lastImportedAt?: string | null;
+}
+
+export interface GraphProviderHealth extends Pick<GraphHealth, 'nodeCount' | 'edgeCount' | 'issueCount' | 'stale'> {
+  readonly provider: string;
+  readonly available: boolean;
+  readonly lastSync?: Record<string, unknown> | null;
+  readonly lastImport?: Record<string, unknown> | null;
+  readonly message?: string | null;
+}
+
+export interface GraphNode {
+  readonly id: string;
+  readonly kind: GraphNodeKind;
+  readonly label: string;
+  readonly properties: Record<string, unknown>;
+}
+
+export interface GraphEdge {
+  readonly id: string;
+  readonly type: string;
+  readonly from: string;
+  readonly to: string;
+  readonly source: string;
+  readonly confidence: number;
+  readonly properties: Record<string, unknown>;
+}
+
+export interface GraphIssue {
+  readonly id: string;
+  readonly severity: GraphIssueSeverity;
+  readonly code: string;
+  readonly message: string;
+  readonly nodeId?: string | null;
+  readonly edgeId?: string | null;
+  readonly properties: Record<string, unknown>;
+}
+
+export interface GraphSuggestion {
+  readonly id: string;
+  readonly type: string;
+  readonly message: string;
+  readonly nodeId?: string | null;
+  readonly properties: Record<string, unknown>;
+}
+
+export interface KnowledgeGraph {
+  readonly scope: GraphScope;
+  readonly health: GraphHealth;
+  readonly nodes: ReadonlyArray<GraphNode>;
+  readonly edges: ReadonlyArray<GraphEdge>;
+  readonly issues: ReadonlyArray<GraphIssue>;
+  readonly suggestions?: ReadonlyArray<GraphSuggestion>;
+  readonly lastSync?: Record<string, unknown> | null;
+}
+
+export interface GraphNodeDetail {
+  readonly node: GraphNode | null;
+  readonly incoming: ReadonlyArray<GraphEdge>;
+  readonly outgoing: ReadonlyArray<GraphEdge>;
+  readonly issues: ReadonlyArray<GraphIssue>;
+}
+
+export interface GraphImpactRequest {
+  readonly nodeId: string;
+  readonly direction?: GraphImpactDirection;
+  readonly maxDepth?: number;
+  readonly relationshipTypes?: ReadonlyArray<string>;
+  readonly applicationId?: string;
+  readonly snowGroup?: string;
+  readonly branch?: string;
+  readonly profileId?: string;
+}
+
+export interface GraphImpact {
+  readonly startNodeId: string;
+  readonly direction: GraphImpactDirection;
+  readonly maxDepth: number;
+  readonly paths: ReadonlyArray<{
+    readonly depth: number;
+    readonly nodes: ReadonlyArray<GraphNode>;
+    readonly edges: ReadonlyArray<GraphEdge>;
+  }>;
+  readonly summary: {
+    readonly impactedDocuments: number;
+    readonly impactedPrograms: number;
+    readonly impactedFiles: number;
+    readonly staleReviews: number;
+  };
+}
+
+export interface GraphFilters {
+  readonly workspaceId?: string;
+  readonly applicationId?: string;
+  readonly snowGroup?: string;
+  readonly projectId?: string;
+  readonly profileId?: string;
+  readonly branch?: string;
+  readonly requirementId?: string;
+  readonly nodeKinds?: ReadonlyArray<string>;
+  readonly includeIssues?: boolean;
+  readonly includeSuggestions?: boolean;
+  readonly limit?: number;
 }
 
 export interface ImportState {

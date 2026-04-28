@@ -51,6 +51,7 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 | S16 | Import Raw Business Input as Requirement | Multi-format import, drag-drop, paste, file upload |
 | S17 | Review AI-Normalized Requirement Draft | Draft review, edit, confirm/discard, missing info flags |
 | S18 | Batch Import Requirements from Excel | Reserved row-based spreadsheet intake; current delivery uses KB-backed multi-file and ZIP import |
+| S19 | View SDD Knowledge Graph | Profile-aware graph of SDD document relationships with indexed/missing/stale health signals |
 
 ---
 
@@ -73,6 +74,7 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 - **Requirement List & Filtering**: List, filter, sort requirements; status distribution summary
 - **Kanban Board**: Visual board grouped by requirement status with drag-read (display-only) cards
 - **Priority Matrix**: Impact vs effort scatter/quadrant visualization
+- **SDD Knowledge Graph**: Profile-aware SDD document relationship graph for impact and decision support
 - **Requirement Detail**: Control-plane view for source evidence, GitHub-backed SDD documents, reviews, CLI runs, linked records, traceability, and metadata
 - **User Story Derivation**: AI-assisted story generation from requirements (req-to-user-story skill)
 - **Spec Linkage & Tracking**: Linked specs per requirement, spec status tracking, generation entry (user-story-to-spec skill)
@@ -127,6 +129,14 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 - **FR-24**: Hovering a point shows a tooltip with title, priority, status, story count. *(Source: S3)*
 - **FR-25**: Clicking a point navigates to the detail view. *(Source: S3, S11)*
 - **FR-26**: The matrix respects the same filters applied in the list view. *(Source: S3, S12)*
+
+### F-REQ-GRAPH: SDD Knowledge Graph View
+
+- **FR-27**: The page provides a graph view as an alternative to list, kanban, and matrix views. *(Source: S19)*
+- **FR-28**: The graph renders SDD document nodes from the active pipeline profile document stages. *(Source: S13, S19)*
+- **FR-29**: The graph renders directed relationships from the active profile document dependency definitions. *(Source: S14, S19)*
+- **FR-29a**: The graph overlays list-level control-plane health metrics: indexed document count, missing document count, stale review count, and aligned requirement count. *(Source: S19)*
+- **FR-29b**: Selecting a graph node shows upstream dependencies, downstream consumers, traceability key, tier, artifact type, and path pattern. *(Source: S19)*
 
 ### F-REQ-DETAIL: Requirement Detail Display
 
@@ -186,8 +196,9 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 - **FR-80**: Requirement list is the default view at `/requirements`. *(Source: S11)*
 - **FR-81**: Kanban view is accessible at `/requirements?view=kanban`. *(Source: S11)*
 - **FR-82**: Priority matrix view is accessible at `/requirements?view=matrix`. *(Source: S11)*
+- **FR-82a**: SDD knowledge graph view is accessible from the same list-level view toggle. *(Source: S19)*
 - **FR-83**: Detail view is accessible via `/requirements/:requirementId`. *(Source: S11)*
-- **FR-84**: View switching (list / kanban / matrix) uses a toggle control in the page header that preserves current filters. *(Source: S11)*
+- **FR-84**: View switching (list / kanban / matrix / graph) uses a toggle control in the page header that preserves current filters. *(Source: S11, S19)*
 - **FR-85**: Detail view has back-navigation to return to the previous view (list, kanban, or matrix). *(Source: S11)*
 - **FR-86**: Deep-linking to a specific requirement via URL is supported. *(Source: S11)*
 - **FR-87**: Page renders inside the shared shell with context bar and AI panel. *(Source: S11)*

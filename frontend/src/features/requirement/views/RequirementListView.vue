@@ -317,7 +317,9 @@ function handleStatusFilter(status: RequirementStatus) {
       :profile="store.activeProfile"
       :requirements="store.sortedRequirements"
       :summaries="store.controlPlaneSummaries"
-      :loading="store.controlPlaneSummaryLoading"
+      :graph="store.knowledgeGraph"
+      :loading="store.controlPlaneSummaryLoading || store.knowledgeGraphLoading"
+      :error="store.knowledgeGraphError"
     />
 
   </div>

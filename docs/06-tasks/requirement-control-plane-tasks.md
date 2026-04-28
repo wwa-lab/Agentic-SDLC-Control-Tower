@@ -171,7 +171,10 @@ profiles, agent manifests, and freshness.
       `_graph/edges.jsonl`
 - [ ] Add project preview graph generation from SDD project branch to matching
       Knowledge Base preview branch
-- [ ] Add Control Tower Knowledge Node view and graph navigation
+- [x] Add Requirement Management SDD Knowledge Graph view for profile document
+      nodes, dependencies, and control-plane health metrics
+- [ ] Wire Control Tower Knowledge Graph view to Neo4j-backed document nodes
+      and cross-requirement graph navigation
 
 ## Phase 11: Document Instance Resolution
 

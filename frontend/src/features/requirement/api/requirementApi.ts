@@ -3,6 +3,12 @@ import type {
   PipelineProfile,
   AgentRun,
   DocumentReview,
+  GraphFilters,
+  GraphImpact,
+  GraphImpactRequest,
+  GraphNodeDetail,
+  GraphProviderHealth,
+  KnowledgeGraph,
   RequirementTraceability,
   RequirementDetail,
   RequirementDraft,
@@ -63,6 +69,23 @@ function buildProfileQuery(profileId?: string): string {
   if (!profileId) return '';
   const params = new URLSearchParams({ profileId });
   return `?${params.toString()}`;
+}
+
+function buildGraphQuery(filters: GraphFilters = {}): string {
+  const params = new URLSearchParams();
+  if (filters.workspaceId) params.set('workspaceId', filters.workspaceId);
+  if (filters.applicationId) params.set('applicationId', filters.applicationId);
+  if (filters.snowGroup) params.set('snowGroup', filters.snowGroup);
+  if (filters.projectId) params.set('projectId', filters.projectId);
+  if (filters.profileId) params.set('profileId', filters.profileId);
+  if (filters.branch) params.set('branch', filters.branch);
+  if (filters.requirementId) params.set('requirementId', filters.requirementId);
+  if (filters.nodeKinds?.length) params.set('nodeKinds', filters.nodeKinds.join(','));
+  if (filters.includeIssues != null) params.set('includeIssues', String(filters.includeIssues));
+  if (filters.includeSuggestions != null) params.set('includeSuggestions', String(filters.includeSuggestions));
+  if (filters.limit != null) params.set('limit', String(filters.limit));
+  const query = params.toString();
+  return query ? `?${query}` : '';
 }
 
 export const requirementApi = {
@@ -184,5 +207,29 @@ export const requirementApi = {
 
   async getTraceability(requirementId: string, profileId?: string): Promise<RequirementTraceability> {
     return fetchJson<RequirementTraceability>(`/requirements/${requirementId}/traceability${buildProfileQuery(profileId)}`);
+  },
+
+  async getKnowledgeGraph(filters: GraphFilters = {}): Promise<KnowledgeGraph> {
+    return fetchJson<KnowledgeGraph>(`/requirements/knowledge-graph${buildGraphQuery(filters)}`);
+  },
+
+  async getGraphNode(nodeId: string, filters: GraphFilters = {}): Promise<GraphNodeDetail> {
+    return fetchJson<GraphNodeDetail>(`/requirements/knowledge-graph/nodes/${encodeURIComponent(nodeId)}${buildGraphQuery(filters)}`);
+  },
+
+  async getGraphImpact(request: GraphImpactRequest): Promise<GraphImpact> {
+    const params = new URLSearchParams({ nodeId: request.nodeId });
+    if (request.direction) params.set('direction', request.direction);
+    if (request.maxDepth != null) params.set('maxDepth', String(request.maxDepth));
+    if (request.relationshipTypes?.length) params.set('relationshipTypes', request.relationshipTypes.join(','));
+    if (request.applicationId) params.set('applicationId', request.applicationId);
+    if (request.snowGroup) params.set('snowGroup', request.snowGroup);
+    if (request.branch) params.set('branch', request.branch);
+    if (request.profileId) params.set('profileId', request.profileId);
+    return fetchJson<GraphImpact>(`/requirements/knowledge-graph/impact?${params.toString()}`);
+  },
+
+  async getGraphHealth(filters: GraphFilters = {}): Promise<GraphProviderHealth> {
+    return fetchJson<GraphProviderHealth>(`/requirements/knowledge-graph/health${buildGraphQuery(filters)}`);
   },
 };

@@ -318,6 +318,15 @@ The page must support a priority matrix (2x2 grid) view where requirements
 are plotted by impact vs. effort (or similar configurable axes), enabling
 prioritization decisions.
 
+### REQ-REQ-63: SDD knowledge graph view
+
+The page must support a knowledge graph view that visualizes SDD document
+relationships for the active pipeline profile. The first version may derive
+nodes and edges from the structured SDD profile/document dependency manifest
+and overlay control-plane health metrics such as indexed documents, missing
+documents, stale reviews, and aligned requirements. The target production data
+source is the structured SDD index repository and Neo4j graph projection.
+
 ---
 
 ## 9. AI Assistance Requirements

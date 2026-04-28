@@ -117,6 +117,40 @@ cd frontend
 VITE_USE_BACKEND=false npm run dev
 ```
 
+### Local Neo4j
+
+For local SDD knowledge-graph experiments, run Neo4j as an optional Docker
+service:
+
+```bash
+docker compose -f docker-compose.neo4j.yml up -d
+```
+
+- Browser UI: `http://localhost:7474`
+- Bolt URI: `bolt://localhost:7687`
+- Username: `neo4j`
+- Default local password: `local-dev-password`
+
+To use a different local password:
+
+```bash
+NEO4J_PASSWORD='change-me-locally' docker compose -f docker-compose.neo4j.yml up -d
+```
+
+The container stores data in a named Docker volume, so graph data survives
+container restarts. Remove the volume only when you intentionally want a clean
+graph database.
+
+Suggested backend graph environment for local experiments:
+
+```bash
+GRAPH_PROVIDER=neo4j
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=local-dev-password
+NEO4J_DATABASE=neo4j
+```
+
 ### Useful Local URLs
 
 - Dashboard: `http://localhost:5173/`

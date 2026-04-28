@@ -43,6 +43,12 @@ public final class ApiConstants {
     public static final String REQUIREMENT_AGENT_RUN_DETAIL = REQUIREMENTS + "/agent-runs/{executionId}";
     public static final String REQUIREMENT_AGENT_RUN_CALLBACK = REQUIREMENT_AGENT_RUN_DETAIL + "/callback";
     public static final String REQUIREMENT_TRACEABILITY = REQUIREMENT_DETAIL + "/traceability";
+    public static final String REQUIREMENT_KNOWLEDGE_GRAPH = REQUIREMENTS + "/knowledge-graph";
+    public static final String REQUIREMENT_KNOWLEDGE_GRAPH_NODE = REQUIREMENT_KNOWLEDGE_GRAPH + "/nodes/{nodeId}";
+    public static final String REQUIREMENT_KNOWLEDGE_GRAPH_IMPACT = REQUIREMENT_KNOWLEDGE_GRAPH + "/impact";
+    public static final String REQUIREMENT_KNOWLEDGE_GRAPH_HEALTH = REQUIREMENT_KNOWLEDGE_GRAPH + "/health";
+    public static final String REQUIREMENT_KNOWLEDGE_GRAPH_IMPORT = REQUIREMENT_KNOWLEDGE_GRAPH + "/import";
+    public static final String REQUIREMENT_KNOWLEDGE_GRAPH_SYNC = REQUIREMENT_KNOWLEDGE_GRAPH + "/sync";
 
     public static final String PIPELINE_PROFILES = API_V1 + "/pipeline-profiles";
     public static final String PIPELINE_PROFILES_ACTIVE = PIPELINE_PROFILES + "/active";

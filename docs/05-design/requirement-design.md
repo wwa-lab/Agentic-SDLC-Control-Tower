@@ -37,6 +37,7 @@ frontend/src/
 │       │   ├── CategoryBadge.vue             # Functional/NFR/Security/etc badge
 │       │   ├── RequirementListTable.vue      # requirement table rows
 │       │   ├── StatusDistribution.vue        # status distribution summary strip
+│       │   ├── SddKnowledgeGraph.vue         # profile-aware SDD document relationship graph
 │       │   ├── RequirementHeaderCard.vue     # header with priority, status, assignee
 │       │   ├── SourceReferencesPanel.vue     # upstream evidence linked from GitHub/control-plane sync
 │       │   ├── SddDocumentsPanel.vue         # canonical GitHub-backed SDD document entry point
@@ -729,7 +730,7 @@ The requirement page uses nested routes within the existing shell:
 
 | Route | Component | Purpose |
 |-------|-----------|---------|
-| `/requirements` | `RequirementListView.vue` | Default list view (or kanban/matrix via view toggle) |
+| `/requirements` | `RequirementListView.vue` | Default list view (or kanban/matrix/graph via view toggle) |
 | `/requirements/:requirementId` | `RequirementDetailView.vue` | Detail view for specific requirement |
 
 `RequirementManagementView.vue` becomes a `<router-view>` host for these child routes.
@@ -737,7 +738,7 @@ The requirement page uses nested routes within the existing shell:
 ### 6.2 Navigation
 
 - Shell nav -> `/requirements` -> List view (default)
-- View toggle -> switches between list, kanban, and matrix (same route, state-driven)
+- View toggle -> switches between list, kanban, matrix, and graph (same route, state-driven)
 - List row click / Kanban card click -> `router.push({ name: 'requirement-detail', params: { requirementId } })`
 - Detail back button -> `router.push({ name: 'requirements' })`
 - SDLC chain link -> `router.push(routePath)`

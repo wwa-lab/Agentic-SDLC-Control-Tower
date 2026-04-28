@@ -18,6 +18,15 @@ app:
       dataset-lookup-limit: ${DIFY_DATASET_LOOKUP_LIMIT:100}
       segment-page-size: ${DIFY_SEGMENT_PAGE_SIZE:100}
       indexing-technique: ${DIFY_INDEXING_TECHNIQUE:high_quality}
+  requirement-knowledge-graph:
+    provider: ${GRAPH_PROVIDER:profile}
+    manifest-root: ${GRAPH_MANIFEST_ROOT:}
+    structured-repo-name: ${GRAPH_STRUCTURED_REPO_NAME:sdd-knowledge-graph}
+    neo4j:
+      uri: ${NEO4J_URI:bolt://localhost:7687}
+      username: ${NEO4J_USERNAME:neo4j}
+      password: ${NEO4J_PASSWORD:local-dev-password}
+      database: ${NEO4J_DATABASE:neo4j}
   navigation:
     items:
       - key: dashboard

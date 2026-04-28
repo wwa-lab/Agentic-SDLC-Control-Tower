@@ -90,6 +90,25 @@ Documents for this slice:
 - API Guide: [project-space-API_IMPLEMENTATION_GUIDE.md](05-design/contracts/project-space-API_IMPLEMENTATION_GUIDE.md)
 - Tasks: [project-space-tasks.md](06-tasks/project-space-tasks.md)
 
+## Active Add-On: SDD Knowledge Graph
+
+SDD Knowledge Graph is an additive Requirement Control Plane capability. It
+defines the document metadata, structured sync repository, graph artifacts,
+Neo4j projection, backend graph API, and Requirement Management graph view for
+decision support.
+
+Documents for this add-on:
+
+- Requirements: [sdd-knowledge-graph-requirements.md](01-requirements/sdd-knowledge-graph-requirements.md)
+- Stories: [sdd-knowledge-graph-stories.md](02-user-stories/sdd-knowledge-graph-stories.md)
+- Spec: [sdd-knowledge-graph-spec.md](03-spec/sdd-knowledge-graph-spec.md)
+- Architecture: [sdd-knowledge-graph-architecture.md](04-architecture/sdd-knowledge-graph-architecture.md)
+- Data Flow: [sdd-knowledge-graph-data-flow.md](04-architecture/sdd-knowledge-graph-data-flow.md)
+- Data Model: [sdd-knowledge-graph-data-model.md](04-architecture/sdd-knowledge-graph-data-model.md)
+- Design: [sdd-knowledge-graph-design.md](05-design/sdd-knowledge-graph-design.md)
+- API Guide: [sdd-knowledge-graph-API_IMPLEMENTATION_GUIDE.md](05-design/contracts/sdd-knowledge-graph-API_IMPLEMENTATION_GUIDE.md)
+- Tasks: [sdd-knowledge-graph-tasks.md](06-tasks/sdd-knowledge-graph-tasks.md)
+
 ## Previous Slice: Team Space
 
 Team Space is the Workspace-level operating home — the contextual bridge between Dashboard (cross-team, cross-project global) and Project Space (single-project execution). See PRD §11.2.
