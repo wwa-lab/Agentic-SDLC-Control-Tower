@@ -3,9 +3,15 @@ import { computed, ref } from 'vue';
 import { ApiError } from '@/shared/api/client';
 import type {
   ImportSourceType,
+  AgentRun,
+  DocumentReview,
+  GraphNode,
+  KnowledgeGraph,
   ImportState,
   OrchestratorResult,
   PipelineProfile,
+  RequirementControlPlaneListSummary,
+  RequirementTraceability,
   RequirementCategory,
   RequirementDetail,
   RequirementDraft,
@@ -16,16 +22,20 @@ import type {
   RequirementPriority,
   RequirementSourceInput,
   RequirementStatus,
+  SddDocumentContent,
+  SddDocumentIndex,
+  SourceReference,
   SortField,
   StatusDistribution,
   ViewMode,
 } from '../types/requirement';
 import { requirementApi } from '../api/requirementApi';
 import { MOCK_REQUIREMENT_DETAILS, MOCK_REQUIREMENT_LIST } from '../mockData';
-import { getActiveProfile } from '../profiles';
+import { getActiveProfile, getAllProfiles, getProfileById } from '../profiles';
 
 const USE_MOCK = import.meta.env.DEV && !import.meta.env.VITE_USE_BACKEND;
 const DEFAULT_KB_NAME = import.meta.env.VITE_REQUIREMENT_KB_NAME?.trim() || 'requirement-intake';
+const PROFILE_STORAGE_KEY = 'requirement.activeProfileId';
 
 const COMPLETED_STATUSES = new Set<RequirementStatus>(['Delivered', 'Archived']);
 
@@ -170,9 +180,28 @@ export const useRequirementStore = defineStore('requirement', () => {
   const detailError = ref<string | null>(null);
   const selectedRequirementId = ref<string | null>(null);
 
-  const activeProfile = ref<PipelineProfile>(getActiveProfile());
+  const availableProfiles = getAllProfiles();
+  const activeProfile = ref<PipelineProfile>(readStoredProfile() ?? getActiveProfile());
   const orchestratorResult = ref<OrchestratorResult | null>(null);
   const skillMessage = ref<string | null>(null);
+  const sourceReferences = ref<ReadonlyArray<SourceReference>>([]);
+  const sddDocuments = ref<SddDocumentIndex | null>(null);
+  const selectedDocumentId = ref<string | null>(null);
+  const selectedDocument = ref<SddDocumentContent | null>(null);
+  const selectedDocumentLoading = ref(false);
+  const selectedDocumentError = ref<string | null>(null);
+  const documentReviews = ref<ReadonlyArray<DocumentReview>>([]);
+  const agentRuns = ref<ReadonlyArray<AgentRun>>([]);
+  const traceability = ref<RequirementTraceability | null>(null);
+  const controlPlaneLoading = ref(false);
+  const controlPlaneError = ref<string | null>(null);
+  const controlPlaneSummaries = ref<Record<string, RequirementControlPlaneListSummary>>({});
+  const controlPlaneSummaryLoading = ref(false);
+  const githubSyncLoading = ref(false);
+  const githubSyncError = ref<string | null>(null);
+  const knowledgeGraph = ref<KnowledgeGraph | null>(null);
+  const knowledgeGraphLoading = ref(false);
+  const knowledgeGraphError = ref<string | null>(null);
 
   const INITIAL_IMPORT: ImportState = {
     isOpen: false,
@@ -271,6 +300,20 @@ export const useRequirementStore = defineStore('requirement', () => {
     },
   );
 
+  const controlPlaneOverview = computed(() => {
+    const summaries = Object.values(controlPlaneSummaries.value);
+    return {
+      total: summaries.length,
+      fresh: summaries.filter(summary => summary.status === 'FRESH').length,
+      stale: summaries.filter(summary => summary.status === 'SOURCE_CHANGED' || summary.status === 'DOCUMENT_CHANGED_AFTER_REVIEW').length,
+      missing: summaries.filter(summary => summary.status === 'MISSING_DOCUMENT' || summary.status === 'MISSING_SOURCE').length,
+      errors: summaries.filter(summary => summary.status === 'ERROR').length,
+      sources: summaries.reduce((sum, summary) => sum + summary.sourceCount, 0),
+      documents: summaries.reduce((sum, summary) => sum + summary.documentCount, 0),
+      artifacts: summaries.reduce((sum, summary) => sum + summary.artifactCount, 0),
+    };
+  });
+
   function buildSourceInput(textOverride?: string): RequirementSourceInput {
     const fileNames = importState.value.fileNames;
     return {
@@ -367,6 +410,7 @@ export const useRequirementStore = defineStore('requirement', () => {
     try {
       if (USE_MOCK) {
         listData.value = MOCK_REQUIREMENT_LIST;
+        void fetchControlPlaneSummaries(MOCK_REQUIREMENT_LIST.requirements.map(req => req.id));
         return;
       }
       const result = await requirementApi.getRequirementList({
@@ -381,11 +425,172 @@ export const useRequirementStore = defineStore('requirement', () => {
         ...result,
         requirements: result.requirements ?? result.items ?? [],
       };
+      void fetchControlPlaneSummaries((result.requirements ?? result.items ?? []).map(req => req.id));
     } catch (error) {
       console.error('Failed to fetch requirement list:', error);
       listError.value = toUserMessage(error, 'Failed to load requirements. Please try again later.');
     } finally {
       listLoading.value = false;
+    }
+  }
+
+  function summarizeTraceability(trace: RequirementTraceability): RequirementControlPlaneListSummary {
+    const documentStages = trace.documents.stages;
+    const missingDocumentCount = documentStages.filter(stage => stage.missing).length;
+    const staleReviewCount = trace.reviews.filter(review => review.stale).length;
+    const statuses = trace.freshness.map(item => item.status);
+    let status: RequirementControlPlaneListSummary['status'] = 'FRESH';
+    if (statuses.includes('ERROR')) status = 'ERROR';
+    else if (statuses.includes('DOCUMENT_CHANGED_AFTER_REVIEW')) status = 'DOCUMENT_CHANGED_AFTER_REVIEW';
+    else if (statuses.includes('SOURCE_CHANGED')) status = 'SOURCE_CHANGED';
+    else if (statuses.includes('MISSING_SOURCE')) status = 'MISSING_SOURCE';
+    else if (statuses.includes('MISSING_DOCUMENT')) status = 'MISSING_DOCUMENT';
+    else if (statuses.includes('UNKNOWN')) status = 'UNKNOWN';
+
+    const message = status === 'FRESH'
+      ? 'Sources, docs, and reviews are aligned'
+      : status === 'DOCUMENT_CHANGED_AFTER_REVIEW'
+      ? 'Document changed after business review'
+      : status === 'SOURCE_CHANGED'
+      ? 'Source changed after document generation'
+      : status === 'MISSING_SOURCE'
+      ? 'No authoritative source linked'
+      : status === 'MISSING_DOCUMENT'
+      ? `${missingDocumentCount} expected docs missing`
+      : 'Freshness needs attention';
+
+    return {
+      requirementId: trace.requirementId,
+      sourceCount: trace.sources.length,
+      documentCount: documentStages.filter(stage => !stage.missing).length,
+      missingDocumentCount,
+      staleReviewCount,
+      artifactCount: trace.artifactLinks.length,
+      status,
+      message,
+    };
+  }
+
+  function buildMockSummary(requirementId: string): RequirementControlPlaneListSummary {
+    const index = Number(requirementId.replace(/\D/g, '')) || 1;
+    const missingDocumentCount = index % 3 === 0 ? 5 : index % 2 === 0 ? 2 : 0;
+    const status = missingDocumentCount > 0 ? 'MISSING_DOCUMENT' : index === 5 ? 'DOCUMENT_CHANGED_AFTER_REVIEW' : 'FRESH';
+    return {
+      requirementId,
+      sourceCount: index % 4 === 0 ? 0 : 1,
+      documentCount: Math.max(0, activeProfile.value.documentStages.length - missingDocumentCount),
+      missingDocumentCount,
+      staleReviewCount: status === 'DOCUMENT_CHANGED_AFTER_REVIEW' ? 1 : 0,
+      artifactCount: index % 5 === 0 ? 1 : 0,
+      status,
+      message: status === 'FRESH'
+        ? 'Sources, docs, and reviews are aligned'
+        : status === 'DOCUMENT_CHANGED_AFTER_REVIEW'
+        ? 'Document changed after business review'
+        : `${missingDocumentCount} expected docs missing`,
+    };
+  }
+
+  function buildMockKnowledgeGraph(): KnowledgeGraph {
+    const nodes: GraphNode[] = activeProfile.value.documentStages.map(stage => ({
+      id: `doc-type:${activeProfile.value.id}:${stage.sddType}`,
+      kind: 'DOCUMENT',
+      label: stage.label,
+      properties: {
+        docType: stage.sddType,
+        profile: activeProfile.value.id,
+        artifactType: stage.artifactType,
+        pathPattern: stage.pathPattern,
+        traceabilityKey: stage.traceabilityKey,
+        expectedTier: stage.expectedTier,
+        freshnessStatus: 'UNKNOWN',
+      },
+    }));
+    const edges = nodes.slice(1).map((node, index) => ({
+      id: `edge:${node.id}:DEPENDS_ON:${nodes[index].id}`,
+      type: 'DEPENDS_ON',
+      from: node.id,
+      to: nodes[index].id,
+      source: 'profile',
+      confidence: 0.75,
+      properties: { profile: activeProfile.value.id },
+    }));
+    return {
+      scope: { profileId: activeProfile.value.id, provider: 'profile' },
+      health: {
+        nodeCount: nodes.length,
+        edgeCount: edges.length,
+        issueCount: 0,
+        errorCount: 0,
+        warningCount: 0,
+        suggestionCount: 0,
+        stale: false,
+        lastGeneratedAt: null,
+        lastImportedAt: null,
+      },
+      nodes,
+      edges,
+      issues: [],
+      suggestions: [],
+      lastSync: null,
+    };
+  }
+
+  async function fetchKnowledgeGraph() {
+    knowledgeGraphLoading.value = true;
+    knowledgeGraphError.value = null;
+    try {
+      if (USE_MOCK) {
+        knowledgeGraph.value = buildMockKnowledgeGraph();
+        return;
+      }
+      knowledgeGraph.value = await requirementApi.getKnowledgeGraph({
+        profileId: activeProfile.value.id,
+        includeIssues: true,
+        includeSuggestions: true,
+      });
+    } catch (error) {
+      console.error('Failed to fetch SDD knowledge graph:', error);
+      knowledgeGraphError.value = toUserMessage(error, 'Backend graph is unavailable. Showing profile fallback.');
+      knowledgeGraph.value = buildMockKnowledgeGraph();
+    } finally {
+      knowledgeGraphLoading.value = false;
+    }
+  }
+
+  async function fetchControlPlaneSummaries(requirementIds: ReadonlyArray<string>) {
+    const ids = [...new Set(requirementIds)].filter(Boolean);
+    if (ids.length === 0) {
+      controlPlaneSummaries.value = {};
+      return;
+    }
+
+    controlPlaneSummaryLoading.value = true;
+    try {
+      if (USE_MOCK) {
+        controlPlaneSummaries.value = Object.fromEntries(ids.map(id => [id, buildMockSummary(id)]));
+        return;
+      }
+      const entries = await Promise.all(ids.map(async id => {
+        try {
+          const trace = await requirementApi.getTraceability(id, activeProfile.value.id);
+          return [id, summarizeTraceability(trace)] as const;
+        } catch (error) {
+          return [id, {
+            requirementId: id,
+            sourceCount: 0,
+            documentCount: 0,
+            missingDocumentCount: 0,
+            staleReviewCount: 0,
+            artifactCount: 0,
+            status: 'ERROR',
+            message: toUserMessage(error, 'Control plane summary failed'),
+          } satisfies RequirementControlPlaneListSummary] as const;
+        }
+      }));
+      controlPlaneSummaries.value = Object.fromEntries(entries);
+    } finally {
+      controlPlaneSummaryLoading.value = false;
     }
   }
 
@@ -401,6 +606,8 @@ export const useRequirementStore = defineStore('requirement', () => {
         : await requirementApi.getRequirementDetail(id);
       if (!detail.value) {
         detailError.value = `Requirement not found: ${id}`;
+      } else {
+        void fetchControlPlane(id);
       }
     } catch (error) {
       console.error('Failed to fetch requirement detail:', error);
@@ -408,6 +615,298 @@ export const useRequirementStore = defineStore('requirement', () => {
     } finally {
       detailLoading.value = false;
     }
+  }
+
+  function buildMockQualityGate(index: number) {
+    const scores = [94, 86, 72, 91, 84, 76, 88, 93, 79, 82];
+    const score = scores[index % scores.length] ?? 82;
+    const band = score >= 90 ? 'EXCELLENT' : score >= 80 ? 'GOOD' : 'BLOCKED';
+    const label = band === 'EXCELLENT' ? 'Excellent' : band === 'GOOD' ? 'Good' : 'Blocked';
+    const passed = score >= 80;
+    return {
+      score,
+      band,
+      label,
+      passed,
+      threshold: 80,
+      summary: passed
+        ? `${label} quality. This document meets the minimum score for business review.`
+        : 'Score is below 80. This document must be improved before downstream approval.',
+      findings: passed
+        ? ['Traceability and acceptance coverage are present.', 'No blocking completeness gaps detected.']
+        : ['Acceptance criteria are incomplete or not testable enough.', 'Traceability to source evidence needs strengthening.'],
+    } as const;
+  }
+
+  function buildMockControlPlane(id: string) {
+    const now = '2026-04-27T09:00:00Z';
+    sourceReferences.value = [
+      {
+        id: `SRC-${id}-JIRA`,
+        requirementId: id,
+        sourceType: 'JIRA',
+        externalId: 'PAY-123',
+        title: 'Payment reconciliation enhancement',
+        url: 'jira://PAY-123',
+        sourceUpdatedAt: now,
+        fetchedAt: now,
+        freshnessStatus: 'FRESH',
+        errorMessage: null,
+      },
+    ];
+    sddDocuments.value = {
+      requirementId: id,
+      profileId: activeProfile.value.id,
+      workspace: {
+        id: `SDDW-${id}`,
+        applicationId: 'payment-gateway',
+        applicationName: 'Payment Gateway',
+        snowGroup: 'APAC-PAYMENTS-L2',
+        sourceRepoFullName: 'wwa-lab/payment-gateway-service',
+        sddRepoFullName: 'wwa-lab/payment-gateway-sdd',
+        baseBranch: 'main',
+        workingBranch: 'project/PAY-2026-sso-upgrade',
+        lifecycleStatus: 'IN_DEVELOPMENT',
+        docsRoot: 'docs/',
+        releasePrUrl: null,
+        kbRepoFullName: 'wwa-lab/payment-gateway-knowledge-base',
+        kbMainBranch: 'main',
+        kbPreviewBranch: 'project/PAY-2026-sso-upgrade',
+        graphManifestPath: '_graph/manifest.json',
+      },
+      stages: activeProfile.value.documentStages.map((stage, index) => ({
+        id: index < 3 ? `DOC-${id}-${stage.sddType}` : null,
+        sddType: stage.sddType,
+        stageLabel: stage.label,
+        title: stage.label,
+        repoFullName: index < 3 ? 'wwa-lab/payment-gateway-sdd' : null,
+        branchOrRef: index < 3 ? 'project/PAY-2026-sso-upgrade' : null,
+        path: stage.pathPattern,
+        latestCommitSha: index < 3 ? `mock-commit-${index}` : null,
+        latestBlobSha: index < 3 ? `mock-blob-${index}` : null,
+        githubUrl: index < 3 ? `https://github.com/wwa-lab/payment-gateway-sdd/blob/project/PAY-2026-sso-upgrade/${stage.pathPattern}` : null,
+        status: index < 3 ? 'IN_REVIEW' : 'MISSING',
+        freshnessStatus: index < 3 ? 'FRESH' : 'MISSING_DOCUMENT',
+        missing: index >= 3,
+        qualityGate: index < 3 ? buildMockQualityGate(index) : null,
+      })),
+    };
+    documentReviews.value = [];
+    agentRuns.value = [];
+    traceability.value = {
+      requirementId: id,
+      sources: sourceReferences.value,
+      documents: sddDocuments.value,
+      reviews: [],
+      agentRuns: [],
+      artifactLinks: [],
+      freshness: [
+        { subjectType: 'SOURCE', subjectId: `SRC-${id}-JIRA`, status: 'FRESH', message: 'Payment reconciliation enhancement' },
+      ],
+    };
+  }
+
+  async function fetchControlPlane(requirementId: string) {
+    controlPlaneLoading.value = true;
+    controlPlaneError.value = null;
+    selectedDocumentId.value = null;
+    selectedDocument.value = null;
+    selectedDocumentError.value = null;
+    try {
+      if (USE_MOCK) {
+        buildMockControlPlane(requirementId);
+        return;
+      }
+      const profileId = activeProfile.value.id;
+      const [sources, documents, reviews, trace] = await Promise.all([
+        requirementApi.getSourceReferences(requirementId),
+        requirementApi.getSddDocuments(requirementId, profileId),
+        requirementApi.getDocumentReviews(requirementId),
+        requirementApi.getTraceability(requirementId, profileId),
+      ]);
+      sourceReferences.value = sources;
+      sddDocuments.value = documents;
+      documentReviews.value = reviews;
+      traceability.value = trace;
+      agentRuns.value = trace.agentRuns;
+    } catch (error) {
+      console.error('Failed to fetch requirement control plane:', error);
+      controlPlaneError.value = toUserMessage(error, 'Failed to load control plane sections.');
+    } finally {
+      controlPlaneLoading.value = false;
+    }
+  }
+
+  async function refreshSourceReference(sourceId: string) {
+    if (USE_MOCK) return;
+    const updated = await requirementApi.refreshSourceReference(sourceId);
+    sourceReferences.value = sourceReferences.value.map(source => source.id === sourceId ? updated : source);
+    if (selectedRequirementId.value) await fetchControlPlane(selectedRequirementId.value);
+  }
+
+  async function refreshGitHubDocuments(requirementIds?: ReadonlyArray<string>) {
+    const ids = [...new Set((requirementIds && requirementIds.length > 0
+      ? requirementIds
+      : sortedRequirements.value.map(requirement => requirement.id)
+    ).filter(Boolean))];
+
+    githubSyncLoading.value = true;
+    githubSyncError.value = null;
+    skillMessage.value = null;
+
+    try {
+      if (ids.length === 0) {
+        await fetchRequirementList();
+        return;
+      }
+
+      if (USE_MOCK) {
+        if (selectedRequirementId.value && ids.includes(selectedRequirementId.value)) {
+          buildMockControlPlane(selectedRequirementId.value);
+        }
+        skillMessage.value = ids.length === 1
+          ? 'GitHub SDD index refreshed from the selected branch.'
+          : `${ids.length} GitHub SDD indexes refreshed from selected branches.`;
+        return;
+      }
+
+      await Promise.all(ids.map(id => requirementApi.refreshSddDocuments(id, activeProfile.value.id)));
+      if (selectedRequirementId.value && ids.includes(selectedRequirementId.value)) {
+        await fetchControlPlane(selectedRequirementId.value);
+      }
+      await fetchRequirementList();
+      skillMessage.value = ids.length === 1
+        ? 'GitHub SDD index refreshed from the selected branch.'
+        : `${ids.length} GitHub SDD indexes refreshed from selected branches.`;
+    } catch (error) {
+      console.error('Failed to refresh GitHub SDD documents:', error);
+      githubSyncError.value = toUserMessage(error, 'Failed to refresh GitHub SDD documents.');
+    } finally {
+      githubSyncLoading.value = false;
+    }
+  }
+
+  async function openSddDocument(documentId: string) {
+    selectedDocumentId.value = documentId;
+    selectedDocument.value = null;
+    selectedDocumentError.value = null;
+    selectedDocumentLoading.value = true;
+    try {
+      if (USE_MOCK) {
+        const document = sddDocuments.value?.stages.find(stage => stage.id === documentId);
+        if (!document) {
+          selectedDocumentError.value = 'Document is no longer available in this index.';
+          return;
+        }
+        selectedDocument.value = {
+          document,
+          markdown: `# ${document.title}\n\nMock GitHub-backed Markdown for ${document.path}.`,
+          commitSha: document.latestCommitSha ?? 'mock-commit',
+          blobSha: document.latestBlobSha ?? 'mock-blob',
+          githubUrl: document.githubUrl ?? '#',
+          fetchedAt: new Date().toISOString(),
+        };
+        return;
+      }
+      selectedDocument.value = await requirementApi.getSddDocument(documentId);
+    } catch (error) {
+      console.error('Failed to fetch SDD document:', error);
+      selectedDocumentError.value = toUserMessage(error, 'Failed to load Markdown from GitHub.');
+    } finally {
+      selectedDocumentLoading.value = false;
+    }
+  }
+
+  async function runDocumentQualityGate(documentId: string) {
+    const document = sddDocuments.value?.stages.find(stage => stage.id === documentId);
+    if (!document) return;
+    skillMessage.value = null;
+
+    try {
+      const gate = USE_MOCK
+        ? buildMockQualityGate(sddDocuments.value?.stages.findIndex(stage => stage.id === documentId) ?? 0)
+        : await requirementApi.runDocumentQualityGate(documentId, activeProfile.value.id);
+
+      if (sddDocuments.value) {
+        sddDocuments.value = {
+          ...sddDocuments.value,
+          stages: sddDocuments.value.stages.map(stage => stage.id === documentId ? { ...stage, qualityGate: gate } : stage),
+        };
+      }
+      if (selectedDocument.value?.document.id === documentId) {
+        selectedDocument.value = {
+          ...selectedDocument.value,
+          document: {
+            ...selectedDocument.value.document,
+            qualityGate: gate,
+          },
+        };
+      }
+      skillMessage.value = `Document quality gate completed: ${gate.score} ${gate.label ?? gate.band}.`;
+    } catch (error) {
+      console.error('Failed to run document quality gate:', error);
+      skillMessage.value = toUserMessage(error, 'Failed to run document quality gate.');
+    }
+  }
+
+  async function createReview(documentId: string, decision: string, comment = '') {
+    const normalizedDecision = decision.trim().toUpperCase();
+    const reviewComment = comment.trim();
+    if (normalizedDecision === 'REJECTED' && !reviewComment) {
+      throw new Error('Rejection reason is required');
+    }
+    const document = sddDocuments.value?.stages.find(stage => stage.id === documentId);
+    if (!document?.latestCommitSha || !document.latestBlobSha) return;
+    if (USE_MOCK) {
+      documentReviews.value = [
+        {
+          id: `REV-${Date.now()}`,
+          documentId,
+          requirementId: selectedRequirementId.value ?? '',
+          decision: normalizedDecision as DocumentReview['decision'],
+          comment: reviewComment || null,
+          reviewerId: 'mock-user',
+          reviewerType: 'BUSINESS',
+          commitSha: document.latestCommitSha,
+          blobSha: document.latestBlobSha,
+          anchorType: 'DOCUMENT',
+          anchorValue: null,
+          stale: false,
+          createdAt: new Date().toISOString(),
+        },
+        ...documentReviews.value,
+      ];
+      return;
+    }
+    await requirementApi.createDocumentReview(documentId, { decision: normalizedDecision, comment: reviewComment, commitSha: document.latestCommitSha, blobSha: document.latestBlobSha });
+    if (selectedRequirementId.value) await fetchControlPlane(selectedRequirementId.value);
+  }
+
+  async function requestAgentRun(skillKey: string, targetStage: string) {
+    if (!selectedRequirementId.value) return;
+    if (USE_MOCK) {
+      agentRuns.value = [
+        {
+          executionId: `EXEC-${Date.now()}`,
+          requirementId: selectedRequirementId.value,
+          profileId: activeProfile.value.id,
+          skillKey,
+          targetStage,
+          status: 'MANIFEST_READY',
+          manifest: {},
+          outputSummary: null,
+          errorMessage: null,
+          artifactLinks: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        ...agentRuns.value,
+      ];
+      return;
+    }
+    const run = await requirementApi.createAgentRun(selectedRequirementId.value, { skillKey, targetStage, profileId: activeProfile.value.id });
+    agentRuns.value = [run, ...agentRuns.value];
+    skillMessage.value = `Agent manifest ready: ${run.executionId}`;
   }
 
   async function generateStories(requirementId: string) {
@@ -457,6 +956,9 @@ export const useRequirementStore = defineStore('requirement', () => {
 
   function setViewMode(mode: ViewMode) {
     viewMode.value = mode;
+    if (mode === 'graph') {
+      void fetchKnowledgeGraph();
+    }
   }
 
   function setSortField(field: SortField) {
@@ -477,11 +979,59 @@ export const useRequirementStore = defineStore('requirement', () => {
     selectedRequirementId.value = null;
     orchestratorResult.value = null;
     skillMessage.value = null;
+    sourceReferences.value = [];
+    sddDocuments.value = null;
+    selectedDocumentId.value = null;
+    selectedDocument.value = null;
+    selectedDocumentLoading.value = false;
+    selectedDocumentError.value = null;
+    documentReviews.value = [];
+    agentRuns.value = [];
+    traceability.value = null;
+    controlPlaneError.value = null;
+  }
+
+  function readStoredProfile(): PipelineProfile | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    const storedProfileId = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+    return storedProfileId ? getProfileById(storedProfileId) ?? null : null;
+  }
+
+  function setActiveProfile(profileId: string) {
+    const nextProfile = getProfileById(profileId);
+    if (!nextProfile || nextProfile.id === activeProfile.value.id) {
+      return;
+    }
+
+    activeProfile.value = nextProfile;
+    orchestratorResult.value = null;
+    skillMessage.value = null;
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(PROFILE_STORAGE_KEY, nextProfile.id);
+    }
+
+    if (listData.value) {
+      void fetchControlPlaneSummaries(listData.value.requirements.map(requirement => requirement.id));
+    }
+    if (viewMode.value === 'graph') {
+      void fetchKnowledgeGraph();
+    }
+    if (selectedRequirementId.value) {
+      void fetchControlPlane(selectedRequirementId.value);
+    }
   }
 
   async function loadActiveProfile(workspaceId?: string) {
     orchestratorResult.value = null;
     skillMessage.value = null;
+    const storedProfile = readStoredProfile();
+    if (storedProfile) {
+      activeProfile.value = storedProfile;
+      return;
+    }
     if (USE_MOCK) {
       activeProfile.value = getActiveProfile(workspaceId);
       return;
@@ -499,10 +1049,10 @@ export const useRequirementStore = defineStore('requirement', () => {
     if (USE_MOCK) {
       if (activeProfile.value.usesOrchestrator) {
         orchestratorResult.value = {
-          determinedPathId: 'modification',
+          determinedPathId: 'enhancement',
           determinedTier: 'L2',
           confidence: 'High',
-          reasoning: 'Existing program detected — modification path selected with L2 standard tier',
+          reasoning: 'Existing RPG/COBOL source modification detected — enhancement path selected with L2 standard tier',
         };
       }
       console.info(`[stub] Profile skill ${skillId} invoked for ${requirementId}`);
@@ -641,7 +1191,7 @@ export const useRequirementStore = defineStore('requirement', () => {
       return;
     }
 
-    await requirementApi.createRequirement({
+    const created = await requirementApi.createRequirement({
       title: draft.title,
       priority: draft.priority,
       category: draft.category,
@@ -652,6 +1202,15 @@ export const useRequirementStore = defineStore('requirement', () => {
       constraints: draft.constraints,
       sourceAttachment: draft.sourceAttachment ?? buildSourceInput(),
     });
+    const source = draft.sourceAttachment ?? buildSourceInput();
+    if (source.fileName || source.text || source.kbName) {
+      await requirementApi.createSourceReference(created.id, {
+        sourceType: source.sourceType === 'FILE' ? 'UPLOAD' : 'URL',
+        url: source.fileName ? `upload://${source.fileName}` : 'manual://intake',
+        title: source.fileName ?? 'Manual intake source',
+        externalId: source.fileName ?? source.sourceType,
+      });
+    }
     await fetchRequirementList();
     closeImport();
   }
@@ -850,16 +1409,45 @@ export const useRequirementStore = defineStore('requirement', () => {
     filteredRequirements,
     sortedRequirements,
     statusDistribution,
+    controlPlaneOverview,
     detail,
     detailLoading,
     detailError,
     selectedRequirementId,
+    availableProfiles,
     activeProfile,
     orchestratorResult,
     skillMessage,
+    sourceReferences,
+    sddDocuments,
+    selectedDocumentId,
+    selectedDocument,
+    selectedDocumentLoading,
+    selectedDocumentError,
+    documentReviews,
+    agentRuns,
+    traceability,
+    controlPlaneLoading,
+    controlPlaneError,
+    controlPlaneSummaries,
+    controlPlaneSummaryLoading,
+    githubSyncLoading,
+    githubSyncError,
+    knowledgeGraph,
+    knowledgeGraphLoading,
+    knowledgeGraphError,
     importState,
     fetchRequirementList,
     fetchRequirementDetail,
+    fetchControlPlane,
+    fetchControlPlaneSummaries,
+    fetchKnowledgeGraph,
+    refreshSourceReference,
+    refreshGitHubDocuments,
+    openSddDocument,
+    runDocumentQualityGate,
+    createReview,
+    requestAgentRun,
     generateStories,
     generateSpec,
     runAnalysis,
@@ -868,6 +1456,7 @@ export const useRequirementStore = defineStore('requirement', () => {
     setSortField,
     clearDetail,
     loadActiveProfile,
+    setActiveProfile,
     invokeProfileSkill,
     openImport,
     closeImport,

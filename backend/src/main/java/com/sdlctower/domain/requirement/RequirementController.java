@@ -6,6 +6,18 @@ import com.sdlctower.domain.requirement.dto.GenerateSpecRequestDto;
 import com.sdlctower.domain.requirement.dto.GenerationResultDto;
 import com.sdlctower.domain.requirement.dto.InvokeSkillRequestDto;
 import com.sdlctower.domain.requirement.dto.RawRequirementInputDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunCallbackRequestDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateAgentRunRequestDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateDocumentReviewRequestDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateQualityGateRunRequestDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateSourceReferenceRequestDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.DocumentQualityGateResultDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.DocumentReviewDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.RequirementTraceabilityDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.SddDocumentContentDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.SddDocumentIndexDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.SourceReferenceDto;
 import com.sdlctower.domain.requirement.dto.RequirementDetailDto;
 import com.sdlctower.domain.requirement.dto.RequirementDraftDto;
 import com.sdlctower.domain.requirement.dto.RequirementImportStatusDto;
@@ -34,10 +46,16 @@ public class RequirementController {
 
     private final RequirementService requirementService;
     private final RequirementImportService requirementImportService;
+    private final RequirementControlPlaneService controlPlaneService;
 
-    public RequirementController(RequirementService requirementService, RequirementImportService requirementImportService) {
+    public RequirementController(
+            RequirementService requirementService,
+            RequirementImportService requirementImportService,
+            RequirementControlPlaneService controlPlaneService
+    ) {
         this.requirementService = requirementService;
         this.requirementImportService = requirementImportService;
+        this.controlPlaneService = controlPlaneService;
     }
 
     @GetMapping(ApiConstants.REQUIREMENTS)
@@ -157,5 +175,107 @@ public class RequirementController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(requirementService.createRequirement(body)));
+    }
+
+    @GetMapping(ApiConstants.REQUIREMENT_SOURCES)
+    public ApiResponse<List<SourceReferenceDto>> listSources(@PathVariable String requirementId) {
+        return ApiResponse.ok(controlPlaneService.listSources(requirementId));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_SOURCES)
+    public ResponseEntity<ApiResponse<SourceReferenceDto>> createSource(
+            @PathVariable String requirementId,
+            @RequestBody CreateSourceReferenceRequestDto body
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(controlPlaneService.createSource(requirementId, body)));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_SOURCE_REFRESH)
+    public ApiResponse<SourceReferenceDto> refreshSource(@PathVariable String sourceId) {
+        return ApiResponse.ok(controlPlaneService.refreshSource(sourceId));
+    }
+
+    @GetMapping(ApiConstants.REQUIREMENT_SDD_DOCUMENTS)
+    public ApiResponse<SddDocumentIndexDto> listSddDocuments(
+            @PathVariable String requirementId,
+            @RequestParam(required = false) String profileId
+    ) {
+        return ApiResponse.ok(controlPlaneService.listSddDocuments(requirementId, profileId));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_SDD_DOCUMENTS_REFRESH)
+    public ApiResponse<SddDocumentIndexDto> refreshSddDocuments(
+            @PathVariable String requirementId,
+            @RequestParam(required = false) String profileId
+    ) {
+        return ApiResponse.ok(controlPlaneService.syncSddDocuments(requirementId, profileId));
+    }
+
+    @GetMapping(ApiConstants.REQUIREMENT_SDD_DOCUMENT_DETAIL)
+    public ApiResponse<SddDocumentContentDto> getDocument(@PathVariable String documentId) {
+        return ApiResponse.ok(controlPlaneService.getDocument(documentId));
+    }
+
+    @GetMapping(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE)
+    public ApiResponse<DocumentQualityGateResultDto> getQualityGate(@PathVariable String documentId) {
+        return ApiResponse.ok(controlPlaneService.getLatestDocumentQualityGate(documentId));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE_RUNS)
+    public ResponseEntity<ApiResponse<DocumentQualityGateResultDto>> runQualityGate(
+            @PathVariable String documentId,
+            @RequestBody(required = false) CreateQualityGateRunRequestDto body
+    ) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(controlPlaneService.runDocumentQualityGate(documentId, body)));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_QUALITY_GATE_RUNS)
+    public ResponseEntity<ApiResponse<List<DocumentQualityGateResultDto>>> runRequirementQualityGates(
+            @PathVariable String requirementId,
+            @RequestBody(required = false) CreateQualityGateRunRequestDto body
+    ) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(controlPlaneService.runRequirementQualityGates(requirementId, body)));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS)
+    public ResponseEntity<ApiResponse<DocumentReviewDto>> createReview(
+            @PathVariable String documentId,
+            @RequestBody CreateDocumentReviewRequestDto body
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(controlPlaneService.createReview(documentId, body)));
+    }
+
+    @GetMapping(ApiConstants.REQUIREMENT_REVIEWS)
+    public ApiResponse<List<DocumentReviewDto>> listReviews(@PathVariable String requirementId) {
+        return ApiResponse.ok(controlPlaneService.listReviews(requirementId));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_AGENT_RUNS)
+    public ResponseEntity<ApiResponse<AgentRunDto>> createAgentRun(
+            @PathVariable String requirementId,
+            @RequestBody(required = false) CreateAgentRunRequestDto body
+    ) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(controlPlaneService.createAgentRun(requirementId, body)));
+    }
+
+    @GetMapping(ApiConstants.REQUIREMENT_AGENT_RUN_DETAIL)
+    public ApiResponse<AgentRunDto> getAgentRun(@PathVariable String executionId) {
+        return ApiResponse.ok(controlPlaneService.getAgentRun(executionId));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_AGENT_RUN_CALLBACK)
+    public ApiResponse<AgentRunDto> agentRunCallback(
+            @PathVariable String executionId,
+            @RequestBody AgentRunCallbackRequestDto body
+    ) {
+        return ApiResponse.ok(controlPlaneService.applyAgentRunCallback(executionId, body));
+    }
+
+    @GetMapping(ApiConstants.REQUIREMENT_TRACEABILITY)
+    public ApiResponse<RequirementTraceabilityDto> getTraceability(
+            @PathVariable String requirementId,
+            @RequestParam(required = false) String profileId
+    ) {
+        return ApiResponse.ok(controlPlaneService.getTraceability(requirementId, profileId));
     }
 }

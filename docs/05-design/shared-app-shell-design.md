@@ -127,7 +127,12 @@ when no subtitle provided. Renders action buttons dynamically from the `actions`
 
 ### AiCommandPanel.vue
 
-No props. Self-contained 320px right rail with four zones:
+Route-controlled 320px right rail. The shell renders it when `ShellPageConfig.showAiPanel`
+is not `false`; pages that keep evidence and execution status in their main content area
+can suppress the rail.
+
+The component accepts page-scoped content from `shellUiStore.setAiPanelContent(...)` and
+supports four zones:
 
 | Zone | Purpose |
 |------|---------|

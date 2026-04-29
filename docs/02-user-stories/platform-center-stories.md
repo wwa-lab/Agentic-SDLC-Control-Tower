@@ -434,7 +434,7 @@ This document converts the requirements in [platform-center-requirements.md](../
 
 - **Given** the Integration sub-section is active  
   **When** the catalog loads  
-  **Then** the header shows the adapter kinds (Jira / GitLab / Jenkins / ServiceNow / custom-webhook) and the body lists all configured connection instances with columns: kind, workspace scope, sync mode, status, last-sync.
+  **Then** the header shows the adapter kinds (Jira / Confluence / GitLab / Jenkins / ServiceNow / custom-webhook) and the body lists all configured connection instances with columns: kind, workspace scope, sync mode, status, last-sync.
 
 ### S-PC-61: Configure a connection
 

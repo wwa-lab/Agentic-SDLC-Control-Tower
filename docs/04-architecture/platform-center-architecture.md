@@ -44,7 +44,7 @@ graph LR
 
     DB[H2 / Oracle DB]
     SEC[Secret Store stub]
-    EXT[External: Jira / GitLab / Jenkins / ServiceNow]
+        EXT[External: Jira / Confluence / GitLab / Jenkins / ServiceNow]
 
     AICENTER[AI Center UI]
     INC[Incident UI]
@@ -251,7 +251,7 @@ Key design points:
 - **`AdminAuthGuard`** is a single Spring `HandlerInterceptor` (or method-level annotation `@RequireRole(PLATFORM_ADMIN)`) registered for every Platform Center controller path.
 - **`InheritanceResolver`** walks the four-layer chain (platform → application → snow-group → project) for a given template or configuration and emits the resolved record with per-field provenance.
 - **`ScopeResolver`** parses and validates scope query params (`scopeType:scopeId`).
-- **`AdapterTester`** is a strategy pattern with five implementations (`JiraAdapterTester`, `GitlabAdapterTester`, etc.); V1 implementations can return canned success/failure for non-prod adapter kinds to keep the slice self-contained.
+- **`AdapterTester`** is a strategy pattern with implementations per adapter (`JiraAdapterTester`, `ConfluenceAdapterTester`, `GitlabAdapterTester`, etc.); V1 implementations can return canned success/failure for non-prod adapter kinds to keep the slice self-contained.
 - **`SecretStoreStub`** is an in-memory map of `credentialRef → credentialValue` backed by a `PLATFORM_CREDENTIAL_REF` lookup table; production wiring to an external secret store is a future concern.
 
 ---
@@ -347,7 +347,7 @@ Platform Center does **not** introduce a global megastore. Each sub-section has 
 
 | External | Trigger | Mode | V1 behavior |
 |----------|---------|------|-------------|
-| Jira / GitLab / Jenkins / ServiceNow | Test-connection button | Synchronous HTTP | V1 returns canned `ok: true` for non-prod; real calls wired in sync-worker slice |
+| Jira / Confluence / GitLab / Jenkins / ServiceNow | Test-connection button | Synchronous HTTP | V1 returns canned `ok: true` for non-prod; real calls wired in sync-worker slice |
 | Secret store | Every time an adapter needs credentials | In-process lookup | V1 uses the in-memory `SecretStoreStub`; production wiring deferred |
 
 ### Nav entry and routing

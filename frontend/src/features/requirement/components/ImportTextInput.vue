@@ -32,7 +32,7 @@ function handleSubmit() {
         :disabled="!text.trim()"
         @click="handleSubmit"
       >
-        Normalize with AI
+        Create Draft
       </button>
     </div>
   </div>

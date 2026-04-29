@@ -14,6 +14,7 @@ export function useShellConfig() {
     title: (route.meta.title as string) ?? '',
     subtitle: route.meta.subtitle as string | undefined,
     actions: route.meta.actions as ReadonlyArray<ShellAction> | undefined,
+    showAiPanel: route.meta.showAiPanel !== false,
   }));
 
   const isComingSoon = computed(() => route.meta.comingSoon === true);

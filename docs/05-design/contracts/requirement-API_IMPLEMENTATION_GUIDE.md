@@ -839,16 +839,16 @@ Returns the resolved pipeline profile for the current workspace context.
     "name": "IBM i",
     "description": "Unified pipeline for IBM i (iSeries/AS400) BAU development — delegates to ibm-i-workflow-orchestrator for path and tier routing",
     "chainNodes": [
-      { "id": "requirement", "label": "Requirement", "isExecutionHub": false, "artifactType": "REQUIREMENT", "order": 1 },
-      { "id": "req-package", "label": "Req Package", "isExecutionHub": false, "artifactType": "REQUIREMENT_PACKAGE", "order": 2 },
-      { "id": "func-spec", "label": "Functional Spec", "isExecutionHub": false, "artifactType": "FUNCTIONAL_SPEC", "order": 3 },
-      { "id": "tech-design", "label": "Technical Design", "isExecutionHub": false, "artifactType": "TECHNICAL_DESIGN", "order": 4 },
-      { "id": "program-spec", "label": "Program Spec", "isExecutionHub": true, "artifactType": "PROGRAM_SPEC", "order": 5 },
-      { "id": "code", "label": "Code", "isExecutionHub": false, "artifactType": "CODE", "order": 6 },
-      { "id": "test", "label": "Test", "isExecutionHub": false, "artifactType": "TEST", "order": 7 },
-      { "id": "deploy", "label": "Deploy", "isExecutionHub": false, "artifactType": "DEPLOYMENT", "order": 8 },
-      { "id": "incident", "label": "Incident", "isExecutionHub": false, "artifactType": "INCIDENT", "order": 9 },
-      { "id": "learning", "label": "Learning", "isExecutionHub": false, "artifactType": "LEARNING", "order": 10 }
+      { "id": "requirement-normalizer", "label": "Requirement Normalizer", "isExecutionHub": false, "artifactType": "REQUIREMENT", "order": 1 },
+      { "id": "functional-spec", "label": "Functional Spec", "isExecutionHub": false, "artifactType": "FUNCTIONAL_SPEC", "order": 2 },
+      { "id": "technical-design", "label": "Technical Design", "isExecutionHub": false, "artifactType": "TECHNICAL_DESIGN", "order": 3 },
+      { "id": "program-spec", "label": "Program Spec", "isExecutionHub": true, "artifactType": "PROGRAM_SPEC", "order": 4 },
+      { "id": "file-spec", "label": "File Spec", "isExecutionHub": false, "artifactType": "FILE_SPEC", "order": 5 },
+      { "id": "ut-plan", "label": "UT Plan", "isExecutionHub": false, "artifactType": "TEST_PLAN", "order": 6 },
+      { "id": "test-scaffold", "label": "Test Scaffold", "isExecutionHub": false, "artifactType": "TEST_SCAFFOLD", "order": 7 },
+      { "id": "spec-review", "label": "Spec Review", "isExecutionHub": false, "artifactType": "REVIEW", "order": 8 },
+      { "id": "dds-review", "label": "DDS Review", "isExecutionHub": false, "artifactType": "REVIEW", "order": 9 },
+      { "id": "code-review", "label": "Code Review", "isExecutionHub": false, "artifactType": "REVIEW", "order": 10 }
     ],
     "executionHubNodeId": "program-spec",
     "skills": [
@@ -924,7 +924,7 @@ Triggers a skill from the active pipeline profile against a requirement.
       "determinedPathLabel": "Enhancement",
       "determinedTierId": "L2",
       "determinedTierLabel": "Standard",
-      "reasoning": "Existing program modification detected — source analysis required before spec generation. Moderate complexity suggests L2 tier.",
+      "reasoning": "Existing RPG/COBOL source modification detected — source analysis required before Program Spec generation. Moderate complexity suggests L2 tier.",
       "confidence": "high"
     }
   },

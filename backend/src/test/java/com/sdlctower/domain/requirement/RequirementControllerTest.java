@@ -260,7 +260,7 @@ class RequirementControllerTest {
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.executionId").value("EXEC-SKILL-REQ-0001-IBM-I-WORKFLOW-ORCHESTRATOR"))
                 .andExpect(jsonPath("$.data.status").value("TRIGGERED"))
-                .andExpect(jsonPath("$.data.orchestratorResult.determinedPathId").value("modification"))
+                .andExpect(jsonPath("$.data.orchestratorResult.determinedPathId").value("enhancement"))
                 .andExpect(jsonPath("$.data.orchestratorResult.determinedTier").value("L2"))
                 .andExpect(jsonPath("$.error").doesNotExist());
     }

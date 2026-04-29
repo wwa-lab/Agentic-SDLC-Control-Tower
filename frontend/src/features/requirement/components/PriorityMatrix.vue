@@ -20,10 +20,35 @@ interface QuadrantItem {
   readonly quadrant: 'quick-wins' | 'strategic' | 'fill-ins' | 'deprioritize';
 }
 
+function isHighImpact(req: RequirementListItem): boolean {
+  return req.priority === 'Critical' || req.priority === 'High';
+}
+
+function isLowEffort(req: RequirementListItem): boolean {
+  return req.completeness > 50;
+}
+
+function impactLabel(req: RequirementListItem): string {
+  return isHighImpact(req) ? 'High impact' : 'Low impact';
+}
+
+function effortLabel(req: RequirementListItem): string {
+  return isLowEffort(req) ? 'Low effort' : 'High effort';
+}
+
+function matrixTooltip(req: RequirementListItem): string {
+  return [
+    `${req.id}: ${req.title}`,
+    `Priority ${req.priority} -> ${impactLabel(req)}`,
+    `Completeness ${req.completeness}% -> ${effortLabel(req)}`,
+    `Status ${req.status}`,
+  ].join('\n');
+}
+
 const quadrantItems = computed<ReadonlyArray<QuadrantItem>>(() => {
   return props.requirements.map(req => {
-    const highImpact = req.priority === 'Critical' || req.priority === 'High';
-    const lowEffort = req.completeness > 50;
+    const highImpact = isHighImpact(req);
+    const lowEffort = isLowEffort(req);
 
     let quadrant: QuadrantItem['quadrant'];
     if (highImpact && lowEffort) quadrant = 'quick-wins';
@@ -62,6 +87,12 @@ const PRIORITY_COLORS: Record<string, string> = {
       <span class="axis-arrow">↑</span>
     </div>
 
+    <div class="matrix-rule" aria-label="Priority matrix scoring rule">
+      <span class="matrix-rule-title">Proxy scoring</span>
+      <span>Impact: Critical/High priority = High</span>
+      <span>Effort: completeness &gt; 50% = Low</span>
+    </div>
+
     <!-- 2x2 Grid -->
     <div class="matrix-grid">
       <div
@@ -71,7 +102,10 @@ const PRIORITY_COLORS: Record<string, string> = {
         :class="QUADRANT_META[q].cssClass"
       >
         <div class="quadrant-header">
-          <span class="quadrant-label">{{ QUADRANT_META[q].label }}</span>
+          <div class="quadrant-title-row">
+            <span class="quadrant-label">{{ QUADRANT_META[q].label }}</span>
+            <span class="quadrant-count">{{ getQuadrant(q).length }}</span>
+          </div>
           <span class="quadrant-subtitle">{{ QUADRANT_META[q].subtitle }}</span>
         </div>
         <div class="quadrant-dots">
@@ -80,7 +114,7 @@ const PRIORITY_COLORS: Record<string, string> = {
             :key="item.req.id"
             class="dot"
             :class="PRIORITY_COLORS[item.req.priority]"
-            :title="`${item.req.id}: ${item.req.title}`"
+            :title="matrixTooltip(item.req)"
             @click="emit('select', item.req.id)"
           >
             <span class="dot-id">{{ item.req.id }}</span>
@@ -132,6 +166,28 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 .axis-arrow { font-size: 0.75rem; }
 
+.matrix-rule {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-family: var(--font-ui);
+  font-size: 0.5625rem;
+  color: var(--color-on-surface-variant);
+}
+
+.matrix-rule span {
+  border: var(--border-ghost);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container);
+  padding: 4px 8px;
+}
+
+.matrix-rule-title {
+  color: var(--color-secondary);
+  border-color: rgba(125, 211, 252, 0.35) !important;
+}
+
 .matrix-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -162,6 +218,13 @@ const PRIORITY_COLORS: Record<string, string> = {
   gap: 2px;
 }
 
+.quadrant-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .quadrant-label {
   font-family: var(--font-ui);
   font-size: 0.625rem;
@@ -169,6 +232,17 @@ const PRIORITY_COLORS: Record<string, string> = {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-on-surface);
+}
+
+.quadrant-count {
+  min-width: 18px;
+  border-radius: 9px;
+  background: var(--color-surface-container);
+  padding: 2px 6px;
+  text-align: center;
+  font-family: var(--font-tech);
+  font-size: 0.5625rem;
+  color: var(--color-on-surface-variant);
 }
 
 .quadrant-subtitle {

@@ -62,7 +62,7 @@ export const ICON_MAP: Record<string, any> = {
  * Page-specific shell configuration for Round 1 pages.
  * Uses ShellPageConfig contract (spec §7).
  */
-const PAGE_CONFIGS: Record<string, Pick<ShellPageConfig, 'subtitle' | 'actions'>> = {
+const PAGE_CONFIGS: Record<string, Pick<ShellPageConfig, 'subtitle' | 'actions' | 'showAiPanel'>> = {
   dashboard: {
     subtitle: 'Cross-stage health and operational overview',
     actions: [
@@ -84,10 +84,8 @@ const PAGE_CONFIGS: Record<string, Pick<ShellPageConfig, 'subtitle' | 'actions'>
     ],
   },
   requirements: {
-    subtitle: 'SDD chain entry point — capture, classify, decompose',
-    actions: [
-      { key: 'ai-analyze', label: 'AI ANALYZE', variant: 'ai' },
-    ],
+    subtitle: 'Control plane for sources, SDD documents, reviews, and freshness',
+    showAiPanel: false,
   },
   'project-management': {
     subtitle: 'Portfolio command center and per-project plan execution workspace',
@@ -177,6 +175,7 @@ const COMPONENT_MAP: Record<string, () => Promise<any>> = {
 const CHILD_ROUTES: Record<string, Array<{ path: string; name: string; component: () => Promise<any> }>> = {
   requirements: [
     { path: '', name: 'requirements', component: () => import('@/features/requirement/views/RequirementListView.vue') },
+    { path: 'skill-flow', name: 'requirement-skill-flow', component: () => import('@/features/requirement/views/RequirementSkillFlowView.vue') },
     { path: ':requirementId', name: 'requirement-detail', component: () => import('@/features/requirement/views/RequirementDetailView.vue') },
   ],
   'project-management': [
@@ -238,6 +237,7 @@ const routes = NAVIGATION_ITEMS.map(item => {
       comingSoon: item.comingSoon,
       subtitle: pageConfig?.subtitle,
       actions: pageConfig?.actions as ReadonlyArray<ShellAction> | undefined,
+      showAiPanel: pageConfig?.showAiPanel,
     },
   };
 

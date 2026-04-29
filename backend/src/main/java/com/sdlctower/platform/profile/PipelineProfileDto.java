@@ -9,6 +9,7 @@ public record PipelineProfileDto(
         List<PipelineChainNodeDto> chainNodes,
         List<PipelineSkillBindingDto> skills,
         List<PipelineEntryPathDto> entryPaths,
+        List<PipelineDocumentStageDto> documentStages,
         PipelineSpecTieringDto specTiering,
         boolean usesOrchestrator,
         String traceabilityMode

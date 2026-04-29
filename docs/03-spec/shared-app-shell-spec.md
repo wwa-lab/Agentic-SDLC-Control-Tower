@@ -134,6 +134,7 @@ The panel should support these zones:
 - Pages provide panel content or content configuration
 - AI Center is the global management page
 - AI Command Panel is the current-page projection of AI state
+- Pages with no page-scoped AI projection may suppress the panel; the main page content remains the source of truth for review, freshness, and execution status.
 
 ## 7. Page Integration Contract
 
@@ -144,6 +145,7 @@ Each page using the shell must be able to provide:
 - optional page-level actions
 - main body content
 - page-scoped AI panel content
+- optional AI panel visibility
 
 V1 contract:
 
@@ -153,6 +155,7 @@ type ShellPageConfig = {
   title: string;
   subtitle?: string;
   actions?: Array<{ key: string; label: string }>;
+  showAiPanel?: boolean;
 };
 ```
 

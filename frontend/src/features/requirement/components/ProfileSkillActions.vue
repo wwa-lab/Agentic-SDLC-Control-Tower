@@ -23,13 +23,13 @@ const emit = defineEmits<{ invokeSkill: [skillId: string] }>();
       </button>
     </template>
 
-    <!-- IBM i: single "Send to Orchestrator" button -->
+    <!-- Legacy compatibility: profile action button, not mounted in current control-plane UI -->
     <template v-else>
       <button
         class="skill-btn skill-btn--orchestrator"
         @click="emit('invokeSkill', profile.skills[0]?.skillId ?? '')"
       >
-        {{ profile.skills[0]?.label ?? 'Send to Orchestrator' }}
+        {{ profile.skills[0]?.label ?? 'CLI Orchestrator' }}
       </button>
     </template>
   </div>

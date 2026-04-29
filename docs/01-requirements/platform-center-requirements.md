@@ -31,7 +31,7 @@ This slice delivers **all six platform capabilities** defined in PRD §12.1 thro
 3. **Audit Management** (PRD §12.3) — Read-only browse of audit records covering configuration changes, permission changes, approvals, AI actions, skill executions, and policy hits
 4. **Access Management** (PRD §12.4) — RBAC-first role/permission model with platform, application, workspace, and project scope bindings
 5. **Policy & Governance** (PRD §12.5) — Action policies, approval rules, autonomy level defaults, risk thresholds, and exception handling
-6. **Integration Framework** (PRD §12.6) — External-system adapter registry (Jira, GitLab, Jenkins, ServiceNow) with workspace-scoped credentials and sync/push modes
+6. **Integration Framework** (PRD §12.6) — External-system adapter registry (Jira, Confluence, GitLab, Jenkins, ServiceNow) with workspace-scoped credentials and sync/push modes
 
 All six capabilities are exposed as browse + CRUD views in V1, with the permission model restricted to a single **Platform Administrator** role (see REQ-PC-40).
 
@@ -321,11 +321,14 @@ V1 Platform Center **does not evaluate policies at runtime**. It stores and serv
 Platform Center must present a catalog of integration adapters covering at least the four V1 adapter kinds from PRD §12.6:
 
 - `jira` — Requirement / priority / status synchronization
+- `confluence` — Requirement source evidence and business-context synchronization
 - `gitlab` — Code changes, MRs, branches, review status
 - `jenkins` — Builds, pipelines, quality gates
 - `servicenow` — Incidents, changes, on-call, approval context
 
 Plus one extension slot: `custom-webhook` (generic webhook-based inbound adapter, deferred behavior but registry entry supported).
+
+Integration connections must expose team ownership scope using Workspace, Application, and SNOW Group fields so multiple Jira, Confluence, Jenkins, and related systems can be configured without ambiguity across product teams.
 
 > Source: PRD §12.6
 

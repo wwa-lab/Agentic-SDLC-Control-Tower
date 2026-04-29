@@ -58,13 +58,13 @@ const segments: ReadonlyArray<{ key: keyof StatusDistribution; label: string; st
 
 .dist-count {
   font-family: var(--font-tech);
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 700;
 }
 
 .dist-label {
   font-family: var(--font-ui);
-  font-size: 0.5625rem;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-on-surface-variant);

@@ -5,9 +5,13 @@ import { useRequirementStore } from '../stores/requirementStore';
 import StatusDistribution from '../components/StatusDistribution.vue';
 import RequirementListTable from '../components/RequirementListTable.vue';
 import PriorityMatrix from '../components/PriorityMatrix.vue';
+import SddKnowledgeGraph from '../components/SddKnowledgeGraph.vue';
+import ProfileSelector from '../components/ProfileSelector.vue';
+import ProfileWorkflowMap from '../components/ProfileWorkflowMap.vue';
+import ControlPlaneSummaryStrip from '../components/ControlPlaneSummaryStrip.vue';
 import ImportPanel from '../components/ImportPanel.vue';
-import ProfileBadge from '../components/ProfileBadge.vue';
 import type { RequirementPriority, RequirementStatus, RequirementCategory, ViewMode, SortField } from '../types/requirement';
+import { RefreshCw, Sparkles, Workflow } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -25,6 +29,11 @@ const TEAM_SPACE_FILTER_LABELS: Record<string, string> = {
 const teamSpaceFilterLabel = computed(() => {
   const filter = route.query.filter;
   return typeof filter === 'string' ? TEAM_SPACE_FILTER_LABELS[filter] ?? null : null;
+});
+
+const attentionCount = computed(() => {
+  const overview = store.controlPlaneOverview;
+  return overview.stale + overview.missing + overview.errors;
 });
 
 function syncFromRouteQuery() {
@@ -71,12 +80,24 @@ function handleSelect(requirementId: string) {
   router.push({ name: 'requirement-detail', params: { requirementId } });
 }
 
+function openSkillFlow() {
+  router.push({ name: 'requirement-skill-flow' });
+}
+
 function setFilterPriority(value: string) {
   store.setFilters({ priority: (value || undefined) as RequirementPriority | undefined });
 }
 
 function setFilterStatus(value: string) {
-  store.setFilters({ status: (value || undefined) as RequirementStatus | undefined });
+  const status = (value || undefined) as RequirementStatus | undefined;
+  store.setFilters({
+    status,
+    showCompleted: status === 'Delivered' || status === 'Archived'
+      ? true
+      : status
+        ? false
+        : store.filters.showCompleted,
+  });
 }
 
 function setFilterCategory(value: string) {
@@ -104,31 +125,70 @@ function handleStatusFilter(status: RequirementStatus) {
 
 <template>
   <div class="list-view">
+    <ImportPanel />
+
     <div v-if="teamSpaceFilterLabel" class="team-space-filter-banner section-high">
       <span class="text-label">Team Space Filter</span>
       <span class="text-body-sm">{{ teamSpaceFilterLabel }}</span>
     </div>
 
-    <div class="profile-row">
-      <ProfileBadge :profile="store.activeProfile" />
-      <span class="profile-caption">{{ store.activeProfile.description }}</span>
+    <section class="workbench-header">
+      <div class="workbench-copy">
+        <span class="eyebrow">Requirement Management</span>
+        <h1>Requirement Workbench</h1>
+        <p>Track requirement readiness, source freshness, SDD documents, and review blockers.</p>
+      </div>
+      <div class="workbench-actions">
+        <button class="primary-btn" type="button" @click="store.openImport()">
+          <Sparkles :size="15" />
+          <span>New Requirement</span>
+        </button>
+        <button class="secondary-btn" :disabled="store.githubSyncLoading" type="button" @click="store.refreshGitHubDocuments()">
+          <RefreshCw :size="14" />
+          <span>{{ store.githubSyncLoading ? 'Syncing' : 'Sync Sources & SDD' }}</span>
+        </button>
+      </div>
+    </section>
+
+    <section v-if="attentionCount > 0" class="attention-panel">
+      <div>
+        <span class="eyebrow">Attention Required</span>
+        <strong>{{ attentionCount }} requirements need review</strong>
+        <p>Prioritize stale sources, missing SDD documents, and failed control-plane checks before approving downstream work.</p>
+      </div>
+      <button class="attention-action" type="button" @click="store.setSortField('recency')">
+        Review Recent Changes
+      </button>
+    </section>
+
+    <div v-if="store.githubSyncError" class="sync-error">
+      {{ store.githubSyncError }}
     </div>
 
-    <!-- Status Distribution Strip -->
+    <ControlPlaneSummaryStrip
+      :total="store.controlPlaneOverview.total"
+      :fresh="store.controlPlaneOverview.fresh"
+      :stale="store.controlPlaneOverview.stale"
+      :missing="store.controlPlaneOverview.missing"
+      :errors="store.controlPlaneOverview.errors"
+      :sources="store.controlPlaneOverview.sources"
+      :documents="store.controlPlaneOverview.documents"
+      :artifacts="store.controlPlaneOverview.artifacts"
+      :is-loading="store.controlPlaneSummaryLoading"
+    />
+
     <StatusDistribution :distribution="store.statusDistribution" @filter="handleStatusFilter" />
 
-    <!-- Filter Bar -->
     <div class="filter-bar">
       <div class="filter-group">
-        <button class="import-btn" @click="store.openImport()">+ Import</button>
-        <select class="filter-select" @change="setFilterPriority(($event.target as HTMLSelectElement).value)">
+        <select class="filter-select" :value="store.filters.priority ?? ''" @change="setFilterPriority(($event.target as HTMLSelectElement).value)">
           <option value="">All Priorities</option>
           <option value="Critical">Critical</option>
           <option value="High">High</option>
           <option value="Medium">Medium</option>
           <option value="Low">Low</option>
         </select>
-        <select class="filter-select" @change="setFilterStatus(($event.target as HTMLSelectElement).value)">
+        <select class="filter-select" :value="store.filters.status ?? ''" @change="setFilterStatus(($event.target as HTMLSelectElement).value)">
           <option value="">All Statuses</option>
           <option value="Draft">Draft</option>
           <option value="In Review">In Review</option>
@@ -137,7 +197,7 @@ function handleStatusFilter(status: RequirementStatus) {
           <option value="Delivered">Delivered</option>
           <option value="Archived">Archived</option>
         </select>
-        <select class="filter-select" @change="setFilterCategory(($event.target as HTMLSelectElement).value)">
+        <select class="filter-select" :value="store.filters.category ?? ''" @change="setFilterCategory(($event.target as HTMLSelectElement).value)">
           <option value="">All Categories</option>
           <option value="Functional">Functional</option>
           <option value="Non-Functional">Non-Functional</option>
@@ -176,34 +236,64 @@ function handleStatusFilter(status: RequirementStatus) {
           >List</button>
           <button
             class="view-btn"
-            :class="{ 'view-btn--active': store.viewMode === 'kanban' }"
-            @click="switchView('kanban')"
-          >Kanban</button>
-          <button
-            class="view-btn"
-            :class="{ 'view-btn--active': store.viewMode === 'matrix' }"
-            @click="switchView('matrix')"
-          >Matrix</button>
+            :class="{ 'view-btn--active': store.viewMode === 'graph' }"
+            @click="switchView('graph')"
+          >Insights</button>
         </div>
       </div>
     </div>
 
-    <!-- Loading -->
+    <details class="advanced-tools">
+      <summary>Advanced Tools</summary>
+      <div class="advanced-body">
+        <div class="profile-row">
+          <div class="profile-row-main">
+            <ProfileSelector
+              :profiles="store.availableProfiles"
+              :model-value="store.activeProfile.id"
+              @update:model-value="store.setActiveProfile"
+            />
+            <span class="profile-caption">{{ store.activeProfile.description }}</span>
+          </div>
+          <button class="skill-flow-btn" type="button" @click="openSkillFlow">
+            <Workflow :size="14" />
+            <span>Skill & Doc Flow</span>
+          </button>
+        </div>
+
+        <ProfileWorkflowMap
+          :profile="store.activeProfile"
+          compact
+          :primary-action-loading="store.githubSyncLoading"
+          @primary-action="store.refreshGitHubDocuments()"
+        />
+
+        <div class="advanced-view-row">
+          <span>Specialist Views</span>
+          <button class="view-btn" :class="{ 'view-btn--active': store.viewMode === 'kanban' }" @click="switchView('kanban')">
+            Kanban
+          </button>
+          <button class="view-btn" :class="{ 'view-btn--active': store.viewMode === 'matrix' }" @click="switchView('matrix')">
+            Matrix
+          </button>
+        </div>
+      </div>
+    </details>
+
     <div v-if="store.listLoading" class="loading-state">
       <div class="loading-spinner"></div>
-      <span>Loading requirements...</span>
+      <span>Loading requirements…</span>
     </div>
 
-    <!-- Error -->
     <div v-else-if="store.listError" class="error-state">
       <span class="error-text">{{ store.listError }}</span>
       <button class="retry-btn" @click="store.fetchRequirementList()">Retry</button>
     </div>
 
-    <!-- Empty -->
     <div v-else-if="store.sortedRequirements.length === 0" class="empty-state">
       <span class="empty-icon">+</span>
-      <span class="empty-text">No requirements yet — create your first requirement to begin the SDD chain</span>
+      <span class="empty-text">No requirements yet. Create your first requirement to begin the SDD chain.</span>
+      <button class="primary-btn" type="button" @click="store.openImport()">New Requirement</button>
     </div>
 
     <!-- List View -->
@@ -212,6 +302,8 @@ function handleStatusFilter(status: RequirementStatus) {
       :requirements="store.sortedRequirements"
       :sort-field="store.sortField"
       :sort-asc="store.sortAsc"
+      :control-plane-summaries="store.controlPlaneSummaries"
+      :control-plane-loading="store.controlPlaneSummaryLoading"
       @select="handleSelect"
       @sort="handleSort"
     />
@@ -244,6 +336,9 @@ function handleStatusFilter(status: RequirementStatus) {
               <span>{{ req.storyCount }} stories</span>
               <span>{{ req.specCount }} specs</span>
             </div>
+            <div v-if="store.controlPlaneSummaries[req.id]" class="kanban-control-plane">
+              {{ store.controlPlaneSummaries[req.id].status.replaceAll('_', ' ') }}
+            </div>
           </div>
           <div v-if="store.sortedRequirements.filter(r => r.status === col).length === 0" class="kanban-empty">
             No items
@@ -259,8 +354,17 @@ function handleStatusFilter(status: RequirementStatus) {
       @select="handleSelect"
     />
 
-    <!-- Import Panel -->
-    <ImportPanel />
+    <!-- Knowledge Graph View -->
+    <SddKnowledgeGraph
+      v-else-if="store.viewMode === 'graph'"
+      :profile="store.activeProfile"
+      :requirements="store.sortedRequirements"
+      :summaries="store.controlPlaneSummaries"
+      :graph="store.knowledgeGraph"
+      :loading="store.controlPlaneSummaryLoading || store.knowledgeGraphLoading"
+      :error="store.knowledgeGraphError"
+    />
+
   </div>
 </template>
 
@@ -283,7 +387,131 @@ function handleStatusFilter(status: RequirementStatus) {
 .profile-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.workbench-header,
+.attention-panel,
+.advanced-tools {
+  border: var(--border-ghost);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-high);
+}
+
+.workbench-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+}
+
+.workbench-copy {
+  min-width: 0;
+}
+
+.eyebrow {
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 4px 0 6px;
+  color: var(--color-on-surface);
+  font-family: var(--font-ui);
+  font-size: 1.375rem;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+  max-width: 760px;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.workbench-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.primary-btn,
+.secondary-btn,
+.attention-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.primary-btn {
+  border: 1px solid var(--color-secondary);
+  background: var(--color-secondary);
+  color: var(--color-on-secondary-container);
+}
+
+.secondary-btn,
+.attention-action {
+  border: 1px solid rgba(137, 206, 255, 0.45);
+  background: var(--color-surface-container);
+  color: var(--color-secondary);
+}
+
+.secondary-btn:disabled {
+  cursor: progress;
+  opacity: 0.65;
+}
+
+.primary-btn:hover,
+.secondary-btn:hover,
+.attention-action:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+.attention-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-color: rgba(245, 158, 11, 0.24);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.attention-panel strong {
+  display: block;
+  margin: 3px 0;
+  color: var(--color-on-surface);
+  font-family: var(--font-ui);
+  font-size: 0.9375rem;
 }
 
 .profile-caption {
@@ -302,36 +530,52 @@ function handleStatusFilter(status: RequirementStatus) {
 
 .filter-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.import-btn {
-  background: linear-gradient(135deg, var(--color-secondary), #a78bfa);
-  border: none;
-  color: #0b1326;
-  padding: 6px 14px;
+.sync-error {
+  padding: 9px 12px;
+  border: 1px solid rgba(239, 83, 80, 0.35);
   border-radius: var(--radius-sm);
+  background: rgba(239, 83, 80, 0.08);
+  color: var(--color-error);
   font-family: var(--font-ui);
-  font-size: 0.625rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
+  font-size: 0.75rem;
 }
 
-.import-btn:hover { opacity: 0.85; }
+.skill-flow-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid rgba(137, 206, 255, 0.45);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-high);
+  color: var(--color-secondary);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.skill-flow-btn:hover {
+  background: var(--color-secondary-tint);
+}
 
 .filter-select, .filter-search {
   background: var(--color-surface-container-high);
   border: var(--border-ghost);
   border-radius: var(--radius-sm);
-  padding: 6px 12px;
+  min-height: 34px;
+  padding: 7px 12px;
   font-family: var(--font-ui);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--color-on-surface);
   cursor: pointer;
 }
 
 .filter-search {
-  min-width: 180px;
+  min-width: 220px;
   cursor: text;
 }
 
@@ -348,14 +592,15 @@ function handleStatusFilter(status: RequirementStatus) {
   background: var(--color-surface-container-high);
   border: var(--border-ghost);
   border-radius: var(--radius-sm);
-  padding: 6px 12px;
+  min-height: 34px;
+  padding: 7px 12px;
   font-family: var(--font-ui);
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-on-surface-variant);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .tab--active { color: var(--color-secondary); border-color: var(--color-secondary); }
@@ -371,19 +616,58 @@ function handleStatusFilter(status: RequirementStatus) {
 .view-btn {
   background: none;
   border: none;
-  padding: 6px 12px;
+  min-height: 34px;
+  padding: 7px 12px;
   font-family: var(--font-ui);
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-on-surface-variant);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .view-btn--active {
   background: var(--color-surface-container-high);
   color: var(--color-secondary);
+}
+
+.advanced-tools {
+  padding: 0;
+}
+
+.advanced-tools summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.advanced-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 12px 12px;
+}
+
+.advanced-view-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.advanced-view-row > span {
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* Kanban Board */
@@ -501,6 +785,19 @@ function handleStatusFilter(status: RequirementStatus) {
   color: var(--color-on-surface-variant);
 }
 
+.kanban-control-plane {
+  align-self: flex-start;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.5rem;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .kanban-empty {
   font-family: var(--font-ui);
   font-size: 0.625rem;
@@ -541,4 +838,16 @@ function handleStatusFilter(status: RequirementStatus) {
 .empty-text { font-size: 0.875rem; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .workbench-header,
+  .attention-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workbench-actions {
+    justify-content: flex-start;
+  }
+}
 </style>

@@ -3,17 +3,15 @@ import { onMounted, onUnmounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useRequirementStore } from '../stores/requirementStore';
 import RequirementHeaderCard from '../components/RequirementHeaderCard.vue';
-import DescriptionCard from '../components/DescriptionCard.vue';
 import LinkedStoriesCard from '../components/LinkedStoriesCard.vue';
-import LinkedSpecsCard from '../components/LinkedSpecsCard.vue';
-import SdlcChainCard from '../components/SdlcChainCard.vue';
-import AiAnalysisCard from '../components/AiAnalysisCard.vue';
-import ProfileBadge from '../components/ProfileBadge.vue';
-import ProfileChainCard from '../components/ProfileChainCard.vue';
-import ProfileSkillActions from '../components/ProfileSkillActions.vue';
+import ProfileSelector from '../components/ProfileSelector.vue';
 import EntryPathSelector from '../components/EntryPathSelector.vue';
 import SpecTierSelector from '../components/SpecTierSelector.vue';
-import { ArrowLeft } from 'lucide-vue-next';
+import SourceReferencesPanel from '../components/SourceReferencesPanel.vue';
+import SddDocumentsPanel from '../components/SddDocumentsPanel.vue';
+import BusinessReviewPanel from '../components/BusinessReviewPanel.vue';
+import RequirementTraceabilityPanel from '../components/RequirementTraceabilityPanel.vue';
+import { ArrowLeft, Workflow } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -36,33 +34,16 @@ function goBack() {
   router.push({ name: 'requirements' });
 }
 
-function handleGenerateStories() {
-  store.generateStories(requirementId.value);
-}
-
-function handleGenerateSpec(payload: { sourceType: 'requirement' | 'story'; sourceId: string }) {
-  if (payload.sourceType === 'story' && payload.sourceId) {
-    store.generateSpec(requirementId.value, [payload.sourceId]);
-    return;
-  }
-  // Fallback: find first story without a spec
-  const stories = store.detail?.linkedStories.data?.stories ?? [];
-  const candidate = stories.find(s => s.specId === null) ?? stories[0];
-  if (candidate) {
-    store.generateSpec(requirementId.value, [candidate.id]);
-  }
-}
-
-function handleRunAnalysis() {
-  store.runAnalysis(requirementId.value);
-}
-
 function handleChainNavigate(routePath: string) {
   router.push(routePath);
 }
 
-function handleInvokeProfileSkill(skillId: string) {
-  store.invokeProfileSkill(requirementId.value, skillId);
+function openSkillFlow() {
+  router.push({ name: 'requirement-skill-flow' });
+}
+
+function handleRetryControlPlane() {
+  store.fetchControlPlane(requirementId.value);
 }
 </script>
 
@@ -94,12 +75,24 @@ function handleInvokeProfileSkill(skillId: string) {
         :is-loading="store.detailLoading"
       />
 
-      <div class="profile-strip">
+      <details class="profile-strip">
+        <summary>
+          <span>Workflow Context</span>
+          <strong>{{ store.activeProfile.name }}</strong>
+        </summary>
         <div class="profile-strip-main">
-          <ProfileBadge :profile="store.activeProfile" />
+          <ProfileSelector
+            :profiles="store.availableProfiles"
+            :model-value="store.activeProfile.id"
+            @update:model-value="store.setActiveProfile"
+          />
           <span class="profile-strip-text">{{ store.activeProfile.description }}</span>
         </div>
         <div class="profile-strip-actions">
+          <button class="skill-flow-link" type="button" @click="openSkillFlow">
+            <Workflow :size="14" />
+            <span>Skill & Doc Flow</span>
+          </button>
           <EntryPathSelector
             :profile="store.activeProfile"
             :orchestrator-result="store.orchestratorResult"
@@ -108,19 +101,49 @@ function handleInvokeProfileSkill(skillId: string) {
             :profile="store.activeProfile"
             :orchestrator-result="store.orchestratorResult"
           />
-          <ProfileSkillActions
-            :profile="store.activeProfile"
-            @invoke-skill="handleInvokeProfileSkill"
-          />
         </div>
         <p v-if="store.skillMessage" class="profile-skill-message">{{ store.skillMessage }}</p>
-      </div>
+      </details>
 
-      <!-- Row 2-3: Description (left, span 2 rows) -->
-      <DescriptionCard
-        class="grid-description"
-        :description="store.detail.description"
-        :is-loading="store.detailLoading"
+      <SourceReferencesPanel
+        class="grid-control-wide"
+        :sources="store.sourceReferences"
+        :is-loading="store.controlPlaneLoading"
+        :error="store.controlPlaneError"
+        @refresh="store.refreshSourceReference"
+        @retry="handleRetryControlPlane"
+      />
+
+      <SddDocumentsPanel
+        class="grid-control-wide"
+        :documents="store.sddDocuments"
+        :selected-document-id="store.selectedDocumentId"
+        :selected-document="store.selectedDocument"
+        :document-loading="store.selectedDocumentLoading"
+        :document-error="store.selectedDocumentError"
+        :is-loading="store.controlPlaneLoading"
+        :error="store.controlPlaneError"
+        :sync-loading="store.githubSyncLoading"
+        :sync-error="store.githubSyncError"
+        @open-document="store.openSddDocument"
+        @run-quality-gate="store.runDocumentQualityGate"
+        @refresh-documents="store.refreshGitHubDocuments([requirementId])"
+        @retry="handleRetryControlPlane"
+      />
+
+      <BusinessReviewPanel
+        :selected-document="store.selectedDocument"
+        :selected-document-id="store.selectedDocumentId"
+        :documents="store.sddDocuments"
+        :reviews="store.documentReviews"
+        :is-loading="store.controlPlaneLoading"
+        @review="store.createReview"
+        @run-quality-gate="store.runDocumentQualityGate"
+      />
+
+      <RequirementTraceabilityPanel
+        :traceability="store.traceability"
+        :is-loading="store.controlPlaneLoading"
       />
 
       <!-- Row 2-3: Stories + Specs (right stack) -->
@@ -128,36 +151,13 @@ function handleInvokeProfileSkill(skillId: string) {
         <LinkedStoriesCard
           :requirement-id="requirementId"
           :linked-stories="store.detail.linkedStories"
+          :jira-sources="store.sourceReferences.filter(source => source.sourceType === 'JIRA')"
           :is-loading="store.detailLoading"
-          @generate-stories="handleGenerateStories"
+          :is-refreshing="store.controlPlaneLoading"
           @navigate="handleChainNavigate"
-        />
-        <LinkedSpecsCard
-          :requirement-id="requirementId"
-          :linked-specs="store.detail.linkedSpecs"
-          :is-loading="store.detailLoading"
-          @generate-spec="handleGenerateSpec"
-          @navigate="handleChainNavigate"
+          @refresh-jira="store.refreshSourceReference"
         />
       </div>
-
-      <!-- Row 4: SDLC Chain + AI Analysis -->
-      <ProfileChainCard
-        :profile="store.activeProfile"
-        :is-loading="store.detailLoading"
-      />
-
-      <SdlcChainCard
-        :chain="store.detail.sdlcChain ?? NULL_SECTION"
-        :is-loading="store.detailLoading"
-        @navigate="handleChainNavigate"
-      />
-
-      <AiAnalysisCard
-        :ai-analysis="store.detail.aiAnalysis ?? NULL_SECTION"
-        :is-loading="store.detailLoading"
-        @run-analysis="handleRunAnalysis"
-      />
     </div>
   </div>
 </template>
@@ -178,7 +178,7 @@ function handleInvokeProfileSkill(skillId: string) {
   border: none;
   color: var(--color-secondary);
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   cursor: pointer;
   padding: 4px 0;
   align-self: flex-start;
@@ -195,13 +195,30 @@ function handleInvokeProfileSkill(skillId: string) {
 
 .profile-strip {
   grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   padding: 14px 16px;
   background: var(--color-surface-container-high);
   border: var(--border-ghost);
   border-radius: var(--radius-sm);
+}
+
+.profile-strip summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-strip summary strong {
+  color: var(--color-on-surface);
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .profile-strip-main {
@@ -209,11 +226,12 @@ function handleInvokeProfileSkill(skillId: string) {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin-top: 12px;
 }
 
 .profile-strip-text {
   font-family: var(--font-ui);
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   color: var(--color-on-surface-variant);
 }
 
@@ -222,22 +240,125 @@ function handleInvokeProfileSkill(skillId: string) {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.skill-flow-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid rgba(137, 206, 255, 0.45);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container);
+  color: var(--color-secondary);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.skill-flow-link:hover {
+  background: var(--color-secondary-tint);
 }
 
 .profile-skill-message {
   margin: 0;
   font-family: var(--font-ui);
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   color: var(--color-secondary);
 }
 
-/* Row 2-3: Description (left, span 2 rows) */
-.grid-description { grid-row: span 2; }
+.detail-view :deep(.requirement-card) {
+  padding: 18px;
+  gap: 14px;
+}
+
+.detail-view :deep(.card-title) {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+
+.detail-view :deep(.req-id) {
+  font-size: 0.9375rem;
+}
+
+.detail-view :deep(.req-title) {
+  font-size: 1.125rem;
+  line-height: 1.35;
+}
+
+.detail-view :deep(.section-label),
+.detail-view :deep(.meta-label),
+.detail-view :deep(.profile-label),
+.detail-view :deep(.path-label),
+.detail-view :deep(.tier-label) {
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+}
+
+.detail-view :deep(.section-text),
+.detail-view :deep(.criterion),
+.detail-view :deep(.bullet-list li),
+.detail-view :deep(.meta-value),
+.detail-view :deep(.source-title),
+.detail-view :deep(.stage-title),
+.detail-view :deep(.trace-row),
+.detail-view :deep(.run-meta),
+.detail-view :deep(.artifact-list a),
+.detail-view :deep(.empty),
+.detail-view :deep(.section-error) {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.detail-view :deep(.priority-badge),
+.detail-view :deep(.status-text),
+.detail-view :deep(.category-badge),
+.detail-view :deep(.source-badge),
+.detail-view :deep(.freshness-chip),
+.detail-view :deep(.criterion-id),
+.detail-view :deep(.stage-path),
+.detail-view :deep(.stage-meta),
+.detail-view :deep(.source-type),
+.detail-view :deep(.source-meta),
+.detail-view :deep(.viewer-meta),
+.detail-view :deep(.run-id),
+.detail-view :deep(.run-status) {
+  font-size: 0.6875rem;
+}
+
+.detail-view :deep(.profile-select),
+.detail-view :deep(.skill-btn),
+.detail-view :deep(.path-value),
+.detail-view :deep(.path-placeholder),
+.detail-view :deep(.tier-value),
+.detail-view :deep(.tier-placeholder) {
+  font-size: 0.75rem;
+}
+
+.detail-view :deep(.criterion-check) {
+  width: 18px;
+  height: 18px;
+  font-size: 0.75rem;
+}
+
+.detail-view :deep(.markdown-viewer pre) {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
 
 .grid-right-stack {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.grid-control-wide {
+  grid-column: 1 / -1;
 }
 
 /* Staggered entrance */
@@ -264,12 +385,12 @@ function handleInvokeProfileSkill(skillId: string) {
   animation: spin 1s linear infinite;
 }
 
-.error-text { color: var(--color-incident-crimson); font-size: 0.75rem; }
+.error-text { color: var(--color-incident-crimson); font-size: 0.8125rem; }
 
 .retry-btn {
   background: var(--color-surface-container-high); border: 1px solid var(--color-secondary);
   color: var(--color-secondary); padding: 6px 16px; border-radius: var(--radius-sm);
-  cursor: pointer; font-family: var(--font-ui); font-size: 0.6875rem;
+  cursor: pointer; font-family: var(--font-ui); font-size: 0.75rem;
   text-transform: uppercase; letter-spacing: 0.04em;
 }
 
@@ -278,6 +399,5 @@ function handleInvokeProfileSkill(skillId: string) {
 
 @media (max-width: 1024px) {
   .detail-grid { grid-template-columns: 1fr; }
-  .grid-description { grid-row: auto; }
 }
 </style>

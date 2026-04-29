@@ -50,6 +50,7 @@ dist/
 # ===== Logs =====
 *.log
 logs/
+repos/
 
 # ===== Test & Coverage =====
 coverage/

@@ -47,7 +47,7 @@ function handleConfirm() {
 
 <template>
   <div class="normalization-result">
-    <h3 class="result-title">AI Draft Review</h3>
+    <h3 class="result-title">Draft Review</h3>
 
     <div class="field-group">
       <label class="field-label">

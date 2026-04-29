@@ -36,7 +36,7 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 | S1 | View Requirement List with Filtering and Sorting | Requirement list with priority, status, category, filtering |
 | S2 | View Requirements in Kanban Board Layout | Kanban board grouped by status with card summaries |
 | S3 | Visualize Priority Matrix (Impact vs Effort) | Scatter/quadrant chart of requirements by impact and effort |
-| S4 | View Requirement Detail with Business Context | Detail view with description, acceptance criteria, business context |
+| S4 | View Requirement Detail Control Plane | Detail view with source evidence, GitHub-backed SDD documents, reviews, CLI runs, and traceability |
 | S5 | Derive User Stories from a Requirement (AI-Assisted) | AI-assisted story derivation via req-to-user-story skill |
 | S6 | Link and Track Specs for a Requirement | Spec linkage, tracking, and generation entry via user-story-to-spec skill |
 | S7 | Trace Requirement Through the Full SDLC Chain | End-to-end traceability from Requirement to Learning |
@@ -51,6 +51,7 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 | S16 | Import Raw Business Input as Requirement | Multi-format import, drag-drop, paste, file upload |
 | S17 | Review AI-Normalized Requirement Draft | Draft review, edit, confirm/discard, missing info flags |
 | S18 | Batch Import Requirements from Excel | Reserved row-based spreadsheet intake; current delivery uses KB-backed multi-file and ZIP import |
+| S19 | View SDD Knowledge Graph | Profile-aware graph of SDD document relationships with indexed/missing/stale health signals |
 
 ---
 
@@ -73,7 +74,8 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 - **Requirement List & Filtering**: List, filter, sort requirements; status distribution summary
 - **Kanban Board**: Visual board grouped by requirement status with drag-read (display-only) cards
 - **Priority Matrix**: Impact vs effort scatter/quadrant visualization
-- **Requirement Detail**: Full requirement with description, acceptance criteria, business context, metadata
+- **SDD Knowledge Graph**: Profile-aware SDD document relationship graph for impact and decision support
+- **Requirement Detail**: Control-plane view for source evidence, GitHub-backed SDD documents, reviews, CLI runs, linked records, traceability, and metadata
 - **User Story Derivation**: AI-assisted story generation from requirements (req-to-user-story skill)
 - **Spec Linkage & Tracking**: Linked specs per requirement, spec status tracking, generation entry (user-story-to-spec skill)
 - **SDLC Chain Traceability**: Full 11-node chain from Requirement through Learning
@@ -121,11 +123,20 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 
 - **FR-20**: The page provides a priority matrix view as an alternative to list and kanban views. *(Source: S3)*
 - **FR-21**: The matrix plots requirements on a 2D grid: X-axis = Effort (Low to High), Y-axis = Impact (Low to High). *(Source: S3)*
+- **FR-21a**: Until explicit impact and effort estimates are present in the list payload, the matrix discloses V1 proxy scoring: priority maps to impact, and completeness maps inversely to remaining effort. *(Source: S3)*
 - **FR-22**: Quadrants are labeled: Quick Wins (high impact, low effort), Strategic (high impact, high effort), Fill-In (low impact, low effort), Deprioritize (low impact, high effort). *(Source: S3)*
 - **FR-23**: Each plotted point shows the requirement ID and is color-coded by priority. *(Source: S3)*
 - **FR-24**: Hovering a point shows a tooltip with title, priority, status, story count. *(Source: S3)*
 - **FR-25**: Clicking a point navigates to the detail view. *(Source: S3, S11)*
 - **FR-26**: The matrix respects the same filters applied in the list view. *(Source: S3, S12)*
+
+### F-REQ-GRAPH: SDD Knowledge Graph View
+
+- **FR-27**: The page provides a graph view as an alternative to list, kanban, and matrix views. *(Source: S19)*
+- **FR-28**: The graph renders SDD document nodes from the active pipeline profile document stages. *(Source: S13, S19)*
+- **FR-29**: The graph renders directed relationships from the active profile document dependency definitions. *(Source: S14, S19)*
+- **FR-29a**: The graph overlays list-level control-plane health metrics: indexed document count, missing document count, stale review count, and aligned requirement count. *(Source: S19)*
+- **FR-29b**: Selecting a graph node shows upstream dependencies, downstream consumers, traceability key, tier, artifact type, and path pattern. *(Source: S19)*
 
 ### F-REQ-DETAIL: Requirement Detail Display
 
@@ -185,8 +196,9 @@ traceability, AI analysis (completeness, gaps, duplicates, impact), and AI Comma
 - **FR-80**: Requirement list is the default view at `/requirements`. *(Source: S11)*
 - **FR-81**: Kanban view is accessible at `/requirements?view=kanban`. *(Source: S11)*
 - **FR-82**: Priority matrix view is accessible at `/requirements?view=matrix`. *(Source: S11)*
+- **FR-82a**: SDD knowledge graph view is accessible from the same list-level view toggle. *(Source: S19)*
 - **FR-83**: Detail view is accessible via `/requirements/:requirementId`. *(Source: S11)*
-- **FR-84**: View switching (list / kanban / matrix) uses a toggle control in the page header that preserves current filters. *(Source: S11)*
+- **FR-84**: View switching (list / kanban / matrix / graph) uses a toggle control in the page header that preserves current filters. *(Source: S11, S19)*
 - **FR-85**: Detail view has back-navigation to return to the previous view (list, kanban, or matrix). *(Source: S11)*
 - **FR-86**: Deep-linking to a specific requirement via URL is supported. *(Source: S11)*
 - **FR-87**: Page renders inside the shared shell with context bar and AI panel. *(Source: S11)*
@@ -212,7 +224,7 @@ The system ships with a "Standard SDD" profile as the default. This profile defi
 > Stories: S13
 
 #### F-REQ-PROFILE-3: Built-in IBM i profile
-The system ships with a single "IBM i" profile. This profile defines a 10-node chain (Requirement → Req Package → Functional Spec → Technical Design → Program Spec / File Spec → Code → Test → Deploy → Incident → Learning), binds a single skill (`ibm-i-workflow-orchestrator`) that serves as the sole entry point for all IBM i workflows, uses shared BR-xx traceability, and supports L1/L2/L3 spec tiering. The orchestrator automatically determines the workflow path (Full Chain / Enhancement / Fast-Path) and spec tier based on input analysis.
+The system ships with a single "IBM i" profile. This profile defines a 10-node IBM i chain (Requirement Normalizer → Functional Spec → Technical Design → Program Spec → File Spec → UT Plan → Test Scaffold → Spec Review → DDS Review → Code Review), binds a single skill (`ibm-i-workflow-orchestrator`) that serves as the sole entry point for all IBM i workflows, uses shared BR-xx traceability, and supports L1/L2/L3 spec tiering. The orchestrator automatically determines the workflow path (Full Chain / Enhancement / Fast-Path) and spec tier based on input analysis.
 > Stories: S13, S14, S15
 
 #### F-REQ-PROFILE-4: Profile-specific chain rendering
@@ -232,7 +244,7 @@ For profiles with spec tiering enabled (e.g., IBM i), the `ibm-i-workflow-orches
 > Stories: S15
 
 #### F-REQ-PROFILE-8: Profile inheritance
-The active profile is determined by workspace/project configuration inheritance (Platform Default → Application Default → SNOW Group Override → Project Override). The page reads the resolved profile; it does not allow inline switching.
+The canonical active profile is determined by workspace/project configuration inheritance (Platform Default → Application Default → SNOW Group Override → Project Override). Requirement pages may expose a local profile preview override for prototype and authoring workflows, but persistent default profile changes belong to Platform Center configuration.
 > Stories: S13
 
 ### F-REQ-INTAKE: Requirement Intake and Import
@@ -346,16 +358,12 @@ flowchart TD
 4. User filters or sorts requirements by priority, status, category, search text, or the Active / Completed toggle
 5. User optionally switches to kanban or priority matrix view
 6. User clicks a requirement to open the detail view
-7. Detail view loads all cards: header, description, acceptance criteria, business context, stories, specs, SDLC chain, AI analysis
+7. Detail view loads all control-plane cards: header, source evidence, SDD documents, reviews, CLI runs, traceability, linked stories/specs, SDLC chain, and persisted analysis snapshot
 8. Each card loads independently — partial failure shows per-card error state (SectionResult pattern)
-9. User reviews description and acceptance criteria to understand the requirement
-10. User clicks "Derive Stories" to invoke the req-to-user-story AI skill
-11. AI-generated stories appear in the stories card with "Generated by AI" badge
-12. User clicks "Generate Spec" on a story to invoke the user-story-to-spec AI skill
-13. AI-generated spec appears in the specs card with "Generated by AI" badge
-14. User reviews SDLC chain to trace downstream artifacts
-15. User runs AI analysis to check completeness, find gaps, and detect duplicates
-16. User navigates back to the requirement list or to a linked SDLC artifact page
+9. User opens the relevant SDD document to read the canonical normalized requirement or downstream spec content
+10. User reviews source evidence and freshness to understand whether the document set is current
+11. User reviews linked stories, specs, SDLC chain, reviews, CLI runs, and analysis snapshots to trace downstream artifacts
+12. User navigates back to the requirement list or to a linked SDLC artifact page
 
 ---
 
@@ -423,10 +431,15 @@ stateDiagram-v2
 - **Audit Management**: AI skill invocations and status transitions feed into the platform audit system
 - **Incident Management**: Incidents link back to requirements via SDLC chain traceability
 
-**External systems (future, out of scope for V1):**
-- Jira: Bi-directional requirement sync
+**External systems:**
+- Jira: Read-only source metadata refresh is supported through the Requirement
+  Control Plane provider; bi-directional requirement sync remains out of scope.
 - Azure DevOps: Work item import/export
-- Confluence: Business context import
+- Confluence: Read-only page metadata refresh is supported through the
+  Requirement Control Plane provider; full page import/edit remains out of
+  scope.
+- GitHub: SDD Markdown indexing and content fetch are supported through a
+  configurable stub/real document gateway.
 
 **APIs / interfaces:**
 - `GET /api/v1/requirements` — list requirements with filtering/sorting (inbound, new)
@@ -443,7 +456,33 @@ stateDiagram-v2
 - `POST /api/v1/requirements/imports` — start async KB-backed file import (inbound, new)
 - `GET /api/v1/requirements/imports/:importId` — poll KB-backed import status (inbound, new)
 - `POST /api/v1/requirements` — create a requirement from a confirmed draft (inbound, new)
+- `GET /api/v1/requirements/:id/sources` — list linked Jira, Confluence, GitHub, KB, upload, or URL source references (inbound, new)
+- `POST /api/v1/requirements/:id/sources` — link a source reference to the requirement (inbound, new)
+- `POST /api/v1/requirements/sources/:sourceId/refresh` — refresh provider metadata for Jira / Confluence / stub sources (inbound, new)
+- `GET /api/v1/requirements/:id/sdd-documents` — list profile-driven SDD document stages and indexed GitHub documents (inbound, new)
+- `POST /api/v1/requirements/:id/sdd-documents/refresh` — index SDD Markdown from the configured GitHub gateway (inbound, new)
+- `GET /api/v1/requirements/documents/:documentId` — fetch Markdown content, commit SHA, blob SHA, and GitHub URL (inbound, new)
+- `POST /api/v1/requirements/documents/:documentId/reviews` — create a version-bound business review (inbound, new)
+- `POST /api/v1/requirements/:id/agent-runs` — create a CLI-agent manifest (inbound, new)
+- `POST /api/v1/requirements/agent-runs/:executionId/callback` — accept CLI callback and artifact links (inbound, new)
+- `GET /api/v1/requirements/:id/traceability` — return sources, SDD docs, reviews, agent runs, artifact links, and freshness (inbound, new)
 - Existing patterns: `ApiResponse<T>` envelope (verified: `shared/dto/ApiResponse.java`), `fetchJson<T>` client (verified: `shared/api/client.ts`)
+
+**Requirement Control Plane provider configuration:**
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `REQUIREMENT_CP_JIRA_PROVIDER` | `stub` or `real` Jira source metadata refresh | `stub` |
+| `JIRA_BASE_URL` | Jira site base URL for real provider | empty |
+| `JIRA_EMAIL` / `JIRA_API_TOKEN` | Jira Cloud basic auth credentials | empty |
+| `JIRA_BEARER_TOKEN` | Alternative Jira bearer token | empty |
+| `REQUIREMENT_CP_CONFLUENCE_PROVIDER` | `stub` or `real` Confluence source metadata refresh | `stub` |
+| `CONFLUENCE_BASE_URL` | Confluence site base URL for real provider | empty |
+| `CONFLUENCE_EMAIL` / `CONFLUENCE_API_TOKEN` | Confluence basic auth credentials | empty |
+| `CONFLUENCE_BEARER_TOKEN` | Alternative Confluence bearer token | empty |
+| `REQUIREMENT_CP_GITHUB_PROVIDER` | `stub` or `real` GitHub SDD document gateway | `stub` |
+| `GITHUB_TOKEN` | Token for GitHub REST API document listing/fetching | empty |
+| `GITHUB_API_BASE_URL` | GitHub API base URL, overridable for enterprise | `https://api.github.com` |
 
 > Full endpoint contracts with JSON examples are in [requirement-API_IMPLEMENTATION_GUIDE.md](../05-design/contracts/requirement-API_IMPLEMENTATION_GUIDE.md).
 
@@ -487,7 +526,9 @@ stateDiagram-v2
 - **Spec full editor**: Spec generation produces a summary; full spec editing is V2
 - **Advanced search / full-text search**: Basic filtering only in V1
 - **Requirement versioning / diff**: V1 shows current state only; version history is V2
-- **Import from external systems**: No Jira/ADO import in V1
+- **Import from external systems**: No Jira/ADO full import in V1; Jira and
+  Confluence are supported as read-only source references for metadata and
+  freshness.
 - **Mobile-optimized views**: Desktop-first in V1
 - **Bulk operations**: No multi-select or bulk status changes in V1
 - **Custom kanban columns**: V1 uses fixed status-based columns

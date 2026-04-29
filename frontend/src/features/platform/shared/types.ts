@@ -184,7 +184,7 @@ export interface PolicyException {
 
 // ── Integrations ─────────────────────────────────────────
 
-export type AdapterKind = 'jira' | 'gitlab' | 'jenkins' | 'servicenow' | 'custom-webhook';
+export type AdapterKind = 'jira' | 'confluence' | 'gitlab' | 'jenkins' | 'servicenow' | 'custom-webhook';
 export type SyncMode = 'pull' | 'push' | 'both';
 export type ConnectionStatus = 'enabled' | 'disabled' | 'error';
 
@@ -199,6 +199,11 @@ export interface Connection {
   readonly id: string;
   readonly kind: AdapterKind;
   readonly scopeWorkspaceId: string;
+  readonly applicationId: string | null;
+  readonly applicationName: string | null;
+  readonly snowGroupId: string | null;
+  readonly snowGroupName: string | null;
+  readonly baseUrl: string | null;
   readonly credentialRef: string;
   readonly syncMode: SyncMode;
   readonly pullSchedule: string | null;
