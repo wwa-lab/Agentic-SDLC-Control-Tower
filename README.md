@@ -10,7 +10,7 @@ All 13 navigation slices are implemented with frontend and backend.
 | ----------------------- | -------- | ------- | ------- | -------------------------------------------------------------------------------- |
 | Shared App Shell        | Yes      | Yes     | V1-V2   | 13-route shell, workspace context, global UI                                     |
 | Dashboard               | Yes      | Yes     | V3      | Cross-stage health summary                                                       |
-| Requirement Management  | Yes      | Yes     | V5-V6   | List/detail, AI analysis, story/spec generation, normalize/import                |
+| Requirement Management  | Yes      | Yes     | V5-V6, V78-V84 | List/detail, AI analysis, normalize/import, Control Plane, SDD docs, quality gates |
 | Incident Management     | Yes      | Yes     | V4      | List/detail, approve/reject actions                                              |
 | Team Space              | Yes      | Yes     | V7-V8   | Aggregate cards, access guards, metrics/risk                                     |
 | Project Space           | Yes      | Yes     | V9-V11  | Project execution, environment status                                            |
@@ -21,13 +21,13 @@ All 13 navigation slices are implemented with frontend and backend.
 | AI Center               | Yes      | Yes     | V60-V61 | Skill registry, run history, adoption metrics, stage coverage                    |
 | Deployment Management   | Yes      | Yes     | V70-V77 | Jenkins observability, release notes, rollback detection, traceability           |
 | Report Center           | Yes      | Yes     | V37-V39 | Efficiency reports, export (CSV/PDF), run history                                |
-| Platform Center         | Yes      | Yes     | V80-V87 | 6 sub-sections: templates, configurations, audit, access, policies, integrations |
+| Platform Center         | Yes      | Yes     | Shared  | 6 sub-sections: templates, configurations, audit, access, policies, integrations |
 
 ## Stack
 
 - Frontend: Vue 3.4, Vite 5, Vue Router 4, Pinia, TypeScript, Vitest
 - Backend: Spring Boot 3.4.4, Java 21, Spring Web, Spring Data JPA, Actuator
-- Data: H2 in local profile, Oracle in prod profile, Flyway migrations (V1-V77, V80-V87 planned)
+- Data: H2 in local profile, Oracle in prod profile, Flyway migrations (V1-V84)
 - Integration: optional Dify-backed requirement import; stub provider enabled by default
 - Delivery model: Spec Driven Development (SDD) — documents before code
 - Dev tools: Claude Code (SDD pipeline, orchestration), Gemini (frontend), Codex (backend)
@@ -44,7 +44,7 @@ All 13 navigation slices are implemented with frontend and backend.
 │   ├── src/main/java/.../domain/       # 12 domain packages (package-by-feature)
 │   ├── src/main/java/.../platform/    # Platform-level services (workspace, navigation, profile)
 │   ├── src/main/java/.../shared/       # ApiResponse, SectionResultDto, audit, integration
-│   └── src/main/resources/db/migration/ # 40+ Flyway migrations (V1-V77)
+│   └── src/main/resources/db/migration/ # 50+ Flyway migrations (V1-V84)
 ├── docs/                     # SDD artifacts (9 docs per slice)
 │   ├── 01-requirements/      #   Requirements with REQ-IDs
 │   ├── 02-user-stories/      #   Agile stories with acceptance criteria
@@ -73,7 +73,7 @@ All 13 navigation slices are implemented with frontend and backend.
 | ------------- | -------------------------- | ---------------------------------------------------------------------------------- |
 | Workspace     | `/workspace-context`     | GET context                                                                        |
 | Dashboard     | `/dashboard`             | GET summary                                                                        |
-| Requirements  | `/requirements`          | CRUD, analysis, story/spec gen, normalize, import                                  |
+| Requirements  | `/requirements`          | CRUD, analysis, story/spec gen, normalize/import, source refresh, SDD doc index, reviews, quality gates |
 | Incidents     | `/incidents`             | List, detail, approve/reject actions                                               |
 | Team Space    | `/team-space`            | Aggregate + 8 section routes                                                       |
 | Project Space | `/project-space`         | Aggregate + 7 section routes                                                       |
@@ -199,6 +199,10 @@ GITHUB_TOKEN=github_pat_or_app_token
   Confluence page metadata, while SDD document refresh lists and fetches
   Markdown from the configured GitHub SDD repository/branch. Without them, the
   local stub path remains deterministic for offline E2E testing.
+- Requirement document quality gates are part of the Control Plane. They score
+  indexed SDD documents into `EXCELLENT` (90-100), `GOOD` (80-89), and
+  `BLOCKED` (<80), persist the scored commit/blob version, and block document
+  approval until the latest quality gate is passing and not stale.
 - Prod database settings:
   - `ORACLE_HOST`
   - `ORACLE_PORT`
@@ -218,14 +222,13 @@ cd frontend
 npm test
 ```
 
-Backend: 136 tests across all domain slices (including 14 AI Center MockMvc tests). Frontend: Vitest unit and component tests.
+Backend: domain and MockMvc tests across all implemented slices. Frontend: Vitest unit and component tests.
 
 ## SDD Workflow
 
 This repo follows Spec Driven Development. Each slice is expected to have requirements, stories, spec, architecture, design, tasks, and supporting contract/data docs under [`docs/`](docs/).
 
 - Start here: [`docs/SDD-BOOTSTRAP.md`](docs/SDD-BOOTSTRAP.md)
-- Full doc tree overview: [`docs/README.md`](docs/README.md)
 - Project guardrails and workflow rules: [`CLAUDE.md`](CLAUDE.md)
 
 ## License
