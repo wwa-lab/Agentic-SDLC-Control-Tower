@@ -12,7 +12,7 @@ public class PipelineProfileService {
     private static final PipelineProfileDto STANDARD_SDD_PROFILE = new PipelineProfileDto(
             "standard-sdd",
             "Standard SDD",
-            "Spec-Driven Development pipeline with 11-node chain, 2 skills, per-layer traceability",
+            "Spec-Driven Development pipeline with 11-node chain, quality gate skill, per-layer traceability",
             List.of(
                     new PipelineChainNodeDto("req", "Requirement", "requirement", false),
                     new PipelineChainNodeDto("story", "User Story", "user-story", false),
@@ -28,7 +28,8 @@ public class PipelineProfileService {
             ),
             List.of(
                     new PipelineSkillBindingDto("req-to-user-story", "CLI Story Derivation", "requirement"),
-                    new PipelineSkillBindingDto("user-story-to-spec", "CLI Spec Generation", "user-story")
+                    new PipelineSkillBindingDto("user-story-to-spec", "CLI Spec Generation", "user-story"),
+                    new PipelineSkillBindingDto("document-quality-gate", "Document Quality Gate", "sdd-document")
             ),
             List.of(
                     new PipelineEntryPathDto("standard", "Standard", "Single entry path through requirement capture")
@@ -52,7 +53,7 @@ public class PipelineProfileService {
     private static final PipelineProfileDto IBM_I_PROFILE = new PipelineProfileDto(
             "ibm-i",
             "IBM i",
-            "IBM i pipeline with single orchestrator skill, L1/L2/L3 tiering, shared-br traceability",
+            "IBM i pipeline with orchestrator and quality gate skills, L1/L2/L3 tiering, shared-br traceability",
             List.of(
                     new PipelineChainNodeDto("requirement-normalizer", "Requirement Normalizer", "requirement", false),
                     new PipelineChainNodeDto("functional-spec", "Functional Spec", "functional-spec", false),
@@ -66,7 +67,8 @@ public class PipelineProfileService {
                     new PipelineChainNodeDto("code-review", "Code Review", "review", false)
             ),
             List.of(
-                    new PipelineSkillBindingDto("ibm-i-workflow-orchestrator", "IBM i CLI Orchestrator", "requirement")
+                    new PipelineSkillBindingDto("ibm-i-workflow-orchestrator", "IBM i CLI Orchestrator", "requirement"),
+                    new PipelineSkillBindingDto("ibm-i-document-quality-gate", "Document Quality Gate", "sdd-document")
             ),
             List.of(
                     new PipelineEntryPathDto("full-chain", "Full Chain", "New RPG/COBOL program or major redesign"),

@@ -75,7 +75,11 @@ function handleRetryControlPlane() {
         :is-loading="store.detailLoading"
       />
 
-      <div class="profile-strip">
+      <details class="profile-strip">
+        <summary>
+          <span>Workflow Context</span>
+          <strong>{{ store.activeProfile.name }}</strong>
+        </summary>
         <div class="profile-strip-main">
           <ProfileSelector
             :profiles="store.availableProfiles"
@@ -99,7 +103,7 @@ function handleRetryControlPlane() {
           />
         </div>
         <p v-if="store.skillMessage" class="profile-skill-message">{{ store.skillMessage }}</p>
-      </div>
+      </details>
 
       <SourceReferencesPanel
         class="grid-control-wide"
@@ -122,6 +126,7 @@ function handleRetryControlPlane() {
         :sync-loading="store.githubSyncLoading"
         :sync-error="store.githubSyncError"
         @open-document="store.openSddDocument"
+        @run-quality-gate="store.runDocumentQualityGate"
         @refresh-documents="store.refreshGitHubDocuments([requirementId])"
         @retry="handleRetryControlPlane"
       />
@@ -133,6 +138,7 @@ function handleRetryControlPlane() {
         :reviews="store.documentReviews"
         :is-loading="store.controlPlaneLoading"
         @review="store.createReview"
+        @run-quality-gate="store.runDocumentQualityGate"
       />
 
       <RequirementTraceabilityPanel
@@ -189,13 +195,30 @@ function handleRetryControlPlane() {
 
 .profile-strip {
   grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   padding: 14px 16px;
   background: var(--color-surface-container-high);
   border: var(--border-ghost);
   border-radius: var(--radius-sm);
+}
+
+.profile-strip summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-strip summary strong {
+  color: var(--color-on-surface);
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .profile-strip-main {
@@ -203,6 +226,7 @@ function handleRetryControlPlane() {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin-top: 12px;
 }
 
 .profile-strip-text {
@@ -216,6 +240,7 @@ function handleRetryControlPlane() {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin-top: 10px;
 }
 
 .skill-flow-link {

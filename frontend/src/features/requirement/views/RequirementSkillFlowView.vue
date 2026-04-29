@@ -4,25 +4,12 @@ import { useRouter } from 'vue-router';
 import { ArrowLeft, FileInput, FileOutput, GitBranch, Workflow } from 'lucide-vue-next';
 import ProfileSelector from '../components/ProfileSelector.vue';
 import { useRequirementStore } from '../stores/requirementStore';
-import type { DocumentDependencyDefinition, DocumentStageDefinition, SkillDocumentContract } from '../types/requirement';
+import type { DocumentDependencyDefinition, SkillDocumentContract } from '../types/requirement';
 
 const router = useRouter();
 const store = useRequirementStore();
 const MAX_VISIBLE_DOCS = 3;
 const MAX_VISIBLE_SKILLS = 2;
-const ARTIFACT_TYPE_ORDER = ['source', 'requirement', 'analysis', 'spec', 'design', 'code', 'test', 'review', 'manifest', 'artifact'];
-const ARTIFACT_TYPE_LABELS: Record<string, string> = {
-  source: 'Sources',
-  requirement: 'Requirements',
-  analysis: 'Analysis',
-  spec: 'Specs',
-  design: 'Design',
-  code: 'Code',
-  test: 'Tests',
-  review: 'Reviews',
-  manifest: 'Manifests',
-  artifact: 'Artifacts',
-};
 
 onMounted(() => {
   store.loadActiveProfile();
@@ -167,42 +154,6 @@ const skillGroups = computed(() => {
       id,
       label: labels[id] ?? id,
       skills,
-    }));
-});
-
-const artifactGroups = computed(() => {
-  const groups = new Map<string, Array<{
-    stage: DocumentStageDefinition;
-    producedCount: number;
-    consumedCount: number;
-    upstreamCount: number;
-    downstreamCount: number;
-  }>>();
-
-  for (const stage of flowDocuments.value) {
-    const type = stage.artifactType || 'artifact';
-    groups.set(type, [
-      ...(groups.get(type) ?? []),
-      {
-        stage,
-        producedCount: producedBy.value.get(stage.sddType)?.length ?? 0,
-        consumedCount: consumedBy.value.get(stage.sddType)?.length ?? 0,
-        upstreamCount: upstreamDocs.value.get(stage.sddType)?.length ?? 0,
-        downstreamCount: downstreamDocs.value.get(stage.sddType)?.length ?? 0,
-      },
-    ]);
-  }
-
-  return [...groups.entries()]
-    .sort(([left], [right]) => {
-      const leftIndex = ARTIFACT_TYPE_ORDER.indexOf(left);
-      const rightIndex = ARTIFACT_TYPE_ORDER.indexOf(right);
-      return (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex);
-    })
-    .map(([type, items]) => ({
-      type,
-      label: ARTIFACT_TYPE_LABELS[type] ?? type,
-      items,
     }));
 });
 
@@ -383,39 +334,6 @@ function extraSkillCount(skillIds: ReadonlyArray<string>) {
       </div>
     </section>
 
-    <section class="flow-section">
-      <div class="section-heading">
-        <FileOutput :size="16" />
-        <span>Artifact Summary</span>
-      </div>
-      <div class="artifact-groups">
-        <section v-for="group in artifactGroups" :key="group.type" class="artifact-group">
-          <div class="artifact-group-head">
-            <span>{{ group.label }}</span>
-            <strong>{{ group.items.length }}</strong>
-          </div>
-          <div class="artifact-list">
-            <article
-              v-for="item in group.items"
-              :key="item.stage.sddType"
-              class="artifact-pill"
-              :title="pathForDoc(item.stage.sddType)"
-            >
-              <div class="artifact-main">
-                <strong>{{ item.stage.label }}</strong>
-                <span>{{ item.stage.sddType }}</span>
-              </div>
-              <div class="artifact-stats">
-                <span>P {{ item.producedCount }}</span>
-                <span>U {{ item.consumedCount }}</span>
-                <span>In {{ item.upstreamCount }}</span>
-                <span>Out {{ item.downstreamCount }}</span>
-              </div>
-            </article>
-          </div>
-        </section>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -458,9 +376,7 @@ function extraSkillCount(skillIds: ReadonlyArray<string>) {
 .skill-id,
 .skill-deps,
 .dependency-line span,
-.io-box span,
-.artifact-main span,
-.artifact-group-head {
+.io-box span {
   color: var(--color-on-surface-variant);
   font-family: var(--font-ui);
   font-size: 0.625rem;
@@ -840,97 +756,10 @@ p {
   color: var(--color-on-surface-variant);
 }
 
-.artifact-groups {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.artifact-group {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border: var(--border-ghost);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-container-low);
-}
-
-.artifact-group-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.artifact-group-head strong {
-  padding: 1px 6px;
-  border-radius: 2px;
-  background: rgba(148, 163, 184, 0.12);
-  color: var(--color-on-surface);
-  font-family: var(--font-tech);
-  font-size: 0.625rem;
-}
-
-.artifact-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.artifact-pill {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  padding: 8px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-container);
-}
-
-.artifact-main {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.artifact-main strong,
-.artifact-main span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.artifact-main strong {
-  color: var(--color-on-surface);
-  font-family: var(--font-ui);
-  font-size: 0.75rem;
-}
-
-.artifact-stats {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 3px;
-  max-width: 146px;
-}
-
-.artifact-stats span {
-  padding: 2px 5px;
-  border-radius: 2px;
-  background: rgba(137, 206, 255, 0.08);
-  color: var(--color-secondary);
-  font-family: var(--font-tech);
-  font-size: 0.5625rem;
-  line-height: 1.2;
-}
-
 @media (max-width: 1180px) {
   .skill-contracts,
   .skill-groups,
-  .summary-grid,
-  .artifact-groups {
+  .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -944,8 +773,7 @@ p {
   .summary-grid,
   .skill-contracts,
   .skill-groups,
-  .io-flow,
-  .artifact-groups {
+  .io-flow {
     grid-template-columns: 1fr;
   }
 

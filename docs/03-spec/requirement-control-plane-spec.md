@@ -216,10 +216,105 @@ RUNNING -> FAILED
 | GET | `/api/v1/requirements/documents/{documentId}` | Fetch latest GitHub Markdown and metadata |
 | POST | `/api/v1/requirements/documents/{documentId}/reviews` | Add comment or decision |
 | GET | `/api/v1/requirements/{id}/reviews` | List review history |
+| POST | `/api/v1/requirements/documents/{documentId}/quality-gate-runs` | Run or rerun document quality gate |
+| GET | `/api/v1/requirements/documents/{documentId}/quality-gate` | Get latest quality gate result |
+| POST | `/api/v1/requirements/{id}/quality-gate-runs` | Run quality gates for a requirement scope |
+| POST | `/api/v1/projects/{projectId}/quality-gate-runs` | Run quality gates for a project snapshot |
 | POST | `/api/v1/requirements/{id}/agent-runs` | Create agent run manifest |
 | GET | `/api/v1/requirements/agent-runs/{executionId}` | Get agent run status |
 | POST | `/api/v1/requirements/agent-runs/{executionId}/callback` | Agent status/artifact callback |
 | GET | `/api/v1/requirements/{id}/traceability` | Source/doc/review/run traceability |
+
+## Document Quality Gate
+
+### Scoring Contract
+
+The quality gate uses one skill entry point:
+
+```text
+document-quality-gate(documentId, profileId, sddType)
+```
+
+The skill selects a rubric from `profileId + sddType + expectedTier +
+entryPath + workspace policy + project policy`. A profile may contribute one
+or more rubrics, but the UI and backend treat the result through a common
+contract.
+
+```json
+{
+  "executionId": "QG-123",
+  "documentId": "DOC-123",
+  "profileId": "ibm-i",
+  "sddType": "program-spec",
+  "score": 74,
+  "band": "BLOCKED",
+  "passed": false,
+  "threshold": 80,
+  "rubricVersion": "quality-gate.ibm-i.program-spec.v1",
+  "commitSha": "...",
+  "blobSha": "...",
+  "dimensions": [
+    { "key": "traceability", "score": 12, "max": 20 }
+  ],
+  "findings": [
+    {
+      "severity": "BLOCKER",
+      "section": "Acceptance Criteria",
+      "message": "Acceptance criteria are not testable enough."
+    }
+  ],
+  "scoredAt": "2026-04-29T00:00:00Z"
+}
+```
+
+### Bands
+
+| Score | Band | Gate |
+|---:|---|---|
+| 90-100 | Excellent | Pass |
+| 80-89 | Good | Pass with advisory findings |
+| 0-79 | Blocked | Fail; downstream approval/generation blocked |
+
+### Policy Scope
+
+Quality gate policy resolves in this order:
+
+```text
+Platform default
+-> Workspace / Team override
+-> Project override
+-> Profile + document-type rubric
+```
+
+The policy model supports multiple teams and multiple projects. Batch runs must
+record workspace ID, team scope, project ID, requirement ID, document ID,
+profile ID, SDD type, rubric version, commit SHA, blob SHA, trigger actor,
+trigger mode, and result.
+
+### Trigger Permissions
+
+| Actor | Allowed triggers |
+|---|---|
+| BA / PM | Requirement, user-story, functional-spec, and business review gates |
+| Tech Lead / Architect | Technical design, architecture, program spec, file spec gates |
+| QA Lead | Test plan and test scaffold gates |
+| Engineer | Implementation-facing gates for assigned work |
+| Platform Admin | Any single or batch gate |
+| Automation/System | After document generation, GitHub refresh, or PR update |
+
+### Modification Permissions
+
+| Asset | Modifier |
+|---|---|
+| Skill code | Platform Admin, Skill Maintainer |
+| Rubric template | Platform Admin, Process Owner |
+| Team policy override | Team Admin, Delivery Owner |
+| Project exception | Proposed by Tech Lead; approved by Delivery Owner |
+| Threshold override | Restricted; requires audit reason and effective scope |
+
+All changes to skill code references, rubric weights, thresholds, and overrides
+must create audit entries with actor, old value, new value, reason, scope, and
+effective time.
 
 ## Profile Examples
 

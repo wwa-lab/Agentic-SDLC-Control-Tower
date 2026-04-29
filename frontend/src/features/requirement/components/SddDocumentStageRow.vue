@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { FileText, Github } from 'lucide-vue-next';
+import { FileText, Github, ShieldCheck } from 'lucide-vue-next';
 import type { SddDocumentStage } from '../types/requirement';
 import FreshnessChip from './FreshnessChip.vue';
+import DocumentQualityBadge from './DocumentQualityBadge.vue';
 
 const props = defineProps<{
   stage: SddDocumentStage;
   selected?: boolean;
   loading?: boolean;
 }>();
-const emit = defineEmits<{ open: [documentId: string] }>();
+const emit = defineEmits<{ open: [documentId: string]; qualityGate: [documentId: string] }>();
 
 function openStage() {
   if (props.stage.id) {
@@ -37,6 +38,7 @@ function openStage() {
         <span>{{ stage.title }}</span>
         <small v-if="stage.title !== stage.stageLabel" class="stage-kind">{{ stage.stageLabel }}</small>
         <FreshnessChip :status="stage.freshnessStatus" />
+        <DocumentQualityBadge :gate="stage.qualityGate" />
         <span v-if="loading" class="stage-loading">Loading...</span>
       </div>
       <span class="stage-path">{{ stage.path }}</span>
@@ -46,6 +48,9 @@ function openStage() {
       <a v-if="stage.githubUrl" class="icon-btn" :href="stage.githubUrl" target="_blank" rel="noreferrer" title="Open in GitHub" @click.stop>
         <Github :size="14" />
       </a>
+      <button v-if="stage.id" class="icon-btn" type="button" title="Run Quality Gate" @click.stop="emit('qualityGate', stage.id)">
+        <ShieldCheck :size="14" />
+      </button>
       <button v-if="stage.id" class="icon-btn" type="button" title="View Markdown" @click.stop="openStage">
         <FileText :size="14" />
       </button>

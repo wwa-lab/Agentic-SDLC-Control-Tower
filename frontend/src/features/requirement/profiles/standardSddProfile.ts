@@ -20,6 +20,7 @@ export const STANDARD_SDD_PROFILE: PipelineProfile = {
   skills: [
     { skillId: 'req-to-user-story', label: 'CLI Story Derivation', triggerPoint: 'requirement' },
     { skillId: 'user-story-to-spec', label: 'CLI Spec Generation', triggerPoint: 'user-story' },
+    { skillId: 'document-quality-gate', label: 'Document Quality Gate', triggerPoint: 'sdd-document' },
   ],
   skillDocumentContracts: [
     {
@@ -38,11 +39,22 @@ export const STANDARD_SDD_PROFILE: PipelineProfile = {
       outputDocuments: ['spec'],
       dependsOnSkills: ['req-to-user-story'],
     },
+    {
+      skillId: 'document-quality-gate',
+      label: 'Document Quality Gate',
+      description: 'Scores SDD documents from 0-100 and blocks downstream approval when the score is below 80.',
+      inputDocuments: ['requirement', 'user-story', 'spec', 'architecture', 'design', 'api-guide', 'tasks'],
+      outputDocuments: ['quality-gate'],
+      dependsOnSkills: ['user-story-to-spec'],
+    },
   ],
   documentDependencies: [
     { from: 'requirement', to: 'user-story', reason: 'Stories are derived from the approved requirement scope.' },
     { from: 'user-story', to: 'spec', reason: 'Spec generation needs story-level behavior and acceptance criteria.' },
     { from: 'spec', to: 'architecture', reason: 'Architecture validates the functional boundary and major components.' },
+    { from: 'spec', to: 'quality-gate', reason: 'Quality gate scores the spec before downstream architecture and design approval.' },
+    { from: 'architecture', to: 'quality-gate', reason: 'Quality gate checks architectural completeness and traceability.' },
+    { from: 'design', to: 'quality-gate', reason: 'Quality gate blocks implementation readiness when design score is below threshold.' },
     { from: 'architecture', to: 'data-flow', reason: 'Data flow follows the architecture integration points.' },
     { from: 'architecture', to: 'data-model', reason: 'Data model follows the architecture persistence and interface decisions.' },
     { from: 'spec', to: 'design', reason: 'Design elaborates the approved functional spec.' },
@@ -62,6 +74,7 @@ export const STANDARD_SDD_PROFILE: PipelineProfile = {
     { sddType: 'design', label: 'Design', pathPattern: 'docs/05-design/{slug}.md', artifactType: 'design', traceabilityKey: 'DESIGN' },
     { sddType: 'api-guide', label: 'API Guide', pathPattern: 'docs/05-design/contracts/{slug}-api.md', artifactType: 'design', traceabilityKey: 'API' },
     { sddType: 'tasks', label: 'Tasks', pathPattern: 'docs/06-tasks/{slug}-tasks.md', artifactType: 'tasks', traceabilityKey: 'TASK' },
+    { sddType: 'quality-gate', label: 'Document Quality Gate', pathPattern: 'docs/08-reviews/quality/{slug}.md', artifactType: 'review', traceabilityKey: 'QG' },
   ],
   specTiering: null,
   usesOrchestrator: false,

@@ -227,6 +227,42 @@ export type FreshnessStatus =
   | 'UNKNOWN'
   | 'ERROR';
 
+export type DocumentQualityBand = 'EXCELLENT' | 'GOOD' | 'BLOCKED';
+
+export interface DocumentQualityDimension {
+  readonly key: string;
+  readonly label: string;
+  readonly score: number;
+  readonly maxScore: number;
+}
+
+export interface DocumentQualityFinding {
+  readonly severity: string;
+  readonly section: string;
+  readonly message: string;
+}
+
+export interface DocumentQualityGate {
+  readonly executionId?: string;
+  readonly documentId?: string;
+  readonly requirementId?: string;
+  readonly profileId?: string;
+  readonly sddType?: string;
+  readonly score: number;
+  readonly band: DocumentQualityBand;
+  readonly label?: string;
+  readonly passed: boolean;
+  readonly threshold: number;
+  readonly rubricVersion?: string;
+  readonly commitSha?: string;
+  readonly blobSha?: string;
+  readonly dimensions?: ReadonlyArray<DocumentQualityDimension>;
+  readonly summary: string;
+  readonly findings: ReadonlyArray<string | DocumentQualityFinding>;
+  readonly stale?: boolean;
+  readonly scoredAt?: string;
+}
+
 export type RequirementControlSourceType = 'JIRA' | 'CONFLUENCE' | 'GITHUB' | 'KB' | 'UPLOAD' | 'URL';
 
 export interface SourceReference {
@@ -256,6 +292,7 @@ export interface SddDocumentStage {
   readonly status: string;
   readonly freshnessStatus: FreshnessStatus;
   readonly missing: boolean;
+  readonly qualityGate?: DocumentQualityGate | null;
 }
 
 export interface SddWorkspace {

@@ -347,7 +347,64 @@ agent executions, and GitHub artifacts in one traceability view.
 Freshness states must use a common vocabulary: Fresh, Source Changed, Document
 Changed After Review, Missing Document, Missing Source, Unknown.
 
-## 9. Non-Functional Requirements
+## 9. Document Quality Gate Requirements
+
+### REQ-RCP-80: Document quality scoring skill
+
+Requirement Control Plane must support a `document-quality-gate` skill that
+scores SDD documents from 0 to 100. Scores from 90 to 100 are Excellent, scores
+from 80 to 89 are Good, and scores below 80 are Blocked.
+
+### REQ-RCP-81: Quality gate enforcement
+
+Documents with a quality score below 80 must not be approved or used to continue
+downstream workflow steps unless an authorized exception is recorded. The gate
+result must include findings that explain why the document is blocked.
+
+### REQ-RCP-82: Profile-specific scoring rubrics
+
+The quality gate must use one shared skill entry point with profile-specific
+rubrics or adapters. Rubric selection must consider profile ID, SDD document
+type, expected tier, workflow path, workspace policy, and project policy.
+
+### REQ-RCP-83: Multi-team policy support
+
+Quality gate policy must support multiple teams. Platform defaults may be
+overridden by workspace/team policy, project policy, and profile/document-type
+rubrics. Team-specific overrides may change thresholds, required checks, and
+rubric weights without changing the skill code.
+
+### REQ-RCP-84: Multi-project quality gate runs
+
+Quality gate execution must support single-document runs and batch runs scoped
+to a requirement, project snapshot, release, or all stale documents visible to
+the caller. Each run must persist its scope and result independently.
+
+### REQ-RCP-85: Quality gate trigger permissions
+
+Authorized users may trigger quality gate runs from the UI. BA/PM users may
+trigger business-facing requirement and functional-spec gates, Tech Leads and
+Architects may trigger technical/design/program gates, QA Leads may trigger test
+document gates, Engineers may trigger implementation-facing gates for assigned
+work, and Platform Admins may trigger any gate or batch run. Automation may
+trigger gates after document generation, GitHub refresh, or PR updates.
+
+### REQ-RCP-86: Skill and rubric modification permissions
+
+Skill code changes must be limited to Platform Admins or Skill Maintainers.
+Rubric templates may be changed by Platform Admins or Process Owners. Team
+policy overrides may be changed by Team Admins or Delivery Owners. Project
+exceptions may be proposed by Tech Leads and approved by Delivery Owners. All
+changes must be auditable with old value, new value, scope, reason, actor, and
+effective time.
+
+### REQ-RCP-87: Quality result version binding
+
+Quality gate results must be bound to document commit SHA and blob SHA. If the
+document changes after scoring, the result becomes stale and the document must
+be rescored before approval or downstream generation can continue.
+
+## 10. Non-Functional Requirements
 
 ### REQ-RCP-70: Permission boundaries
 

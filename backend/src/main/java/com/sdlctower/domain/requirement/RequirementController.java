@@ -10,7 +10,9 @@ import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRun
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateAgentRunRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateDocumentReviewRequestDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateQualityGateRunRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateSourceReferenceRequestDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.DocumentQualityGateResultDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.DocumentReviewDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.RequirementTraceabilityDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.SddDocumentContentDto;
@@ -212,6 +214,27 @@ public class RequirementController {
     @GetMapping(ApiConstants.REQUIREMENT_SDD_DOCUMENT_DETAIL)
     public ApiResponse<SddDocumentContentDto> getDocument(@PathVariable String documentId) {
         return ApiResponse.ok(controlPlaneService.getDocument(documentId));
+    }
+
+    @GetMapping(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE)
+    public ApiResponse<DocumentQualityGateResultDto> getQualityGate(@PathVariable String documentId) {
+        return ApiResponse.ok(controlPlaneService.getLatestDocumentQualityGate(documentId));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE_RUNS)
+    public ResponseEntity<ApiResponse<DocumentQualityGateResultDto>> runQualityGate(
+            @PathVariable String documentId,
+            @RequestBody(required = false) CreateQualityGateRunRequestDto body
+    ) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(controlPlaneService.runDocumentQualityGate(documentId, body)));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_QUALITY_GATE_RUNS)
+    public ResponseEntity<ApiResponse<List<DocumentQualityGateResultDto>>> runRequirementQualityGates(
+            @PathVariable String requirementId,
+            @RequestBody(required = false) CreateQualityGateRunRequestDto body
+    ) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(controlPlaneService.runRequirementQualityGates(requirementId, body)));
     }
 
     @PostMapping(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS)

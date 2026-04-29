@@ -15,6 +15,7 @@ const sourceIssues = computed(() => sources.value.filter(source => source.freshn
 const readyDocuments = computed(() => documents.value.filter(document => !document.missing));
 const missingDocuments = computed(() => documents.value.filter(document => document.missing || document.freshnessStatus === 'MISSING_DOCUMENT'));
 const staleReviews = computed(() => reviews.value.filter(review => review.stale));
+const qualityBlockedDocuments = computed(() => documents.value.filter(document => document.qualityGate && (!document.qualityGate.passed || document.qualityGate.stale)));
 
 const readinessStatus = computed<FreshnessStatus>(() => {
   if (!props.traceability) return 'UNKNOWN';
@@ -27,6 +28,7 @@ const readinessStatus = computed<FreshnessStatus>(() => {
 const readinessLabel = computed(() => {
   if (!props.traceability) return 'No readiness signals';
   if (missingDocuments.value.length > 0) return 'Documents needed';
+  if (qualityBlockedDocuments.value.length > 0) return 'Quality gate blocked';
   if (sourceIssues.value.length > 0) return 'Source needs sync';
   if (staleReviews.value.length > 0) return 'Review needs refresh';
   return 'Ready for review';
@@ -38,6 +40,7 @@ const blockers = computed(() => {
   if (sources.value.length === 0) items.push('No source reference linked');
   if (sourceIssues.value.length > 0) items.push(`${sourceIssues.value.length} source reference needs refresh`);
   if (missingDocuments.value.length > 0) items.push(`${missingDocuments.value.length} expected SDD documents are missing`);
+  if (qualityBlockedDocuments.value.length > 0) items.push(`${qualityBlockedDocuments.value.length} document quality gate needs attention`);
   if (staleReviews.value.length > 0) items.push(`${staleReviews.value.length} business reviews are stale`);
   return items;
 });

@@ -193,6 +193,43 @@ profiles, agent manifests, and freshness.
 - [ ] Add controller tests for branch-based document identity and resolved
       missing document paths.
 
+## Phase 12: Document Quality Gate Enhancement
+
+- [ ] Define `document-quality-gate` skill contract with one entry point and a
+      common output schema for score, band, threshold, rubric version,
+      dimensions, findings, commit SHA, and blob SHA.
+- [ ] Add quality gate persistence for single-document and batch runs,
+      including workspace ID, team scope, project ID, requirement ID,
+      document ID, profile ID, SDD type, trigger actor, trigger mode, result,
+      and audit metadata.
+- [ ] Add policy model for Platform default -> Workspace/Team override ->
+      Project override -> Profile + document-type rubric resolution.
+- [ ] Add Standard SDD rubrics for requirement, user story, spec,
+      architecture/design, API guide, and task documents.
+- [ ] Add IBM i rubrics for requirement normalizer, functional spec,
+      technical design, program spec, file spec, UT plan, DDS review, and code
+      review documents.
+- [ ] Add permission checks for manual gate triggers:
+      BA/PM for business-facing docs, Tech Lead/Architect for technical docs,
+      QA Lead for test docs, Engineer for assigned implementation-facing docs,
+      and Platform Admin for any single or batch run.
+- [ ] Add automation triggers after document generation, GitHub SDD refresh,
+      and PR updates, with stale-result detection when commit/blob metadata
+      changes.
+- [ ] Add UI controls for `Run Gate` and `Re-run Gate` in SDD document rows
+      and Business Review.
+- [ ] Block `Approve Selected Version` and downstream generation when the
+      latest quality gate is missing, stale, or below threshold.
+- [ ] Add governance UI/API for skill code ownership, rubric template edits,
+      team overrides, project exceptions, threshold changes, and required audit
+      reasons.
+- [ ] Add tests for multiple teams using different thresholds and rubric
+      overrides.
+- [ ] Add tests for multiple project-scope batch runs executing independently
+      and preserving project/team audit scope.
+- [ ] Add tests that unauthorized users cannot trigger restricted gates or
+      modify skill/rubric policy.
+
 ## Rollout Notes
 
 - Roll out as additive sections first.

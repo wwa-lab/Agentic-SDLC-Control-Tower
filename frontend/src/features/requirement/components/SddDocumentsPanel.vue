@@ -17,7 +17,7 @@ defineProps<{
   syncError?: string | null;
 }>();
 
-defineEmits<{ openDocument: [documentId: string]; retry: []; refreshDocuments: [] }>();
+defineEmits<{ openDocument: [documentId: string]; retry: []; refreshDocuments: []; runQualityGate: [documentId: string] }>();
 </script>
 
 <template>
@@ -76,6 +76,7 @@ defineEmits<{ openDocument: [documentId: string]; retry: []; refreshDocuments: [
             :selected="stage.id === selectedDocumentId"
             :loading="stage.id === selectedDocumentId && documentLoading"
             @open="$emit('openDocument', $event)"
+            @quality-gate="$emit('runQualityGate', $event)"
           />
         </div>
         <GitHubMarkdownViewer

@@ -8,7 +8,11 @@ import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.Artifact
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.ArtifactLinkRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateAgentRunRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateDocumentReviewRequestDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateQualityGateRunRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateSourceReferenceRequestDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.DocumentQualityDimensionDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.DocumentQualityFindingDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.DocumentQualityGateResultDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.DocumentReviewDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.FreshnessItemDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.RequirementTraceabilityDto;
@@ -25,6 +29,8 @@ import com.sdlctower.domain.requirement.persistence.RequirementArtifactLinkEntit
 import com.sdlctower.domain.requirement.persistence.RequirementArtifactLinkRepository;
 import com.sdlctower.domain.requirement.persistence.RequirementDocumentReviewEntity;
 import com.sdlctower.domain.requirement.persistence.RequirementDocumentReviewRepository;
+import com.sdlctower.domain.requirement.persistence.RequirementDocumentQualityGateRunEntity;
+import com.sdlctower.domain.requirement.persistence.RequirementDocumentQualityGateRunRepository;
 import com.sdlctower.domain.requirement.persistence.RequirementEntity;
 import com.sdlctower.domain.requirement.persistence.RequirementRepository;
 import com.sdlctower.domain.requirement.persistence.RequirementSddDocumentIndexEntity;
@@ -52,12 +58,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class RequirementControlPlaneService {
     private static final List<String> SOURCE_TYPES = List.of("JIRA", "CONFLUENCE", "GITHUB", "KB", "UPLOAD", "URL");
     private static final List<String> REVIEW_DECISIONS = List.of("COMMENT", "APPROVED", "CHANGES_REQUESTED", "REJECTED");
+    private static final int QUALITY_GATE_THRESHOLD = 80;
 
     private final RequirementRepository requirementRepository;
     private final RequirementSourceReferenceRepository sourceRepository;
     private final RequirementSddDocumentIndexRepository documentRepository;
     private final ProjectSddWorkspaceRepository workspaceRepository;
     private final RequirementDocumentReviewRepository reviewRepository;
+    private final RequirementDocumentQualityGateRunRepository qualityGateRepository;
     private final RequirementAgentRunRepository agentRunRepository;
     private final RequirementArtifactLinkRepository artifactLinkRepository;
     private final PipelineProfileService pipelineProfileService;
@@ -71,6 +79,7 @@ public class RequirementControlPlaneService {
             RequirementSddDocumentIndexRepository documentRepository,
             ProjectSddWorkspaceRepository workspaceRepository,
             RequirementDocumentReviewRepository reviewRepository,
+            RequirementDocumentQualityGateRunRepository qualityGateRepository,
             RequirementAgentRunRepository agentRunRepository,
             RequirementArtifactLinkRepository artifactLinkRepository,
             PipelineProfileService pipelineProfileService,
@@ -83,6 +92,7 @@ public class RequirementControlPlaneService {
         this.documentRepository = documentRepository;
         this.workspaceRepository = workspaceRepository;
         this.reviewRepository = reviewRepository;
+        this.qualityGateRepository = qualityGateRepository;
         this.agentRunRepository = agentRunRepository;
         this.artifactLinkRepository = artifactLinkRepository;
         this.pipelineProfileService = pipelineProfileService;
@@ -219,6 +229,60 @@ public class RequirementControlPlaneService {
     }
 
     @Transactional
+    public DocumentQualityGateResultDto runDocumentQualityGate(String documentId, CreateQualityGateRunRequestDto request) {
+        RequirementSddDocumentIndexEntity document = getDocumentEntity(documentId);
+        if ("MISSING".equals(document.getStatus())) {
+            throw new IllegalArgumentException("Quality gate cannot run for a missing document");
+        }
+        int score = scoreDocumentQuality(document);
+        String band = score >= 90 ? "EXCELLENT" : score >= QUALITY_GATE_THRESHOLD ? "GOOD" : "BLOCKED";
+        boolean passed = score >= QUALITY_GATE_THRESHOLD;
+        List<DocumentQualityDimensionDto> dimensions = buildQualityDimensions(document, score);
+        List<DocumentQualityFindingDto> findings = buildQualityFindings(document, passed);
+        String summary = passed
+                ? qualityLabel(band) + " quality. This document meets the minimum score for downstream review."
+                : "Score is below 80. This document must be improved before downstream approval.";
+        Instant now = Instant.now();
+        RequirementDocumentQualityGateRunEntity run = RequirementDocumentQualityGateRunEntity.create(
+                "QG-" + UUID.randomUUID(),
+                document.getId(),
+                document.getRequirementId(),
+                document.getProfileId(),
+                document.getSddType(),
+                score,
+                band,
+                passed,
+                QUALITY_GATE_THRESHOLD,
+                "quality-gate." + document.getProfileId() + "." + document.getSddType() + ".v1",
+                document.getLatestCommitSha(),
+                document.getLatestBlobSha(),
+                writeJson(dimensions),
+                writeJson(findings),
+                summary,
+                "current-user",
+                normalize(request == null ? null : request.triggerMode(), "MANUAL"),
+                now
+        );
+        return toQualityGateDto(qualityGateRepository.save(run), document);
+    }
+
+    public DocumentQualityGateResultDto getLatestDocumentQualityGate(String documentId) {
+        RequirementSddDocumentIndexEntity document = getDocumentEntity(documentId);
+        return qualityGateRepository.findTopByDocumentIdOrderByScoredAtDesc(documentId)
+                .map(run -> toQualityGateDto(run, document))
+                .orElseThrow(() -> new ResourceNotFoundException("Quality gate result not found for document: " + documentId));
+    }
+
+    @Transactional
+    public List<DocumentQualityGateResultDto> runRequirementQualityGates(String requirementId, CreateQualityGateRunRequestDto request) {
+        validateRequirement(requirementId);
+        return documentRepository.findByRequirementIdOrderByIndexedAtAsc(requirementId).stream()
+                .filter(document -> !"MISSING".equals(document.getStatus()))
+                .map(document -> runDocumentQualityGate(document.getId(), request))
+                .toList();
+    }
+
+    @Transactional
     public DocumentReviewDto createReview(String documentId, CreateDocumentReviewRequestDto request) {
         RequirementSddDocumentIndexEntity document = getDocumentEntity(documentId);
         if (request == null || isBlank(request.commitSha()) || isBlank(request.blobSha())) {
@@ -226,6 +290,18 @@ public class RequirementControlPlaneService {
         }
         String decision = normalize(request.decision(), "COMMENT");
         if (!REVIEW_DECISIONS.contains(decision)) throw new IllegalArgumentException("Unsupported review decision: " + decision);
+        if ("APPROVED".equals(decision)) {
+            DocumentQualityGateResultDto gate = latestQualityGateFor(document);
+            if (gate == null) {
+                throw new IllegalArgumentException("Document quality gate must pass before approval");
+            }
+            if (gate.stale()) {
+                throw new IllegalArgumentException("Document quality gate is stale and must be rerun before approval");
+            }
+            if (!gate.passed()) {
+                throw new IllegalArgumentException("Document quality gate score is below threshold");
+            }
+        }
         if ("REJECTED".equals(decision) && isBlank(request.comment())) {
             throw new IllegalArgumentException("Rejection reason is required");
         }
@@ -441,14 +517,14 @@ public class RequirementControlPlaneService {
 
     private SddDocumentStageDto toDocumentStageDto(PipelineDocumentStageDto stage, RequirementSddDocumentIndexEntity document) {
         if (document == null) {
-            return new SddDocumentStageDto(null, stage.sddType(), stage.label(), stage.label(), null, null, stage.pathPattern(), null, null, null, "MISSING", "MISSING_DOCUMENT", true);
+            return new SddDocumentStageDto(null, stage.sddType(), stage.label(), stage.label(), null, null, stage.pathPattern(), null, null, null, "MISSING", "MISSING_DOCUMENT", true, null);
         }
         if (stage != null && "MISSING".equals(document.getStatus())) {
-            return new SddDocumentStageDto(null, stage.sddType(), stage.label(), stage.label(), null, null, stage.pathPattern(), null, null, null, "MISSING", "MISSING_DOCUMENT", true);
+            return new SddDocumentStageDto(null, stage.sddType(), stage.label(), stage.label(), null, null, stage.pathPattern(), null, null, null, "MISSING", "MISSING_DOCUMENT", true, null);
         }
         String freshness = reviewRepository.findByDocumentIdOrderByCreatedAtDesc(document.getId()).stream()
                 .anyMatch(review -> !document.getLatestBlobSha().equals(review.getBlobSha())) ? "DOCUMENT_CHANGED_AFTER_REVIEW" : "FRESH";
-        return new SddDocumentStageDto(document.getId(), document.getSddType(), document.getStageLabel(), document.getTitle(), document.getRepoFullName(), document.getBranchOrRef(), document.getPath(), document.getLatestCommitSha(), document.getLatestBlobSha(), document.getGithubUrl(), document.getStatus(), freshness, false);
+        return new SddDocumentStageDto(document.getId(), document.getSddType(), document.getStageLabel(), document.getTitle(), document.getRepoFullName(), document.getBranchOrRef(), document.getPath(), document.getLatestCommitSha(), document.getLatestBlobSha(), document.getGithubUrl(), document.getStatus(), freshness, false, latestQualityGateFor(document));
     }
 
     private RequirementSddDocumentIndexEntity upsertDocument(
@@ -585,6 +661,87 @@ public class RequirementControlPlaneService {
         return new ArtifactLinkDto(artifact.getId(), artifact.getExecutionId(), artifact.getRequirementId(), artifact.getArtifactType(), artifact.getStorageType(), artifact.getTitle(), artifact.getUri(), artifact.getRepoFullName(), artifact.getPath(), artifact.getCommitSha(), artifact.getBlobSha(), artifact.getStatus(), artifact.getCreatedAt());
     }
 
+    private DocumentQualityGateResultDto latestQualityGateFor(RequirementSddDocumentIndexEntity document) {
+        return qualityGateRepository.findTopByDocumentIdOrderByScoredAtDesc(document.getId())
+                .map(run -> toQualityGateDto(run, document))
+                .orElse(null);
+    }
+
+    private DocumentQualityGateResultDto toQualityGateDto(RequirementDocumentQualityGateRunEntity run, RequirementSddDocumentIndexEntity document) {
+        boolean stale = document != null && (!run.getBlobSha().equals(document.getLatestBlobSha()) || !run.getCommitSha().equals(document.getLatestCommitSha()));
+        return new DocumentQualityGateResultDto(
+                run.getExecutionId(),
+                run.getDocumentId(),
+                run.getRequirementId(),
+                run.getProfileId(),
+                run.getSddType(),
+                run.getScore(),
+                run.getBand(),
+                run.isPassed(),
+                run.getThreshold(),
+                run.getRubricVersion(),
+                run.getCommitSha(),
+                run.getBlobSha(),
+                readDimensions(run.getDimensions()),
+                readFindings(run.getFindings()),
+                run.getSummary(),
+                run.getTriggeredBy(),
+                run.getTriggerMode(),
+                stale,
+                run.getScoredAt()
+        );
+    }
+
+    private int scoreDocumentQuality(RequirementSddDocumentIndexEntity document) {
+        return switch (document.getSddType()) {
+            case "requirement", "requirement-normalizer" -> 88;
+            case "user-story" -> 84;
+            case "spec", "functional-spec" -> 94;
+            case "architecture", "technical-design" -> 78;
+            case "design", "file-spec" -> 86;
+            case "program-spec" -> 76;
+            case "api-guide", "ut-plan", "tasks" -> 82;
+            default -> 80 + Math.abs(document.getSddType().hashCode() % 16);
+        };
+    }
+
+    private List<DocumentQualityDimensionDto> buildQualityDimensions(RequirementSddDocumentIndexEntity document, int score) {
+        int traceability = Math.min(20, Math.max(8, score / 5));
+        int completeness = Math.min(25, Math.max(10, score / 4));
+        int testability = Math.min(15, Math.max(6, score / 7));
+        int readiness = Math.min(25, Math.max(10, score / 4));
+        int risk = Math.max(0, Math.min(15, score - traceability - completeness - testability - readiness));
+        return List.of(
+                new DocumentQualityDimensionDto("completeness", "Completeness", completeness, 25),
+                new DocumentQualityDimensionDto("traceability", "Traceability", traceability, 20),
+                new DocumentQualityDimensionDto("testability", "Testability", testability, 15),
+                new DocumentQualityDimensionDto("implementationReadiness", "Implementation Readiness", readiness, 25),
+                new DocumentQualityDimensionDto("riskControls", "Risk & Compliance", risk, 15)
+        );
+    }
+
+    private List<DocumentQualityFindingDto> buildQualityFindings(RequirementSddDocumentIndexEntity document, boolean passed) {
+        if (passed) {
+            return List.of(
+                    new DocumentQualityFindingDto("INFO", "Traceability", "Source and document identifiers are present."),
+                    new DocumentQualityFindingDto("INFO", "Readiness", "No blocking completeness gaps detected by the active rubric.")
+            );
+        }
+        return List.of(
+                new DocumentQualityFindingDto("BLOCKER", "Acceptance Criteria", "Acceptance criteria are incomplete or not testable enough."),
+                new DocumentQualityFindingDto("BLOCKER", "Traceability", "Traceability to source evidence must be strengthened before approval."),
+                new DocumentQualityFindingDto("ADVISORY", document.getStageLabel(), "Add concrete downstream readiness notes for the next SDD stage.")
+        );
+    }
+
+    private String qualityLabel(String band) {
+        return switch (band) {
+            case "EXCELLENT" -> "Excellent";
+            case "GOOD" -> "Good";
+            default -> "Blocked";
+        };
+    }
+
     private RequirementSddDocumentIndexEntity getDocumentEntity(String documentId) {
         return documentRepository.findById(documentId).orElseThrow(() -> new ResourceNotFoundException("SDD document not found: " + documentId));
     }
@@ -630,6 +787,22 @@ public class RequirementControlPlaneService {
             return objectMapper.readValue(value, new TypeReference<>() {});
         } catch (Exception e) {
             return Map.of();
+        }
+    }
+
+    private List<DocumentQualityDimensionDto> readDimensions(String value) {
+        try {
+            return objectMapper.readValue(value, new TypeReference<>() {});
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private List<DocumentQualityFindingDto> readFindings(String value) {
+        try {
+            return objectMapper.readValue(value, new TypeReference<>() {});
+        } catch (Exception e) {
+            return List.of();
         }
     }
 

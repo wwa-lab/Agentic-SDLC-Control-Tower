@@ -38,6 +38,9 @@ public final class ApiConstants {
     public static final String REQUIREMENT_SDD_DOCUMENTS_REFRESH = REQUIREMENT_SDD_DOCUMENTS + "/refresh";
     public static final String REQUIREMENT_SDD_DOCUMENT_DETAIL = REQUIREMENTS + "/documents/{documentId}";
     public static final String REQUIREMENT_DOCUMENT_REVIEWS = REQUIREMENT_SDD_DOCUMENT_DETAIL + "/reviews";
+    public static final String REQUIREMENT_DOCUMENT_QUALITY_GATE = REQUIREMENT_SDD_DOCUMENT_DETAIL + "/quality-gate";
+    public static final String REQUIREMENT_DOCUMENT_QUALITY_GATE_RUNS = REQUIREMENT_SDD_DOCUMENT_DETAIL + "/quality-gate-runs";
+    public static final String REQUIREMENT_QUALITY_GATE_RUNS = REQUIREMENT_DETAIL + "/quality-gate-runs";
     public static final String REQUIREMENT_REVIEWS = REQUIREMENT_DETAIL + "/reviews";
     public static final String REQUIREMENT_AGENT_RUNS = REQUIREMENT_DETAIL + "/agent-runs";
     public static final String REQUIREMENT_AGENT_RUN_DETAIL = REQUIREMENTS + "/agent-runs/{executionId}";

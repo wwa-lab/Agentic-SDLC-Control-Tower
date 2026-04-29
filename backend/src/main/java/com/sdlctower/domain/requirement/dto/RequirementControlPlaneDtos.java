@@ -61,7 +61,8 @@ public final class RequirementControlPlaneDtos {
             String githubUrl,
             String status,
             String freshnessStatus,
-            boolean missing
+            boolean missing,
+            DocumentQualityGateResultDto qualityGate
     ) {}
 
     public record SddDocumentContentDto(
@@ -96,6 +97,34 @@ public final class RequirementControlPlaneDtos {
             String anchorValue,
             boolean stale,
             Instant createdAt
+    ) {}
+
+    public record CreateQualityGateRunRequestDto(String profileId, String triggerMode, String notes) {}
+
+    public record DocumentQualityDimensionDto(String key, String label, int score, int maxScore) {}
+
+    public record DocumentQualityFindingDto(String severity, String section, String message) {}
+
+    public record DocumentQualityGateResultDto(
+            String executionId,
+            String documentId,
+            String requirementId,
+            String profileId,
+            String sddType,
+            int score,
+            String band,
+            boolean passed,
+            int threshold,
+            String rubricVersion,
+            String commitSha,
+            String blobSha,
+            List<DocumentQualityDimensionDto> dimensions,
+            List<DocumentQualityFindingDto> findings,
+            String summary,
+            String triggeredBy,
+            String triggerMode,
+            boolean stale,
+            Instant scoredAt
     ) {}
 
     public record CreateAgentRunRequestDto(String skillKey, String targetStage, String profileId, String notes) {}

@@ -3,6 +3,7 @@ import type {
   PipelineProfile,
   AgentRun,
   DocumentReview,
+  DocumentQualityGate,
   GraphFilters,
   GraphImpact,
   GraphImpactRequest,
@@ -187,6 +188,17 @@ export const requirementApi = {
 
   async getSddDocument(documentId: string): Promise<SddDocumentContent> {
     return fetchJson<SddDocumentContent>(`/requirements/documents/${documentId}`);
+  },
+
+  async getDocumentQualityGate(documentId: string): Promise<DocumentQualityGate> {
+    return fetchJson<DocumentQualityGate>(`/requirements/documents/${documentId}/quality-gate`);
+  },
+
+  async runDocumentQualityGate(documentId: string, profileId?: string): Promise<DocumentQualityGate> {
+    return postJson<DocumentQualityGate>(`/requirements/documents/${documentId}/quality-gate-runs`, {
+      profileId,
+      triggerMode: 'MANUAL',
+    });
   },
 
   async createDocumentReview(documentId: string, request: { decision: string; comment?: string; commitSha: string; blobSha: string }): Promise<DocumentReview> {

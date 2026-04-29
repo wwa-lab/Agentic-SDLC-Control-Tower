@@ -98,6 +98,19 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void reviewCreationIsBoundToCommitAndBlobVersion() throws Exception {
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE_RUNS, "DOC-REQ-0001-SPEC")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "triggerMode": "MANUAL"
+                                }
+                                """))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.score").value(94))
+                .andExpect(jsonPath("$.data.band").value("EXCELLENT"))
+                .andExpect(jsonPath("$.data.passed").value(true))
+                .andExpect(jsonPath("$.data.stale").value(false));
+
         mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "DOC-REQ-0001-SPEC")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -124,6 +137,62 @@ class RequirementControlPlaneControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.stale").value(true));
+    }
+
+    @Test
+    void approvedReviewRequiresPassingQualityGate() throws Exception {
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "DOC-REQ-0001-STORY")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "decision": "APPROVED",
+                                  "comment": "Trying to approve before the gate runs.",
+                                  "commitSha": "c0ffee1002",
+                                  "blobSha": "blob-story-0001-v1"
+                                }
+                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Document quality gate must pass before approval"));
+    }
+
+    @Test
+    void qualityGateRunCanBeTriggeredPerDocumentAndRequirement() throws Exception {
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE_RUNS, "DOC-REQ-0001-REQ")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "profileId": "standard-sdd",
+                                  "triggerMode": "MANUAL"
+                                }
+                                """))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.documentId").value("DOC-REQ-0001-REQ"))
+                .andExpect(jsonPath("$.data.profileId").value("standard-sdd"))
+                .andExpect(jsonPath("$.data.score").value(88))
+                .andExpect(jsonPath("$.data.band").value("GOOD"))
+                .andExpect(jsonPath("$.data.threshold").value(80))
+                .andExpect(jsonPath("$.data.dimensions.length()").value(5))
+                .andExpect(jsonPath("$.data.findings.length()").value(2));
+
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE, "DOC-REQ-0001-REQ"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.documentId").value("DOC-REQ-0001-REQ"))
+                .andExpect(jsonPath("$.data.score").value(88));
+
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_QUALITY_GATE_RUNS, "REQ-0001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "triggerMode": "AUTO"
+                                }
+                                """))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.length()").value(3));
+
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_SDD_DOCUMENTS, "REQ-0001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.stages[0].qualityGate.score").value(88))
+                .andExpect(jsonPath("$.data.stages[0].qualityGate.passed").value(true));
     }
 
     @Test

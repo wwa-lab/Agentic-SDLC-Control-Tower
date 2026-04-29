@@ -617,6 +617,27 @@ export const useRequirementStore = defineStore('requirement', () => {
     }
   }
 
+  function buildMockQualityGate(index: number) {
+    const scores = [94, 86, 72, 91, 84, 76, 88, 93, 79, 82];
+    const score = scores[index % scores.length] ?? 82;
+    const band = score >= 90 ? 'EXCELLENT' : score >= 80 ? 'GOOD' : 'BLOCKED';
+    const label = band === 'EXCELLENT' ? 'Excellent' : band === 'GOOD' ? 'Good' : 'Blocked';
+    const passed = score >= 80;
+    return {
+      score,
+      band,
+      label,
+      passed,
+      threshold: 80,
+      summary: passed
+        ? `${label} quality. This document meets the minimum score for business review.`
+        : 'Score is below 80. This document must be improved before downstream approval.',
+      findings: passed
+        ? ['Traceability and acceptance coverage are present.', 'No blocking completeness gaps detected.']
+        : ['Acceptance criteria are incomplete or not testable enough.', 'Traceability to source evidence needs strengthening.'],
+    } as const;
+  }
+
   function buildMockControlPlane(id: string) {
     const now = '2026-04-27T09:00:00Z';
     sourceReferences.value = [
@@ -667,6 +688,7 @@ export const useRequirementStore = defineStore('requirement', () => {
         status: index < 3 ? 'IN_REVIEW' : 'MISSING',
         freshnessStatus: index < 3 ? 'FRESH' : 'MISSING_DOCUMENT',
         missing: index >= 3,
+        qualityGate: index < 3 ? buildMockQualityGate(index) : null,
       })),
     };
     documentReviews.value = [];
@@ -792,6 +814,38 @@ export const useRequirementStore = defineStore('requirement', () => {
       selectedDocumentError.value = toUserMessage(error, 'Failed to load Markdown from GitHub.');
     } finally {
       selectedDocumentLoading.value = false;
+    }
+  }
+
+  async function runDocumentQualityGate(documentId: string) {
+    const document = sddDocuments.value?.stages.find(stage => stage.id === documentId);
+    if (!document) return;
+    skillMessage.value = null;
+
+    try {
+      const gate = USE_MOCK
+        ? buildMockQualityGate(sddDocuments.value?.stages.findIndex(stage => stage.id === documentId) ?? 0)
+        : await requirementApi.runDocumentQualityGate(documentId, activeProfile.value.id);
+
+      if (sddDocuments.value) {
+        sddDocuments.value = {
+          ...sddDocuments.value,
+          stages: sddDocuments.value.stages.map(stage => stage.id === documentId ? { ...stage, qualityGate: gate } : stage),
+        };
+      }
+      if (selectedDocument.value?.document.id === documentId) {
+        selectedDocument.value = {
+          ...selectedDocument.value,
+          document: {
+            ...selectedDocument.value.document,
+            qualityGate: gate,
+          },
+        };
+      }
+      skillMessage.value = `Document quality gate completed: ${gate.score} ${gate.label ?? gate.band}.`;
+    } catch (error) {
+      console.error('Failed to run document quality gate:', error);
+      skillMessage.value = toUserMessage(error, 'Failed to run document quality gate.');
     }
   }
 
@@ -1391,6 +1445,7 @@ export const useRequirementStore = defineStore('requirement', () => {
     refreshSourceReference,
     refreshGitHubDocuments,
     openSddDocument,
+    runDocumentQualityGate,
     createReview,
     requestAgentRun,
     generateStories,

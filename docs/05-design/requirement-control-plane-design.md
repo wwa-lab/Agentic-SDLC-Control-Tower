@@ -386,6 +386,108 @@ requirement-normalizer, functional-spec, technical-design, program-spec,
 file-spec, ut-plan, test-scaffold, spec-review, dds-review, code-review
 ```
 
+## Document Quality Gate Design
+
+Document Quality Gate is an enhancement to the review surface. The UI triggers
+or displays results from the `document-quality-gate` skill; it does not score
+documents locally except for trivial display fallback states.
+
+### User Experience
+
+- SDD document rows show quality state: Not Scored, Scoring, Excellent, Good,
+  Blocked, or Stale.
+- Each row exposes `Run Gate` or `Re-run Gate` when the caller has permission.
+- Business Review disables approval when the latest quality gate result is
+  missing, stale, or blocked by policy.
+- Blocked results show score, rubric version, blocking findings, and suggested
+  remediation.
+- Good results may continue but show advisory findings.
+- Excellent results continue without blocking findings.
+
+### Skill and Rubric Model
+
+The platform exposes one quality gate skill entry point and delegates rubric
+selection to policy:
+
+```text
+document-quality-gate(documentId, profileId, sddType)
+```
+
+Rubric resolution:
+
+```text
+Platform default rubric
+-> Workspace / Team override
+-> Project override
+-> Profile rubric
+-> SDD document type rubric
+-> Tier / entry-path refinements
+```
+
+This keeps UI and gating logic stable while allowing Standard SDD, IBM i, and
+future profiles to score documents differently.
+
+### Multi-Team and Multi-Project Behavior
+
+Quality gate policy is scoped. A team may inherit platform defaults or override
+thresholds, required checks, and weights. Projects may apply stricter overrides
+or approved exceptions. Runs may be created for:
+
+- One selected document
+- One requirement and its indexed SDD documents
+- One project snapshot
+- One release scope
+- All stale documents visible to the caller
+
+Each run stores workspace/team/project/requirement/document scope so audit and
+dashboards can compare scores across teams and projects without mixing policy
+contexts.
+
+### Permission Model
+
+| Action | Default role |
+|---|---|
+| Run business-facing document gate | BA, PM |
+| Run technical document gate | Tech Lead, Architect |
+| Run test document gate | QA Lead |
+| Run implementation-facing assigned gate | Engineer |
+| Run any gate or batch scope | Platform Admin |
+| Modify skill code | Platform Admin, Skill Maintainer |
+| Modify rubric template | Platform Admin, Process Owner |
+| Modify team policy override | Team Admin, Delivery Owner |
+| Approve project exception | Delivery Owner |
+
+Ordinary users can trigger scoring but cannot lower standards. Any bypass,
+threshold change, or project exception requires a reason and audit record.
+
+### Data Shape
+
+```ts
+interface DocumentQualityGateResult {
+  readonly executionId: string;
+  readonly documentId: string;
+  readonly profileId: string;
+  readonly sddType: string;
+  readonly score: number;
+  readonly band: 'EXCELLENT' | 'GOOD' | 'BLOCKED';
+  readonly passed: boolean;
+  readonly threshold: number;
+  readonly rubricVersion: string;
+  readonly commitSha: string;
+  readonly blobSha: string;
+  readonly dimensions: readonly QualityDimensionScore[];
+  readonly findings: readonly QualityFinding[];
+  readonly triggeredBy: string;
+  readonly triggeredMode: 'MANUAL' | 'AUTOMATION';
+  readonly scoredAt: string;
+  readonly stale: boolean;
+}
+```
+
+Quality results are valid only for the matching `commitSha` and `blobSha`.
+When the document changes, the result becomes stale and approval is blocked
+until the gate is rerun.
+
 ## Error and Empty States
 
 | Section | Empty | Error |
