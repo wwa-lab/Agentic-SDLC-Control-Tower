@@ -176,6 +176,29 @@ NEO4J_DATABASE=neo4j
   - `DIFY_DATASET_LOOKUP_LIMIT`
   - `DIFY_SEGMENT_PAGE_SIZE`
   - `DIFY_INDEXING_TECHNIQUE`
+- Requirement Control Plane defaults to local stubs for Jira, Confluence, and
+  GitHub-backed SDD Markdown. To run the full local E2E against real providers,
+  set:
+
+```bash
+REQUIREMENT_CP_JIRA_PROVIDER=real
+JIRA_BASE_URL=https://your-domain.atlassian.net
+JIRA_EMAIL=you@example.com
+JIRA_API_TOKEN=...
+
+REQUIREMENT_CP_CONFLUENCE_PROVIDER=real
+CONFLUENCE_BASE_URL=https://your-domain.atlassian.net/wiki
+CONFLUENCE_EMAIL=you@example.com
+CONFLUENCE_API_TOKEN=...
+
+REQUIREMENT_CP_GITHUB_PROVIDER=real
+GITHUB_TOKEN=github_pat_or_app_token
+```
+
+  With these set, Requirement source refresh reads Jira issue metadata and
+  Confluence page metadata, while SDD document refresh lists and fetches
+  Markdown from the configured GitHub SDD repository/branch. Without them, the
+  local stub path remains deterministic for offline E2E testing.
 - Prod database settings:
   - `ORACLE_HOST`
   - `ORACLE_PORT`

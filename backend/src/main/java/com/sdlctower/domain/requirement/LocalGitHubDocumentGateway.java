@@ -4,9 +4,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(name = "app.requirement-control-plane.github.provider", havingValue = "stub", matchIfMissing = true)
 public class LocalGitHubDocumentGateway implements GitHubDocumentGateway {
     @Override
     public GitHubDocumentContent fetchMarkdown(String repoFullName, String branchOrRef, String path, String commitSha, String blobSha, String githubUrl, String title) {

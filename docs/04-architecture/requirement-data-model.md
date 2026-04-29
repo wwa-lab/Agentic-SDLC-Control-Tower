@@ -302,7 +302,32 @@ graph LR
 
 - The requirement service database stores requirement records, import task state, previews, and source metadata.
 - Raw uploaded binaries are not stored in the requirement tables. File bodies are expected to live in the configured KB/provider system, with this service retaining task ids, dataset ids, and provider document references.
+- Jira, Confluence, and GitHub credentials are not stored in requirement tables.
+  They are supplied through environment-backed application configuration.
+- Requirement source references store only stable metadata and freshness fields:
+  source type, external id, title, URL, source updated timestamp, fetch
+  timestamp, freshness status, and error message.
+- SDD document indexes store GitHub document coordinates and version binding:
+  repo full name, branch/ref, path, latest commit SHA, latest blob SHA, GitHub
+  URL, indexed status, and indexed timestamp.
 - Current local development still uses H2, but the schema is shaped to stay compatible with the Phase B production target database profile.
+
+### 5.5 Control Plane Provider Configuration
+
+Requirement Control Plane integrations are configured outside the schema:
+
+| Property / Env | Purpose | Default |
+|---|---|---|
+| `app.requirement-control-plane.jira.provider` / `REQUIREMENT_CP_JIRA_PROVIDER` | Selects `stub` or `real` Jira source provider | `stub` |
+| `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_BEARER_TOKEN` | Jira connection details for metadata refresh | empty |
+| `app.requirement-control-plane.confluence.provider` / `REQUIREMENT_CP_CONFLUENCE_PROVIDER` | Selects `stub` or `real` Confluence source provider | `stub` |
+| `CONFLUENCE_BASE_URL`, `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN`, `CONFLUENCE_BEARER_TOKEN` | Confluence connection details for metadata refresh | empty |
+| `app.requirement-control-plane.github.provider` / `REQUIREMENT_CP_GITHUB_PROVIDER` | Selects `stub` or `real` GitHub SDD document gateway | `stub` |
+| `GITHUB_TOKEN`, `GITHUB_API_BASE_URL` | GitHub REST API access for SDD Markdown indexing/fetching | `https://api.github.com` base URL |
+
+The data model intentionally stores provider results, not provider secrets. If a
+provider refresh fails, the source row remains linked to the requirement with
+`freshness_status = 'ERROR'` and the provider message in `error_message`.
 
 ---
 

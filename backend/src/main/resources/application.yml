@@ -18,6 +18,23 @@ app:
       dataset-lookup-limit: ${DIFY_DATASET_LOOKUP_LIMIT:100}
       segment-page-size: ${DIFY_SEGMENT_PAGE_SIZE:100}
       indexing-technique: ${DIFY_INDEXING_TECHNIQUE:high_quality}
+  requirement-control-plane:
+    jira:
+      provider: ${REQUIREMENT_CP_JIRA_PROVIDER:stub}
+      base-url: ${JIRA_BASE_URL:}
+      email: ${JIRA_EMAIL:}
+      api-token: ${JIRA_API_TOKEN:}
+      bearer-token: ${JIRA_BEARER_TOKEN:}
+    confluence:
+      provider: ${REQUIREMENT_CP_CONFLUENCE_PROVIDER:stub}
+      base-url: ${CONFLUENCE_BASE_URL:}
+      email: ${CONFLUENCE_EMAIL:}
+      api-token: ${CONFLUENCE_API_TOKEN:}
+      bearer-token: ${CONFLUENCE_BEARER_TOKEN:}
+    github:
+      provider: ${REQUIREMENT_CP_GITHUB_PROVIDER:stub}
+      api-base-url: ${GITHUB_API_BASE_URL:https://api.github.com}
+      token: ${GITHUB_TOKEN:}
   requirement-knowledge-graph:
     provider: ${GRAPH_PROVIDER:profile}
     manifest-root: ${GRAPH_MANIFEST_ROOT:}

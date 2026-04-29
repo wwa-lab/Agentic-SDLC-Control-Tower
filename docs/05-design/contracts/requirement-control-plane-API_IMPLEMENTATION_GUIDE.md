@@ -54,6 +54,32 @@ Response: `SourceReferenceDto`
 
 Refreshes metadata from the source provider. Response: `SourceReferenceDto`.
 
+Provider behavior:
+
+- `JIRA` with `REQUIREMENT_CP_JIRA_PROVIDER=real` reads the Jira issue via
+  `/rest/api/3/issue/{issueKey}?fields=summary,updated,status` and updates
+  `externalId`, `title`, `sourceUpdatedAt`, `fetchedAt`, and freshness state.
+- `CONFLUENCE` with `REQUIREMENT_CP_CONFLUENCE_PROVIDER=real` reads the
+  Confluence page via `/rest/api/content/{pageId}?expand=version` and updates
+  `externalId`, `title`, `sourceUpdatedAt`, and `fetchedAt`.
+- Stub mode preserves the local deterministic path and marks the source fresh.
+- Provider errors do not fail the whole requirement page; the source reference
+  is persisted with `freshnessStatus = "ERROR"` and `errorMessage`.
+
+Real-provider configuration:
+
+```bash
+REQUIREMENT_CP_JIRA_PROVIDER=real
+JIRA_BASE_URL=https://your-domain.atlassian.net
+JIRA_EMAIL=you@example.com
+JIRA_API_TOKEN=...
+
+REQUIREMENT_CP_CONFLUENCE_PROVIDER=real
+CONFLUENCE_BASE_URL=https://your-domain.atlassian.net/wiki
+CONFLUENCE_EMAIL=you@example.com
+CONFLUENCE_API_TOKEN=...
+```
+
 ## 2. SDD Documents
 
 ### GET `/api/v1/requirements/{requirementId}/sdd-documents?profileId={profileId}`
@@ -92,6 +118,21 @@ template, and `unresolvedTokens` lists tokens that could not yet be resolved.
 Profiles may produce multiple documents for one stage. The target response
 shape is `stageGroups[].documents[]`. The flattened `stages[]` array may remain
 temporarily for backward-compatible UI rendering.
+
+`POST /sdd-documents/refresh` uses the configured GitHub document gateway:
+
+- `REQUIREMENT_CP_GITHUB_PROVIDER=stub` uses deterministic local Markdown
+  metadata for offline E2E.
+- `REQUIREMENT_CP_GITHUB_PROVIDER=real` lists `docs/**/*.md` from
+  `workspace.sddRepoFullName` at `workspace.workingBranch`, resolves the branch
+  head commit SHA, records each matching file's blob SHA, and fetches Markdown
+  through the GitHub contents API.
+
+```bash
+REQUIREMENT_CP_GITHUB_PROVIDER=real
+GITHUB_TOKEN=github_pat_or_app_token
+GITHUB_API_BASE_URL=https://api.github.com
+```
 
 ```json
 {
@@ -380,7 +421,12 @@ Returns sources, docs, reviews, agent runs, artifact links, and freshness states
 ## Testing Contracts
 
 - Source reference creation handles provider success and provider error.
+- Source refresh supports stub mode and real Jira / Confluence metadata refresh.
+- Source refresh persists `ERROR` freshness on provider failure without breaking
+  requirement detail rendering.
 - GitHub document fetch returns markdown and SHA metadata.
+- GitHub document refresh supports stub mode and real GitHub `docs/**/*.md`
+  indexing.
 - Review creation rejects missing commit/blob.
 - Agent manifest includes sources, profile, documents, and output target.
 - Callback updates run status and artifact links.

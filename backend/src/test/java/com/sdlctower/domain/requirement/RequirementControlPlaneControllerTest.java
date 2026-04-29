@@ -2,6 +2,7 @@ package com.sdlctower.domain.requirement;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -57,6 +58,16 @@ class RequirementControlPlaneControllerTest {
                 .andExpect(jsonPath("$.data.stages[7].path").value("docs/08-reviews/spec/{br-id}.md"))
                 .andExpect(jsonPath("$.data.stages[8].path").value("docs/08-reviews/dds/{file}.md"))
                 .andExpect(jsonPath("$.data.stages[9].path").value("docs/08-reviews/code/{program}.md"));
+    }
+
+    @Test
+    void sourceRefreshUsesConfiguredProviderAndPreservesSourceMetadata() throws Exception {
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_SOURCE_REFRESH, "SRC-REQ-0001-JIRA"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sourceType").value("JIRA"))
+                .andExpect(jsonPath("$.data.externalId").value("AUTH-123"))
+                .andExpect(jsonPath("$.data.freshnessStatus").value("FRESH"))
+                .andExpect(jsonPath("$.data.errorMessage", nullValue()));
     }
 
     @Test

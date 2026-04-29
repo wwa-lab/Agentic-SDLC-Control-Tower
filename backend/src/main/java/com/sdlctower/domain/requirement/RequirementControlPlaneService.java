@@ -62,6 +62,7 @@ public class RequirementControlPlaneService {
     private final RequirementArtifactLinkRepository artifactLinkRepository;
     private final PipelineProfileService pipelineProfileService;
     private final GitHubDocumentGateway githubDocumentGateway;
+    private final List<RequirementSourceProvider> sourceProviders;
     private final ObjectMapper objectMapper;
 
     public RequirementControlPlaneService(
@@ -74,6 +75,7 @@ public class RequirementControlPlaneService {
             RequirementArtifactLinkRepository artifactLinkRepository,
             PipelineProfileService pipelineProfileService,
             GitHubDocumentGateway githubDocumentGateway,
+            List<RequirementSourceProvider> sourceProviders,
             ObjectMapper objectMapper
     ) {
         this.requirementRepository = requirementRepository;
@@ -85,6 +87,7 @@ public class RequirementControlPlaneService {
         this.artifactLinkRepository = artifactLinkRepository;
         this.pipelineProfileService = pipelineProfileService;
         this.githubDocumentGateway = githubDocumentGateway;
+        this.sourceProviders = sourceProviders;
         this.objectMapper = objectMapper;
     }
 
@@ -120,8 +123,23 @@ public class RequirementControlPlaneService {
     public SourceReferenceDto refreshSource(String sourceId) {
         RequirementSourceReferenceEntity source = sourceRepository.findById(sourceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Source reference not found: " + sourceId));
-        Instant now = Instant.now();
-        source.refresh(now, now, "FRESH", null);
+        RequirementSourceProvider provider = sourceProviders.stream()
+                .filter(candidate -> candidate.supports(source.getSourceType()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No source provider supports " + source.getSourceType()));
+        try {
+            RequirementSourceProvider.SourceMetadata metadata = provider.refresh(source);
+            source.refreshMetadata(
+                    metadata.externalId(),
+                    metadata.title(),
+                    firstNonNull(metadata.sourceUpdatedAt(), Instant.now()),
+                    firstNonNull(metadata.fetchedAt(), Instant.now()),
+                    firstNonBlank(metadata.freshnessStatus(), "FRESH"),
+                    metadata.errorMessage()
+            );
+        } catch (RuntimeException exception) {
+            source.refresh(source.getSourceUpdatedAt(), Instant.now(), "ERROR", exception.getMessage());
+        }
         return toSourceDto(sourceRepository.save(source));
     }
 
@@ -621,6 +639,10 @@ public class RequirementControlPlaneService {
 
     private static String firstNonBlank(String value, String fallback) {
         return isBlank(value) ? fallback : value.trim();
+    }
+
+    private static <T> T firstNonNull(T value, T fallback) {
+        return value == null ? fallback : value;
     }
 
     private static boolean isBlank(String value) {

@@ -219,6 +219,57 @@ platform/github/
 
 Use explicit bean names if simple class names collide with other slices.
 
+### Provider Configuration
+
+Requirement Control Plane uses provider interfaces so local demos can stay
+deterministic while integration environments can hit real systems.
+
+Default local mode:
+
+```text
+app.requirement-control-plane.jira.provider=stub
+app.requirement-control-plane.confluence.provider=stub
+app.requirement-control-plane.github.provider=stub
+```
+
+Real-provider mode is enabled per integration:
+
+```text
+REQUIREMENT_CP_JIRA_PROVIDER=real
+JIRA_BASE_URL=https://your-domain.atlassian.net
+JIRA_EMAIL=you@example.com
+JIRA_API_TOKEN=...
+
+REQUIREMENT_CP_CONFLUENCE_PROVIDER=real
+CONFLUENCE_BASE_URL=https://your-domain.atlassian.net/wiki
+CONFLUENCE_EMAIL=you@example.com
+CONFLUENCE_API_TOKEN=...
+
+REQUIREMENT_CP_GITHUB_PROVIDER=real
+GITHUB_TOKEN=...
+```
+
+The Jira and Confluence source providers refresh metadata only. They do not
+edit Jira issues, mutate Confluence pages, or import entire external work items
+into the requirement database. The current metadata contract is:
+
+```text
+sourceType, externalId, title, url, sourceUpdatedAt, fetchedAt,
+freshnessStatus, errorMessage
+```
+
+The GitHub document gateway has two implementations:
+
+- `LocalGitHubDocumentGateway` (`provider=stub`) returns deterministic Markdown,
+  commit SHA, blob SHA, and GitHub URLs for local E2E.
+- `RealGitHubDocumentGateway` (`provider=real`) lists Markdown files from the
+  configured SDD repo branch under `docs/` and fetches file content through the
+  GitHub REST API.
+
+Provider failures are stored on the affected source reference as
+`freshnessStatus=ERROR` plus `errorMessage`, so the rest of the detail page can
+continue rendering.
+
 ## Route and API Client
 
 Existing route `/requirements/:requirementId` stays. The new sections load

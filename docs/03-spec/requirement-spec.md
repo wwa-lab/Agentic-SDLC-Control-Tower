@@ -431,10 +431,15 @@ stateDiagram-v2
 - **Audit Management**: AI skill invocations and status transitions feed into the platform audit system
 - **Incident Management**: Incidents link back to requirements via SDLC chain traceability
 
-**External systems (future, out of scope for V1):**
-- Jira: Bi-directional requirement sync
+**External systems:**
+- Jira: Read-only source metadata refresh is supported through the Requirement
+  Control Plane provider; bi-directional requirement sync remains out of scope.
 - Azure DevOps: Work item import/export
-- Confluence: Business context import
+- Confluence: Read-only page metadata refresh is supported through the
+  Requirement Control Plane provider; full page import/edit remains out of
+  scope.
+- GitHub: SDD Markdown indexing and content fetch are supported through a
+  configurable stub/real document gateway.
 
 **APIs / interfaces:**
 - `GET /api/v1/requirements` — list requirements with filtering/sorting (inbound, new)
@@ -451,7 +456,33 @@ stateDiagram-v2
 - `POST /api/v1/requirements/imports` — start async KB-backed file import (inbound, new)
 - `GET /api/v1/requirements/imports/:importId` — poll KB-backed import status (inbound, new)
 - `POST /api/v1/requirements` — create a requirement from a confirmed draft (inbound, new)
+- `GET /api/v1/requirements/:id/sources` — list linked Jira, Confluence, GitHub, KB, upload, or URL source references (inbound, new)
+- `POST /api/v1/requirements/:id/sources` — link a source reference to the requirement (inbound, new)
+- `POST /api/v1/requirements/sources/:sourceId/refresh` — refresh provider metadata for Jira / Confluence / stub sources (inbound, new)
+- `GET /api/v1/requirements/:id/sdd-documents` — list profile-driven SDD document stages and indexed GitHub documents (inbound, new)
+- `POST /api/v1/requirements/:id/sdd-documents/refresh` — index SDD Markdown from the configured GitHub gateway (inbound, new)
+- `GET /api/v1/requirements/documents/:documentId` — fetch Markdown content, commit SHA, blob SHA, and GitHub URL (inbound, new)
+- `POST /api/v1/requirements/documents/:documentId/reviews` — create a version-bound business review (inbound, new)
+- `POST /api/v1/requirements/:id/agent-runs` — create a CLI-agent manifest (inbound, new)
+- `POST /api/v1/requirements/agent-runs/:executionId/callback` — accept CLI callback and artifact links (inbound, new)
+- `GET /api/v1/requirements/:id/traceability` — return sources, SDD docs, reviews, agent runs, artifact links, and freshness (inbound, new)
 - Existing patterns: `ApiResponse<T>` envelope (verified: `shared/dto/ApiResponse.java`), `fetchJson<T>` client (verified: `shared/api/client.ts`)
+
+**Requirement Control Plane provider configuration:**
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `REQUIREMENT_CP_JIRA_PROVIDER` | `stub` or `real` Jira source metadata refresh | `stub` |
+| `JIRA_BASE_URL` | Jira site base URL for real provider | empty |
+| `JIRA_EMAIL` / `JIRA_API_TOKEN` | Jira Cloud basic auth credentials | empty |
+| `JIRA_BEARER_TOKEN` | Alternative Jira bearer token | empty |
+| `REQUIREMENT_CP_CONFLUENCE_PROVIDER` | `stub` or `real` Confluence source metadata refresh | `stub` |
+| `CONFLUENCE_BASE_URL` | Confluence site base URL for real provider | empty |
+| `CONFLUENCE_EMAIL` / `CONFLUENCE_API_TOKEN` | Confluence basic auth credentials | empty |
+| `CONFLUENCE_BEARER_TOKEN` | Alternative Confluence bearer token | empty |
+| `REQUIREMENT_CP_GITHUB_PROVIDER` | `stub` or `real` GitHub SDD document gateway | `stub` |
+| `GITHUB_TOKEN` | Token for GitHub REST API document listing/fetching | empty |
+| `GITHUB_API_BASE_URL` | GitHub API base URL, overridable for enterprise | `https://api.github.com` |
 
 > Full endpoint contracts with JSON examples are in [requirement-API_IMPLEMENTATION_GUIDE.md](../05-design/contracts/requirement-API_IMPLEMENTATION_GUIDE.md).
 
@@ -495,7 +526,9 @@ stateDiagram-v2
 - **Spec full editor**: Spec generation produces a summary; full spec editing is V2
 - **Advanced search / full-text search**: Basic filtering only in V1
 - **Requirement versioning / diff**: V1 shows current state only; version history is V2
-- **Import from external systems**: No Jira/ADO import in V1
+- **Import from external systems**: No Jira/ADO full import in V1; Jira and
+  Confluence are supported as read-only source references for metadata and
+  freshness.
 - **Mobile-optimized views**: Desktop-first in V1
 - **Bulk operations**: No multi-select or bulk status changes in V1
 - **Custom kanban columns**: V1 uses fixed status-based columns

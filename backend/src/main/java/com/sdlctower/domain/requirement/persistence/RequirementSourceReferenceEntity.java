@@ -57,6 +57,16 @@ public class RequirementSourceReferenceEntity {
         this.errorMessage = errorMessage;
     }
 
+    public void refreshMetadata(String externalId, String title, Instant sourceUpdatedAt, Instant fetchedAt, String freshnessStatus, String errorMessage) {
+        if (externalId != null && !externalId.isBlank()) {
+            this.externalId = externalId;
+        }
+        if (title != null && !title.isBlank()) {
+            this.title = title;
+        }
+        refresh(sourceUpdatedAt, fetchedAt, freshnessStatus, errorMessage);
+    }
+
     public String getId() { return id; }
     public String getRequirementId() { return requirementId; }
     public String getSourceType() { return sourceType; }
