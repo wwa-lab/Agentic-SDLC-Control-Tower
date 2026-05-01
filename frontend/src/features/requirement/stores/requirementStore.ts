@@ -885,15 +885,19 @@ export const useRequirementStore = defineStore('requirement', () => {
   async function requestAgentRun(skillKey: string, targetStage: string) {
     if (!selectedRequirementId.value) return;
     if (USE_MOCK) {
+      const executionId = `EXEC-${Date.now()}`;
       agentRuns.value = [
         {
-          executionId: `EXEC-${Date.now()}`,
+          executionId,
           requirementId: selectedRequirementId.value,
           profileId: activeProfile.value.id,
           skillKey,
           targetStage,
           status: 'MANIFEST_READY',
           manifest: {},
+          command: `/${skillKey} please help me complete ${targetStage} for ${selectedRequirementId.value}.`,
+          callbackUrl: `http://localhost:8080/api/v1/requirements/agent-runs/${executionId}/callback`,
+          stageEvents: [],
           outputSummary: null,
           errorMessage: null,
           artifactLinks: [],
@@ -906,7 +910,50 @@ export const useRequirementStore = defineStore('requirement', () => {
     }
     const run = await requirementApi.createAgentRun(selectedRequirementId.value, { skillKey, targetStage, profileId: activeProfile.value.id });
     agentRuns.value = [run, ...agentRuns.value];
-    skillMessage.value = `Agent manifest ready: ${run.executionId}`;
+    skillMessage.value = `CLI prompt ready: ${run.executionId}`;
+  }
+
+  async function confirmAgentRunMerge(executionId: string, prUrl: string) {
+    const run = agentRuns.value.find(candidate => candidate.executionId === executionId && candidate.profileId === activeProfile.value.id);
+    if (!run || !selectedRequirementId.value) return;
+    const stageId = run.targetStage ?? sddDocuments.value?.stages[0]?.sddType ?? 'spec';
+    const stageLabel = sddDocuments.value?.stages.find(stage => stage.sddType === stageId)?.stageLabel ?? stageId;
+    if (USE_MOCK) {
+      const event = {
+        id: `STAGE-${Date.now()}`,
+        executionId: run.executionId,
+        requirementId: run.requirementId,
+        profileId: run.profileId,
+        stageId,
+        stageLabel,
+        state: 'DONE',
+        message: 'GitHub PR merge confirmed manually.',
+        outputPath: prUrl,
+        errorMessage: null,
+        createdAt: new Date().toISOString(),
+      };
+      agentRuns.value = agentRuns.value.map(candidate => candidate.executionId === run.executionId
+        ? {
+          ...candidate,
+          status: 'COMPLETED',
+          stageEvents: [...(candidate.stageEvents ?? []), event],
+          updatedAt: new Date().toISOString(),
+        }
+        : candidate);
+      skillMessage.value = `GitHub merge confirmed for ${stageLabel}.`;
+      return;
+    }
+
+    await requirementApi.createAgentStageEvent(run.executionId, {
+      stageId,
+      stageLabel,
+      state: 'DONE',
+      message: 'GitHub PR merge confirmed manually.',
+      outputPath: prUrl,
+    });
+    await requirementApi.refreshSddDocuments(selectedRequirementId.value, activeProfile.value.id);
+    await fetchControlPlane(selectedRequirementId.value);
+    skillMessage.value = `GitHub merge confirmed for ${stageLabel}.`;
   }
 
   async function generateStories(requirementId: string) {
@@ -1448,6 +1495,7 @@ export const useRequirementStore = defineStore('requirement', () => {
     runDocumentQualityGate,
     createReview,
     requestAgentRun,
+    confirmAgentRunMerge,
     generateStories,
     generateSpec,
     runAnalysis,

@@ -3,7 +3,7 @@ import type { PipelineProfile } from '../types/requirement';
 export const STANDARD_SDD_PROFILE: PipelineProfile = {
   id: 'standard-sdd',
   name: 'Standard SDD',
-  description: 'Spec-Driven Development pipeline with 11-node chain, 2 skills, per-layer traceability',
+  description: 'Spec-Driven Development pipeline with 11-node chain, staged CLI skills, per-layer traceability',
   chainNodes: [
     { id: 'req', label: 'Requirement', artifactType: 'requirement', isExecutionHub: false },
     { id: 'story', label: 'User Story', artifactType: 'user-story', isExecutionHub: false },
@@ -20,6 +20,7 @@ export const STANDARD_SDD_PROFILE: PipelineProfile = {
   skills: [
     { skillId: 'req-to-user-story', label: 'CLI Story Derivation', triggerPoint: 'requirement' },
     { skillId: 'user-story-to-spec', label: 'CLI Spec Generation', triggerPoint: 'user-story' },
+    { skillId: 'architecture-blueprint', label: 'Architecture Blueprint', triggerPoint: 'architecture' },
     { skillId: 'document-quality-gate', label: 'Document Quality Gate', triggerPoint: 'sdd-document' },
   ],
   skillDocumentContracts: [
@@ -38,6 +39,14 @@ export const STANDARD_SDD_PROFILE: PipelineProfile = {
       inputDocuments: ['requirement', 'user-story'],
       outputDocuments: ['spec'],
       dependsOnSkills: ['req-to-user-story'],
+    },
+    {
+      skillId: 'architecture-blueprint',
+      label: 'Architecture Blueprint',
+      description: 'Creates the architecture document from the approved or reviewed spec.',
+      inputDocuments: ['spec'],
+      outputDocuments: ['architecture'],
+      dependsOnSkills: ['user-story-to-spec'],
     },
     {
       skillId: 'document-quality-gate',

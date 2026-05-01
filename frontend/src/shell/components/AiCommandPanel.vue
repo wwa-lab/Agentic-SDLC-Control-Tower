@@ -215,4 +215,10 @@ function onCommand(event: Event) {
   box-shadow: 0 0 10px rgba(137, 206, 255, 0.1);
   pointer-events: none;
 }
+
+@media (max-width: 1180px) {
+  .ai-command-panel {
+    display: none;
+  }
+}
 </style>

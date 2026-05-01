@@ -1,6 +1,7 @@
 import { fetchJson, postFormData, postJson } from '@/shared/api/client';
 import type {
   PipelineProfile,
+  AgentStageEvent,
   AgentRun,
   DocumentReview,
   DocumentQualityGate,
@@ -215,6 +216,13 @@ export const requirementApi = {
 
   async getAgentRun(executionId: string): Promise<AgentRun> {
     return fetchJson<AgentRun>(`/requirements/agent-runs/${executionId}`);
+  },
+
+  async createAgentStageEvent(
+    executionId: string,
+    request: { stageId: string; stageLabel?: string; state: string; message?: string; outputPath?: string; errorMessage?: string }
+  ): Promise<AgentStageEvent> {
+    return postJson<AgentStageEvent>(`/requirements/agent-runs/${executionId}/stage-events`, request);
   },
 
   async getTraceability(requirementId: string, profileId?: string): Promise<RequirementTraceability> {

@@ -371,11 +371,28 @@ export interface AgentRun {
   readonly targetStage: string | null;
   readonly status: 'MANIFEST_READY' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'STALE_CONTEXT' | string;
   readonly manifest: Record<string, unknown>;
+  readonly command?: string | null;
+  readonly callbackUrl?: string | null;
+  readonly stageEvents?: ReadonlyArray<AgentStageEvent>;
   readonly outputSummary: string | null;
   readonly errorMessage: string | null;
   readonly artifactLinks: ReadonlyArray<ArtifactLink>;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+export interface AgentStageEvent {
+  readonly id: string;
+  readonly executionId: string;
+  readonly requirementId: string;
+  readonly profileId: string;
+  readonly stageId: string;
+  readonly stageLabel: string | null;
+  readonly state: string;
+  readonly message: string | null;
+  readonly outputPath: string | null;
+  readonly errorMessage: string | null;
+  readonly createdAt: string;
 }
 
 export interface FreshnessItem {

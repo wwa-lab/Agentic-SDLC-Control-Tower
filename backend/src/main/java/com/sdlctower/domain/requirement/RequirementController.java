@@ -8,6 +8,8 @@ import com.sdlctower.domain.requirement.dto.InvokeSkillRequestDto;
 import com.sdlctower.domain.requirement.dto.RawRequirementInputDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunCallbackRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentStageEventDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentStageEventRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateAgentRunRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateDocumentReviewRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateQualityGateRunRequestDto;
@@ -269,6 +271,14 @@ public class RequirementController {
             @RequestBody AgentRunCallbackRequestDto body
     ) {
         return ApiResponse.ok(controlPlaneService.applyAgentRunCallback(executionId, body));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_AGENT_RUN_STAGE_EVENTS)
+    public ApiResponse<AgentStageEventDto> createAgentRunStageEvent(
+            @PathVariable String executionId,
+            @RequestBody AgentStageEventRequestDto body
+    ) {
+        return ApiResponse.ok(controlPlaneService.recordAgentStageEvent(executionId, body));
     }
 
     @GetMapping(ApiConstants.REQUIREMENT_TRACEABILITY)

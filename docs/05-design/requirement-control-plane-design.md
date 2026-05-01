@@ -28,6 +28,7 @@ components/
   SourceReferenceCard.vue
   SddDocumentsPanel.vue
   SddDocumentStageRow.vue
+  CliAgentRunPanel.vue
   GitHubMarkdownViewer.vue
   BusinessReviewPanel.vue
   ReviewHistoryList.vue
@@ -59,6 +60,8 @@ control-plane sections:
 ```text
 Requirement Header
 Profile Strip
+Next Action
+Compact Workflow Map
 Source References
 SDD Documents
 Selected Document Viewer
@@ -170,11 +173,68 @@ The UI must require `text` when `decision` is `REJECTED`, and the backend should
 reject empty rejection reasons as a validation error. Approval can remain a
 single-click action.
 
-Agent run history is not a primary BA-facing panel. Control Tower should keep
-agent run manifests and artifact links for audit, callback handling, and
-developer diagnostics, but Requirement Detail should surface the business
-outcome through SDD document freshness, review status, traceability, and GitHub
-links instead of showing a standalone CLI execution log.
+Agent run history is not a primary BA-facing review panel. Control Tower should
+keep agent run manifests, stage events, and artifact links for audit, callback
+handling, and developer diagnostics. In the short-term manual model,
+Requirement Detail may show a compact `Next Action` panel for Developers and
+Technical Leads. That panel prepares a copyable CLI prompt and exposes manual
+PR merge confirmation; execution IDs, raw statuses, and stage events stay in a
+collapsed run history. BA-facing outcome remains SDD document freshness, review
+status, traceability, and GitHub links.
+
+### CliAgentRunPanel
+
+Props:
+
+```ts
+interface Props {
+  profile: SddProfile | null;
+  documents: SddDocumentIndex | null;
+  agentRuns: readonly AgentRun[];
+  isLoading: boolean;
+}
+```
+
+Events:
+
+```ts
+prepareRun(skillKey: string, targetStage: string): void
+refreshStatus(): void
+```
+
+The panel derives the next missing/current profile stage from SDD documents and
+filters run history to the active profile. It requests an agent manifest,
+displays the returned CLI prompt, and hides recent stage events under run
+history. The prompt should start with the real skill invocation, such as
+`/skill-name please help me complete Program Spec for REQ-1024.` Callback URLs
+and run IDs are platform metadata and should stay out of the default copy text.
+The browser does not execute a terminal process.
+
+`Next Action` uses risk-first priority, so it does not push users to generate
+downstream documents while upstream facts are stale:
+
+```text
+changed source -> refresh source
+changed document after review -> open latest document for review
+in-flight CLI run -> copy prompt / confirm PR merge
+missing document -> prepare CLI prompt
+merged PR -> refresh GitHub documents
+ready -> refresh or continue business review
+```
+
+This panel should appear before the profile workflow map. The workflow map is
+supporting context; the primary job of the page is to tell the user the one
+thing to do next and why. On requirement detail, the workflow map should default
+to compact mode and keep the full chain and document catalog inside collapsed
+details, so first-time users see current stage rather than configuration.
+
+When the next action is document review, `Open Document` should select the
+document and scroll to Business Review. The click should move the user directly
+from diagnosis to review work, not merely change hidden state lower on the page.
+
+After the developer completes CLI review cycles and merges the GitHub PR, the
+panel exposes `Confirm Merge`. It opens an inline GitHub PR URL field and records
+a `DONE` stage event with that URL, then refreshes the SDD document index.
 
 ## Backend Structure
 
@@ -204,9 +264,12 @@ domain/requirement/agent/
   RequirementAgentRunService.java
   AgentRunEntity.java
   AgentRunRepository.java
+  AgentStageEventEntity.java
+  AgentStageEventRepository.java
   ArtifactLinkEntity.java
   ArtifactLinkRepository.java
   AgentRunDto.java
+  AgentStageEventDto.java
   AgentRunCallbackDto.java
 
 domain/requirement/freshness/

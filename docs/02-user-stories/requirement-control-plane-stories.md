@@ -147,8 +147,12 @@ from the correct sources.
 - Given I request an agent run, then Control Tower creates an execution manifest.
 - Given the manifest is created, then it includes sources, profile, repo, branch,
   document references, output expectations, and constraints.
+- Given the manifest is created, then the UI shows a copyable CLI prompt for
+  the selected stage and skill.
 - Given an agent run is requested, then UI status is Queued or Awaiting CLI
   Execution rather than pretending the UI generated the artifact.
+- Given an upstream source or reviewed document is stale, then Next Action shows
+  the stale-item action before any downstream generation action.
 
 ### Story RCP-09: Agent callback updates status and artifacts
 
@@ -161,6 +165,10 @@ Control Tower, so that business users can see the outcome.
 
 - Given an agent completes successfully, then Requirement detail shows completed
   status, summary, GitHub PR URL, and artifact links.
+- Given the CLI wrapper reports stage events, then Requirement detail shows the
+  latest stage and event history.
+- Given I have merged the generated PR, then I can enter the GitHub PR URL in
+  Requirement detail and mark the stage as merged.
 - Given an agent fails, then Requirement detail shows failure reason and any
   partial artifacts.
 - Given an agent reports a stale context error, then the UI shows which manifest

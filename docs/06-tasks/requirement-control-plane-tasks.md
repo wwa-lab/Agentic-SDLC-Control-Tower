@@ -106,12 +106,18 @@ profiles, agent manifests, and freshness.
 
 - [x] Add `POST /requirements/{id}/agent-runs`
 - [x] Add `GET /requirements/agent-runs/{executionId}`
+- [x] Add `POST /requirements/agent-runs/{executionId}/stage-events`
 - [x] Add `POST /requirements/agent-runs/{executionId}/callback`
 - [x] Generate manifest with requirement, profile, repo, branch/ref, source
       references, document references, output expectations, and constraints
 - [x] Include source repo, central SDD workspace branch, and Knowledge Base
       graph context in the manifest
 - [x] Pin source/document versions at manifest creation time
+- [x] Return a copyable slash-skill CLI prompt from the run response
+- [x] Add `CliAgentRunPanel.vue` as the short-term developer/technical lead
+      handoff surface
+- [x] Keep `scripts/control-tower-run` as an optional wrapper that posts
+      RUNNING/DONE/FAILED stage events and a final callback
 - [x] Keep agent run status available for backend audit and developer
       diagnostics instead of showing a standalone CLI Runs card in the
       BA-facing Requirement Detail page

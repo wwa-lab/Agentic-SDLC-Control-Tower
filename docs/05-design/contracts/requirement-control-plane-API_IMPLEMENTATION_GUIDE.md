@@ -310,7 +310,9 @@ Returns review history for all documents linked to a requirement.
 
 ### POST `/api/v1/requirements/{requirementId}/agent-runs`
 
-Creates a manifest for CLI-agent execution.
+Creates a manifest for CLI-agent execution. In the short-term manual model, the
+response also returns a copyable CLI prompt and callback URL. The frontend
+shows the prompt; it does not run the CLI process directly.
 
 Request:
 
@@ -333,6 +335,8 @@ Response:
     "profileId": "ibm-i",
     "skillKey": "ibm-i-workflow-orchestrator",
     "status": "MANIFEST_READY",
+    "command": "/ibm-i-workflow-orchestrator please help me complete Program Spec for REQ-1024.",
+    "callbackUrl": "http://localhost:8080/api/v1/requirements/agent-runs/exec-1024/callback",
     "manifest": {
       "executionId": "exec-1024",
       "requirementId": "REQ-1024",
@@ -365,6 +369,7 @@ Response:
       }
     },
     "artifactLinks": [],
+    "stageEvents": [],
     "createdAt": "2026-04-27T09:12:00Z"
   },
   "error": null
@@ -373,7 +378,73 @@ Response:
 
 ### GET `/api/v1/requirements/agent-runs/{executionId}`
 
-Returns current run status.
+Returns current run status, artifacts, stage events, and the derived command.
+
+### POST `/api/v1/requirements/agent-runs/{executionId}/stage-events`
+
+Records precise stage progress from the local CLI wrapper or agent.
+The frontend also uses this endpoint for short-term manual merge confirmation
+after a developer has merged the generated PR in GitHub.
+
+Request:
+
+```json
+{
+  "profileId": "ibm-i",
+  "skillKey": "ibm-i-workflow-orchestrator",
+  "targetStage": "program-spec",
+  "status": "RUNNING",
+  "message": "Generating Program Spec from Functional Spec context.",
+  "artifactUri": null,
+  "metadata": {
+    "runner": "scripts/control-tower-run"
+  },
+  "occurredAt": "2026-04-27T09:14:00Z"
+}
+```
+
+Manual merge confirmation request:
+
+```json
+{
+  "stageId": "program-spec",
+  "stageLabel": "Program Spec",
+  "state": "DONE",
+  "message": "GitHub PR merge confirmed manually.",
+  "outputPath": "https://github.com/wwa-lab/payment-app/pull/42",
+  "errorMessage": null
+}
+```
+
+Response:
+
+```json
+{
+  "data": {
+    "executionId": "exec-1024",
+    "status": "RUNNING",
+    "stageEvents": [
+      {
+        "id": "evt-001",
+        "executionId": "exec-1024",
+        "requirementId": "REQ-1024",
+        "profileId": "ibm-i",
+        "skillKey": "ibm-i-workflow-orchestrator",
+        "targetStage": "program-spec",
+        "status": "RUNNING",
+        "message": "Generating Program Spec from Functional Spec context.",
+        "artifactUri": null,
+        "metadata": {
+          "runner": "scripts/control-tower-run"
+        },
+        "occurredAt": "2026-04-27T09:14:00Z",
+        "createdAt": "2026-04-27T09:14:01Z"
+      }
+    ]
+  },
+  "error": null
+}
+```
 
 ### POST `/api/v1/requirements/agent-runs/{executionId}/callback`
 
@@ -385,6 +456,16 @@ Agent callback request:
   "outputSummary": {
     "message": "Program Spec generated and PR opened."
   },
+  "stageEvents": [
+    {
+      "profileId": "ibm-i",
+      "skillKey": "ibm-i-workflow-orchestrator",
+      "targetStage": "program-spec",
+      "status": "DONE",
+      "message": "Program Spec generated.",
+      "artifactUri": "https://github.com/wwa-lab/payment-app/pull/42"
+    }
+  ],
   "artifactLinks": [
     {
       "artifactType": "GITHUB_PR",
@@ -429,5 +510,8 @@ Returns sources, docs, reviews, agent runs, artifact links, and freshness states
   indexing.
 - Review creation rejects missing commit/blob.
 - Agent manifest includes sources, profile, documents, and output target.
+- Agent run response includes manual CLI prompt and callback URL.
+- Stage-event callback records current stage progress and updates coarse run
+  status.
 - Callback updates run status and artifact links.
 - Traceability includes stale review when blob changes.

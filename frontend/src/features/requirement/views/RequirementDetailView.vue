@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed } from 'vue';
+import { onMounted, onUnmounted, computed, nextTick, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useRequirementStore } from '../stores/requirementStore';
 import RequirementHeaderCard from '../components/RequirementHeaderCard.vue';
 import LinkedStoriesCard from '../components/LinkedStoriesCard.vue';
 import ProfileSelector from '../components/ProfileSelector.vue';
+import ProfileWorkflowMap from '../components/ProfileWorkflowMap.vue';
 import EntryPathSelector from '../components/EntryPathSelector.vue';
 import SpecTierSelector from '../components/SpecTierSelector.vue';
 import SourceReferencesPanel from '../components/SourceReferencesPanel.vue';
 import SddDocumentsPanel from '../components/SddDocumentsPanel.vue';
+import CliAgentRunPanel from '../components/CliAgentRunPanel.vue';
 import BusinessReviewPanel from '../components/BusinessReviewPanel.vue';
 import RequirementTraceabilityPanel from '../components/RequirementTraceabilityPanel.vue';
 import { ArrowLeft, Workflow } from 'lucide-vue-next';
@@ -16,6 +18,7 @@ import { ArrowLeft, Workflow } from 'lucide-vue-next';
 const route = useRoute();
 const router = useRouter();
 const store = useRequirementStore();
+const businessReviewAnchor = ref<HTMLElement | null>(null);
 
 const requirementId = computed(() => route.params.requirementId as string);
 
@@ -44,6 +47,18 @@ function openSkillFlow() {
 
 function handleRetryControlPlane() {
   store.fetchControlPlane(requirementId.value);
+}
+
+function scrollToBusinessReview() {
+  businessReviewAnchor.value?.scrollIntoView({ block: 'start', inline: 'nearest' });
+}
+
+async function handleOpenDocumentFromNextAction(documentId: string) {
+  await store.openSddDocument(documentId);
+  await nextTick();
+  scrollToBusinessReview();
+  window.requestAnimationFrame(scrollToBusinessReview);
+  window.setTimeout(scrollToBusinessReview, 120);
 }
 </script>
 
@@ -105,6 +120,31 @@ function handleRetryControlPlane() {
         <p v-if="store.skillMessage" class="profile-skill-message">{{ store.skillMessage }}</p>
       </details>
 
+      <CliAgentRunPanel
+        class="grid-control-wide"
+        :profile="store.activeProfile"
+        :documents="store.sddDocuments"
+        :sources="store.sourceReferences"
+        :agent-runs="store.agentRuns"
+        :is-loading="store.controlPlaneLoading"
+        @prepare-run="store.requestAgentRun"
+        @refresh-status="handleRetryControlPlane"
+        @refresh-source="store.refreshSourceReference"
+        @open-document="handleOpenDocumentFromNextAction"
+        @refresh-documents="store.refreshGitHubDocuments([requirementId])"
+        @confirm-merge="store.confirmAgentRunMerge"
+      />
+
+      <ProfileWorkflowMap
+        class="grid-control-wide"
+        :profile="store.activeProfile"
+        :documents="store.sddDocuments"
+        full-width
+        compact
+        :primary-action-loading="store.githubSyncLoading"
+        @primary-action="store.refreshGitHubDocuments([requirementId])"
+      />
+
       <SourceReferencesPanel
         class="grid-control-wide"
         :sources="store.sourceReferences"
@@ -131,15 +171,17 @@ function handleRetryControlPlane() {
         @retry="handleRetryControlPlane"
       />
 
-      <BusinessReviewPanel
-        :selected-document="store.selectedDocument"
-        :selected-document-id="store.selectedDocumentId"
-        :documents="store.sddDocuments"
-        :reviews="store.documentReviews"
-        :is-loading="store.controlPlaneLoading"
-        @review="store.createReview"
-        @run-quality-gate="store.runDocumentQualityGate"
-      />
+      <div ref="businessReviewAnchor" class="business-review-anchor">
+        <BusinessReviewPanel
+          :selected-document="store.selectedDocument"
+          :selected-document-id="store.selectedDocumentId"
+          :documents="store.sddDocuments"
+          :reviews="store.documentReviews"
+          :is-loading="store.controlPlaneLoading"
+          @review="store.createReview"
+          @run-quality-gate="store.runDocumentQualityGate"
+        />
+      </div>
 
       <RequirementTraceabilityPanel
         :traceability="store.traceability"
@@ -326,8 +368,7 @@ function handleRetryControlPlane() {
 .detail-view :deep(.source-type),
 .detail-view :deep(.source-meta),
 .detail-view :deep(.viewer-meta),
-.detail-view :deep(.run-id),
-.detail-view :deep(.run-status) {
+.detail-view :deep(.run-id) {
   font-size: 0.6875rem;
 }
 
@@ -359,6 +400,11 @@ function handleRetryControlPlane() {
 
 .grid-control-wide {
   grid-column: 1 / -1;
+}
+
+.business-review-anchor {
+  min-width: 0;
+  scroll-margin-top: 18px;
 }
 
 /* Staggered entrance */

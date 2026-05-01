@@ -109,8 +109,23 @@ generated knowledge graph outputs derived from released SDD baselines.
 
 - UI creates an agent run request and execution manifest.
 - Manifest pins latest resolved source/document versions.
-- Agents run outside the UI and report status through callback APIs.
-- Requirement detail shows recent runs and artifacts.
+- Short-term execution is a manual CLI handoff: Requirement Detail returns a
+  copyable prompt that starts with the real CLI skill command, such as
+  `/skill-name please help me ...`.
+- Agents run outside the UI and report progress through stage-event APIs plus a
+  final callback API.
+- Requirement detail shows the prepared prompt and merge confirmation as the
+  primary action. Execution IDs, raw statuses, stage events, final run status,
+  and artifacts are secondary run-history details.
+- The primary action is prioritized as a single next step: refresh changed
+  sources, review changed documents, continue an in-flight CLI run, generate the
+  next missing document, then refresh GitHub after merge confirmation.
+- When the next step is review, `Open Document` selects the changed document and
+  moves focus to Business Review. Requirement detail shows workflow progress as
+  compact context by default, with the full workflow catalog collapsed.
+- After a developer merges the generated PR, Requirement detail allows manual
+  merge confirmation with a GitHub PR URL. The confirmation is recorded as a
+  stage event and triggers document refresh.
 
 ### F-RCP-FRESHNESS: Freshness and Traceability
 
@@ -222,6 +237,7 @@ RUNNING -> FAILED
 | POST | `/api/v1/projects/{projectId}/quality-gate-runs` | Run quality gates for a project snapshot |
 | POST | `/api/v1/requirements/{id}/agent-runs` | Create agent run manifest |
 | GET | `/api/v1/requirements/agent-runs/{executionId}` | Get agent run status |
+| POST | `/api/v1/requirements/agent-runs/{executionId}/stage-events` | Record CLI stage progress |
 | POST | `/api/v1/requirements/agent-runs/{executionId}/callback` | Agent status/artifact callback |
 | GET | `/api/v1/requirements/{id}/traceability` | Source/doc/review/run traceability |
 

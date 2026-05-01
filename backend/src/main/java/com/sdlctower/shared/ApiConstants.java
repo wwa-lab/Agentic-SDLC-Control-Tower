@@ -45,6 +45,7 @@ public final class ApiConstants {
     public static final String REQUIREMENT_AGENT_RUNS = REQUIREMENT_DETAIL + "/agent-runs";
     public static final String REQUIREMENT_AGENT_RUN_DETAIL = REQUIREMENTS + "/agent-runs/{executionId}";
     public static final String REQUIREMENT_AGENT_RUN_CALLBACK = REQUIREMENT_AGENT_RUN_DETAIL + "/callback";
+    public static final String REQUIREMENT_AGENT_RUN_STAGE_EVENTS = REQUIREMENT_AGENT_RUN_DETAIL + "/stage-events";
     public static final String REQUIREMENT_TRACEABILITY = REQUIREMENT_DETAIL + "/traceability";
     public static final String REQUIREMENT_KNOWLEDGE_GRAPH = REQUIREMENTS + "/knowledge-graph";
     public static final String REQUIREMENT_KNOWLEDGE_GRAPH_NODE = REQUIREMENT_KNOWLEDGE_GRAPH + "/nodes/{nodeId}";

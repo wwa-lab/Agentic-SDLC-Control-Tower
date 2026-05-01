@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunCallbackRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentStageEventDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentStageEventRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.ArtifactLinkDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.ArtifactLinkRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateAgentRunRequestDto;
@@ -25,6 +27,8 @@ import com.sdlctower.domain.requirement.persistence.ProjectSddWorkspaceEntity;
 import com.sdlctower.domain.requirement.persistence.ProjectSddWorkspaceRepository;
 import com.sdlctower.domain.requirement.persistence.RequirementAgentRunEntity;
 import com.sdlctower.domain.requirement.persistence.RequirementAgentRunRepository;
+import com.sdlctower.domain.requirement.persistence.RequirementAgentStageEventEntity;
+import com.sdlctower.domain.requirement.persistence.RequirementAgentStageEventRepository;
 import com.sdlctower.domain.requirement.persistence.RequirementArtifactLinkEntity;
 import com.sdlctower.domain.requirement.persistence.RequirementArtifactLinkRepository;
 import com.sdlctower.domain.requirement.persistence.RequirementDocumentReviewEntity;
@@ -41,6 +45,7 @@ import com.sdlctower.platform.profile.PipelineDocumentStageDto;
 import com.sdlctower.platform.profile.PipelineProfileDto;
 import com.sdlctower.platform.profile.PipelineProfileService;
 import com.sdlctower.shared.exception.ResourceNotFoundException;
+import com.sdlctower.shared.ApiConstants;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -67,10 +72,12 @@ public class RequirementControlPlaneService {
     private final RequirementDocumentReviewRepository reviewRepository;
     private final RequirementDocumentQualityGateRunRepository qualityGateRepository;
     private final RequirementAgentRunRepository agentRunRepository;
+    private final RequirementAgentStageEventRepository agentStageEventRepository;
     private final RequirementArtifactLinkRepository artifactLinkRepository;
     private final PipelineProfileService pipelineProfileService;
     private final GitHubDocumentGateway githubDocumentGateway;
     private final List<RequirementSourceProvider> sourceProviders;
+    private final RequirementControlPlaneProperties properties;
     private final ObjectMapper objectMapper;
 
     public RequirementControlPlaneService(
@@ -81,10 +88,12 @@ public class RequirementControlPlaneService {
             RequirementDocumentReviewRepository reviewRepository,
             RequirementDocumentQualityGateRunRepository qualityGateRepository,
             RequirementAgentRunRepository agentRunRepository,
+            RequirementAgentStageEventRepository agentStageEventRepository,
             RequirementArtifactLinkRepository artifactLinkRepository,
             PipelineProfileService pipelineProfileService,
             GitHubDocumentGateway githubDocumentGateway,
             List<RequirementSourceProvider> sourceProviders,
+            RequirementControlPlaneProperties properties,
             ObjectMapper objectMapper
     ) {
         this.requirementRepository = requirementRepository;
@@ -94,10 +103,12 @@ public class RequirementControlPlaneService {
         this.reviewRepository = reviewRepository;
         this.qualityGateRepository = qualityGateRepository;
         this.agentRunRepository = agentRunRepository;
+        this.agentStageEventRepository = agentStageEventRepository;
         this.artifactLinkRepository = artifactLinkRepository;
         this.pipelineProfileService = pipelineProfileService;
         this.githubDocumentGateway = githubDocumentGateway;
         this.sourceProviders = sourceProviders;
+        this.properties = properties;
         this.objectMapper = objectMapper;
     }
 
@@ -357,6 +368,10 @@ public class RequirementControlPlaneService {
         String outputSummary = writeJson(request == null ? Map.of() : request.outputSummary());
         run.applyCallback(status, outputSummary, request == null ? null : request.errorMessage(), Instant.now());
         agentRunRepository.save(run);
+        List<AgentStageEventRequestDto> stageEvents = request == null || request.stageEvents() == null ? List.of() : request.stageEvents();
+        for (AgentStageEventRequestDto event : stageEvents) {
+            recordAgentStageEvent(run, event);
+        }
         List<ArtifactLinkRequestDto> links = request == null || request.artifactLinks() == null ? List.of() : request.artifactLinks();
         for (ArtifactLinkRequestDto link : links) {
             artifactLinkRepository.save(RequirementArtifactLinkEntity.create(
@@ -376,6 +391,42 @@ public class RequirementControlPlaneService {
             ));
         }
         return toAgentRunDto(run);
+    }
+
+    @Transactional
+    public AgentStageEventDto recordAgentStageEvent(String executionId, AgentStageEventRequestDto request) {
+        RequirementAgentRunEntity run = agentRunRepository.findById(executionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agent run not found: " + executionId));
+        return toAgentStageEventDto(recordAgentStageEvent(run, request));
+    }
+
+    private RequirementAgentStageEventEntity recordAgentStageEvent(RequirementAgentRunEntity run, AgentStageEventRequestDto request) {
+        String stageId = firstNonBlank(request == null ? null : request.stageId(), run.getTargetStage());
+        String state = normalize(request == null ? null : request.state(), "RUNNING");
+        String runStatus = switch (state) {
+            case "RUNNING", "STARTED" -> "RUNNING";
+            case "DONE", "COMPLETED" -> "COMPLETED";
+            case "FAILED", "ERROR" -> "FAILED";
+            default -> run.getStatus();
+        };
+        if (!runStatus.equals(run.getStatus())) {
+            run.applyCallback(runStatus, run.getOutputSummary(), firstNonBlank(request == null ? null : request.errorMessage(), run.getErrorMessage()), Instant.now());
+            agentRunRepository.save(run);
+        }
+        RequirementAgentStageEventEntity event = RequirementAgentStageEventEntity.create(
+                "STAGE-" + UUID.randomUUID(),
+                run.getExecutionId(),
+                run.getRequirementId(),
+                run.getProfileId(),
+                stageId,
+                firstNonBlank(request == null ? null : request.stageLabel(), labelForStage(run.getProfileId(), stageId)),
+                state,
+                request == null ? null : request.message(),
+                request == null ? null : request.outputPath(),
+                request == null ? null : request.errorMessage(),
+                Instant.now()
+        );
+        return agentStageEventRepository.save(event);
     }
 
     public RequirementTraceabilityDto getTraceability(String requirementId) {
@@ -513,6 +564,16 @@ public class RequirementControlPlaneService {
             items.add(new FreshnessItemDto("REVIEW", review.id(), review.stale() ? "DOCUMENT_CHANGED_AFTER_REVIEW" : "FRESH", review.decision()));
         }
         return items;
+    }
+
+    private String labelForStage(String profileId, String stageId) {
+        if (isBlank(stageId)) return "Workflow stage";
+        PipelineProfileDto profile = pipelineProfileService.getProfile(firstNonBlank(profileId, "standard-sdd"));
+        return profile.documentStages().stream()
+                .filter(stage -> stage.sddType().equals(stageId))
+                .map(PipelineDocumentStageDto::label)
+                .findFirst()
+                .orElse(stageId);
     }
 
     private SddDocumentStageDto toDocumentStageDto(PipelineDocumentStageDto stage, RequirementSddDocumentIndexEntity document) {
@@ -654,7 +715,58 @@ public class RequirementControlPlaneService {
     }
 
     private AgentRunDto toAgentRunDto(RequirementAgentRunEntity run) {
-        return new AgentRunDto(run.getExecutionId(), run.getRequirementId(), run.getProfileId(), run.getSkillKey(), run.getTargetStage(), run.getStatus(), readJson(run.getManifest()), run.getOutputSummary(), run.getErrorMessage(), artifactLinkRepository.findByExecutionIdOrderByCreatedAtAsc(run.getExecutionId()).stream().map(this::toArtifactDto).toList(), run.getCreatedAt(), run.getUpdatedAt());
+        return new AgentRunDto(
+                run.getExecutionId(),
+                run.getRequirementId(),
+                run.getProfileId(),
+                run.getSkillKey(),
+                run.getTargetStage(),
+                run.getStatus(),
+                readJson(run.getManifest()),
+                buildCliCommand(run),
+                buildCallbackUrl(run.getExecutionId()),
+                agentStageEventRepository.findByExecutionIdOrderByCreatedAtAsc(run.getExecutionId()).stream().map(this::toAgentStageEventDto).toList(),
+                run.getOutputSummary(),
+                run.getErrorMessage(),
+                artifactLinkRepository.findByExecutionIdOrderByCreatedAtAsc(run.getExecutionId()).stream().map(this::toArtifactDto).toList(),
+                run.getCreatedAt(),
+                run.getUpdatedAt()
+        );
+    }
+
+    private AgentStageEventDto toAgentStageEventDto(RequirementAgentStageEventEntity event) {
+        return new AgentStageEventDto(
+                event.getId(),
+                event.getExecutionId(),
+                event.getRequirementId(),
+                event.getProfileId(),
+                event.getStageId(),
+                event.getStageLabel(),
+                event.getState(),
+                event.getMessage(),
+                event.getOutputPath(),
+                event.getErrorMessage(),
+                event.getCreatedAt()
+        );
+    }
+
+    private String buildCliCommand(RequirementAgentRunEntity run) {
+        String stageId = firstNonBlank(run.getTargetStage(), "spec");
+        String stageLabel = labelForStage(run.getProfileId(), stageId);
+        String skillCommand = run.getSkillKey().startsWith("/") ? run.getSkillKey() : "/" + run.getSkillKey();
+        return skillCommand
+                + " please help me complete " + stageLabel
+                + " for " + run.getRequirementId() + ".";
+    }
+
+    private String buildStageEventUrl(String executionId) {
+        return firstNonBlank(properties.getCliRunner().getBackendBaseUrl(), "http://localhost:8080")
+                + ApiConstants.REQUIREMENT_AGENT_RUN_STAGE_EVENTS.replace("{executionId}", executionId);
+    }
+
+    private String buildCallbackUrl(String executionId) {
+        return firstNonBlank(properties.getCliRunner().getBackendBaseUrl(), "http://localhost:8080")
+                + ApiConstants.REQUIREMENT_AGENT_RUN_CALLBACK.replace("{executionId}", executionId);
     }
 
     private ArtifactLinkDto toArtifactDto(RequirementArtifactLinkEntity artifact) {

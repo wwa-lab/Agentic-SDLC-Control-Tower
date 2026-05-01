@@ -303,6 +303,10 @@ Users with permission must be able to request an agent run from Requirement
 detail. The request creates an execution manifest, not an immediate synchronous
 generation inside the UI.
 
+For the short-term rollout, the request must return a copyable slash-skill CLI
+prompt so teams can run the agent from a terminal without learning a full
+orchestration system.
+
 ### REQ-RCP-51: Execution manifest
 
 The manifest must include execution ID, project ID, requirement ID, active SDD
@@ -321,10 +325,17 @@ those versions.
 Agents must be able to report execution status, output summary, GitHub PR URL,
 artifact links, and errors back to Control Tower.
 
+### REQ-RCP-53A: Agent stage event callback
+
+The CLI wrapper or agent must be able to report precise stage events such as
+STARTED, RUNNING, DONE, and FAILED. Control Tower must persist those events and
+use them to update the coarse agent run status.
+
 ### REQ-RCP-54: Execution visibility
 
 Requirement detail must show recent agent runs, their statuses, requested skill,
-source context, output artifacts, and failure reason when applicable.
+source context, prepared prompt, stage events, output artifacts, and failure
+reason when applicable.
 
 ## 8. Freshness and Traceability Requirements
 

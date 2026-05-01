@@ -137,6 +137,9 @@ public final class RequirementControlPlaneDtos {
             String targetStage,
             String status,
             Map<String, Object> manifest,
+            String command,
+            String callbackUrl,
+            List<AgentStageEventDto> stageEvents,
             String outputSummary,
             String errorMessage,
             List<ArtifactLinkDto> artifactLinks,
@@ -147,8 +150,32 @@ public final class RequirementControlPlaneDtos {
     public record AgentRunCallbackRequestDto(
             String status,
             Map<String, Object> outputSummary,
+            List<AgentStageEventRequestDto> stageEvents,
             List<ArtifactLinkRequestDto> artifactLinks,
             String errorMessage
+    ) {}
+
+    public record AgentStageEventRequestDto(
+            String stageId,
+            String stageLabel,
+            String state,
+            String message,
+            String outputPath,
+            String errorMessage
+    ) {}
+
+    public record AgentStageEventDto(
+            String id,
+            String executionId,
+            String requirementId,
+            String profileId,
+            String stageId,
+            String stageLabel,
+            String state,
+            String message,
+            String outputPath,
+            String errorMessage,
+            Instant createdAt
     ) {}
 
     public record ArtifactLinkRequestDto(

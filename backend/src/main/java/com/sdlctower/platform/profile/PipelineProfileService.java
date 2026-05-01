@@ -29,6 +29,7 @@ public class PipelineProfileService {
             List.of(
                     new PipelineSkillBindingDto("req-to-user-story", "CLI Story Derivation", "requirement"),
                     new PipelineSkillBindingDto("user-story-to-spec", "CLI Spec Generation", "user-story"),
+                    new PipelineSkillBindingDto("architecture-blueprint", "Architecture Blueprint", "architecture"),
                     new PipelineSkillBindingDto("document-quality-gate", "Document Quality Gate", "sdd-document")
             ),
             List.of(

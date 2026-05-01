@@ -158,4 +158,33 @@ const navigate = (path: string) => {
   align-items: center;
   gap: 8px;
 }
+
+@media (max-width: 900px) {
+  .primary-nav {
+    width: 64px;
+  }
+
+  .logo {
+    padding: 20px 0;
+    justify-content: center;
+    font-size: 0.875rem;
+  }
+
+  .logo-accent,
+  .nav-label,
+  .system-status span {
+    display: none;
+  }
+
+  .nav-item {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .nav-footer {
+    padding: 16px 0;
+    display: flex;
+    justify-content: center;
+  }
+}
 </style>
