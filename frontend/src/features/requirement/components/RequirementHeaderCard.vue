@@ -77,7 +77,8 @@ function formatDate(iso: string): string {
 
 .header-top {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -89,11 +90,14 @@ function formatDate(iso: string): string {
 }
 
 .req-title {
+  flex: 1 1 260px;
+  min-width: min(100%, 220px);
   font-family: var(--font-ui);
   font-size: 1rem;
   font-weight: 600;
   color: var(--color-on-surface);
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .header-badges {
@@ -115,9 +119,9 @@ function formatDate(iso: string): string {
 }
 
 .header-meta {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 12px 18px;
 }
 
 .meta-item {
@@ -138,5 +142,6 @@ function formatDate(iso: string): string {
   font-family: var(--font-ui);
   font-size: 0.75rem;
   color: var(--color-on-surface);
+  overflow-wrap: anywhere;
 }
 </style>

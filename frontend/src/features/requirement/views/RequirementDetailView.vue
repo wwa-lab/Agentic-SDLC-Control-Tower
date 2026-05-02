@@ -209,7 +209,9 @@ async function handleOpenDocumentFromNextAction(documentId: string) {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0 24px 24px;
+  width: 100%;
+  min-width: 0;
+  padding: 0 clamp(12px, 2vw, 24px) 24px;
 }
 
 .back-btn {
@@ -231,12 +233,18 @@ async function handleOpenDocumentFromNextAction(documentId: string) {
 
 .detail-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-width: 0;
   gap: 16px;
+}
+
+.detail-grid > * {
+  min-width: 0;
 }
 
 .profile-strip {
   grid-column: 1 / -1;
+  min-width: 0;
   padding: 14px 16px;
   background: var(--color-surface-container-high);
   border: var(--border-ghost);
@@ -403,6 +411,7 @@ async function handleOpenDocumentFromNextAction(documentId: string) {
 }
 
 .business-review-anchor {
+  grid-column: 1 / -1;
   min-width: 0;
   scroll-margin-top: 18px;
 }
@@ -445,5 +454,19 @@ async function handleOpenDocumentFromNextAction(documentId: string) {
 
 @media (max-width: 1024px) {
   .detail-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .detail-view {
+    gap: 12px;
+  }
+
+  .detail-grid {
+    gap: 12px;
+  }
+
+  .detail-view :deep(.requirement-card) {
+    padding: 14px;
+  }
 }
 </style>

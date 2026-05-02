@@ -4,6 +4,7 @@ import type { DocumentQualityFinding, DocumentReview, SddDocumentContent, SddDoc
 import RequirementCard from './RequirementCard.vue';
 import ReviewHistoryList from './ReviewHistoryList.vue';
 import DocumentQualityBadge from './DocumentQualityBadge.vue';
+import FreshnessChip from './FreshnessChip.vue';
 
 const props = defineProps<{
   selectedDocument: SddDocumentContent | null;
@@ -150,9 +151,14 @@ function findingText(finding: string | DocumentQualityFinding) {
       </div>
 
       <div v-if="currentDocument" class="review-target">
-        <span class="target-label">Selected Document</span>
-        <strong>{{ currentDocument.title }}</strong>
-        <span class="target-meta">{{ currentDocument.path ?? currentDocument.stageLabel }}</span>
+        <div class="review-target-head">
+          <div>
+            <span class="target-label">Selected Document</span>
+            <strong>{{ currentDocument.title }}</strong>
+            <span class="target-meta">{{ currentDocument.path ?? currentDocument.stageLabel }}</span>
+          </div>
+          <FreshnessChip :status="currentDocument.freshnessStatus" />
+        </div>
         <div v-if="qualityGate" class="quality-gate" :class="{ 'quality-gate--blocked': !qualityGate.passed }">
           <div class="quality-gate-head">
             <span class="target-label">Document Quality Gate</span>
@@ -191,7 +197,8 @@ function findingText(finding: string | DocumentQualityFinding) {
         </div>
       </div>
       <div v-else class="review-target review-target--empty">
-        Select an SDD document to choose the version for review.
+        <strong>No document selected</strong>
+        <span>Select an SDD document to choose the version for review.</span>
       </div>
 
       <div v-if="markdownPreview" class="review-preview">
@@ -297,6 +304,25 @@ function findingText(finding: string | DocumentQualityFinding) {
   color: var(--color-on-surface-variant);
   font-size: 0.75rem;
 }
+.review-target--empty strong {
+  color: var(--color-on-surface);
+  font-size: 0.8125rem;
+}
+.review-target--empty span {
+  margin-top: 2px;
+}
+.review-target-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.review-target-head > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .target-label {
   font-family: var(--font-ui);
   font-size: 0.5625rem;
@@ -307,14 +333,15 @@ function findingText(finding: string | DocumentQualityFinding) {
 .review-target strong {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   color: var(--color-on-surface);
   font-size: 0.8125rem;
 }
 .target-meta {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   color: var(--color-on-surface-variant);
   font-family: var(--font-tech);
   font-size: 0.625rem;

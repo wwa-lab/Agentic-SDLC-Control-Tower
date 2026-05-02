@@ -94,6 +94,7 @@ defineEmits<{ openDocument: [documentId: string]; retry: []; refreshDocuments: [
 .documents-panel {
   display: grid;
   grid-template-columns: minmax(340px, 0.9fr) minmax(380px, 1.1fr);
+  min-width: 0;
   gap: 12px;
   align-items: stretch;
 }
@@ -103,6 +104,7 @@ defineEmits<{ openDocument: [documentId: string]; retry: []; refreshDocuments: [
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
   padding: 9px 10px;
   border: var(--border-ghost);
   border-radius: var(--radius-sm);
@@ -216,5 +218,12 @@ defineEmits<{ openDocument: [documentId: string]; retry: []; refreshDocuments: [
 }
 @media (max-width: 720px) {
   .workspace-context { grid-template-columns: 1fr; }
+  .documents-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .sync-btn {
+    width: 100%;
+  }
 }
 </style>

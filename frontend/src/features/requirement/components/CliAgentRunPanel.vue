@@ -58,6 +58,8 @@ const selectedSkill = computed(() => {
     ?? null;
 });
 
+const reviewBlockerLabel = computed(() => missingDocument.value?.stageLabel ?? 'the next stage');
+
 function stageDisplayName(stageId?: string | null) {
   if (!stageId) return targetStageLabel.value;
   return props.documents?.stages.find(stage => stage.sddType === stageId)?.stageLabel
@@ -196,6 +198,12 @@ function confirmMerge() {
         <p>{{ nextAction.description }}</p>
       </div>
 
+      <div v-if="nextAction.kind === 'review-document' && staleDocument" class="action-context">
+        <span>Review Target</span>
+        <strong>{{ staleDocument.title }}</strong>
+        <small>Blocks {{ reviewBlockerLabel }}</small>
+      </div>
+
       <div class="action-buttons">
         <button
           class="primary-btn"
@@ -294,7 +302,38 @@ function confirmMerge() {
   line-height: 1.5;
 }
 
+.action-context {
+  grid-column: 1;
+  min-width: min(100%, 260px);
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 202, 40, 0.28);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 202, 40, 0.08);
+}
+
+.action-context span,
+.action-context small {
+  display: block;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.action-context strong {
+  display: block;
+  margin: 4px 0;
+  color: var(--color-on-surface);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .action-buttons {
+  grid-column: 2;
+  grid-row: 1 / span 2;
   display: flex;
   align-items: flex-end;
   flex-direction: column;
@@ -412,7 +451,14 @@ function confirmMerge() {
   }
 
   .action-buttons {
+    grid-column: auto;
+    grid-row: auto;
     align-items: stretch;
+  }
+
+  .action-context {
+    grid-column: auto;
+    min-width: 0;
   }
 }
 </style>

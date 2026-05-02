@@ -43,16 +43,23 @@ const shellUiStore = useShellUiStore();
 
 <style scoped>
 .page-header {
-  padding: 24px;
+  min-width: 0;
+  padding: 24px clamp(12px, 2vw, 24px);
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  gap: 16px;
+}
+
+.title-section {
+  min-width: 0;
 }
 
 .page-title {
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
 }
 
 .breadcrumb-row {
@@ -75,6 +82,24 @@ const shellUiStore = useShellUiStore();
 
 .action-section {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .action-section {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 </style>

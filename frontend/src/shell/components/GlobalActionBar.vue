@@ -39,6 +39,7 @@ const { currentFontScale, cycleFontScale } = useFontScale();
 
 <style scoped>
 .global-action-bar {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -154,5 +155,41 @@ const { currentFontScale, cycleFontScale } = useFontScale();
 
 .theme-toggle.dark .toggle-thumb {
   transform: translateX(24px);
+}
+
+@media (max-width: 720px) {
+  .global-action-bar {
+    gap: 4px;
+    padding-right: 12px;
+  }
+
+  .font-scale-btn {
+    min-width: 38px;
+    width: 38px;
+    padding: 0;
+  }
+
+  .font-scale-label,
+  .font-scale-value {
+    display: none;
+  }
+
+  .icon-btn {
+    padding: 5px;
+  }
+
+  .theme-toggle {
+    width: 42px;
+  }
+
+  .theme-toggle.dark .toggle-thumb {
+    transform: translateX(18px);
+  }
+}
+
+@media (max-width: 520px) {
+  .global-action-bar .icon-btn[title="Audit / History"] {
+    display: none;
+  }
 }
 </style>

@@ -67,7 +67,8 @@ onMounted(() => {
 }
 
 .main-stack {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -75,15 +76,19 @@ onMounted(() => {
 }
 
 .top-bar {
+  min-width: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: var(--border-ghost);
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .content-scroll {
   flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -92,5 +97,6 @@ onMounted(() => {
 
 .page-container {
   flex: 1;
+  min-width: 0;
 }
 </style>
