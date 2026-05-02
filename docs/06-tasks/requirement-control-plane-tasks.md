@@ -89,7 +89,7 @@ profiles, agent manifests, and freshness.
 ## Phase 5: Profile-Driven Stage Rendering
 
 - [x] Extend frontend profile model with document stage definitions
-- [x] Update Standard Java profile stages and path patterns
+- [x] Update Standard SDD profile stages and path patterns
 - [x] Rewrite IBM i profile based on `build-agent-skill` workflow:
       Requirement Normalizer, Functional Spec, Technical Design, Program Spec,
       File Spec, UT Plan, Test Scaffold, Spec Review, DDS Review, Code Review
@@ -100,6 +100,9 @@ profiles, agent manifests, and freshness.
       skill outputs, skill dependencies, and document dependencies
 - [x] Expand IBM i Skill & Document Flow from orchestrator-only to all 16
       `build-agent-skill` skills with flow-only source/code/report artifacts
+- [x] Resync IBM i Skill & Document Flow with current upstream `.claude/ibm-i-*`
+      folders: remove non-existent IBM i skill bindings and expose updated
+      V2.2 DDS/File Spec and V2.6 Program Spec descriptions
 - [x] Add Skill & Document Flow entry points from Requirement list and detail
 
 ## Phase 6: Agent Run Manifest
@@ -119,8 +122,8 @@ profiles, agent manifests, and freshness.
 - [x] Keep `scripts/control-tower-run` as an optional wrapper that posts
       RUNNING/DONE/FAILED stage events and a final callback
 - [x] Keep agent run status available for backend audit and developer
-      diagnostics instead of showing a standalone CLI Runs card in the
-      BA-facing Requirement Detail page
+      diagnostics without showing run history in the default BA-facing
+      Requirement Detail page
 - [x] Store artifact links from callbacks
 
 ## Phase 7: Freshness and Traceability
@@ -161,7 +164,7 @@ profiles, agent manifests, and freshness.
 - [x] Backend controller tests for all new endpoints
 - [x] Frontend store tests for source refs, document viewer, reviews, and agent
       runs
-- [x] UI smoke test for Requirement detail with Standard Java profile
+- [x] UI smoke test for Requirement detail with Standard SDD profile
 - [x] UI smoke test for Requirement detail with IBM i profile
 - [x] Verify GitHub fetch section-level failure does not break page
 - [x] Verify review decision is tied to commit/blob metadata
@@ -235,6 +238,21 @@ profiles, agent manifests, and freshness.
       and preserving project/team audit scope.
 - [ ] Add tests that unauthorized users cannot trigger restricted gates or
       modify skill/rubric policy.
+
+## Phase 13: Standard SDD Skill Sync
+
+- [x] Sync Standard SDD skill bindings to the current `.claude/skills` folders:
+      `req-to-user-story`, `user-story-to-spec`, `spec-to-architecture`,
+      `architecture-review`, `architecture-to-design`, `design-to-tasks`,
+      `tasks-to-code`, `tasks-to-implementation`,
+      `review-code-against-design`, and `review-doc-quality`.
+- [x] Keep Data Flow, Data Model, and API Implementation Guide as supporting
+      artifacts in the document dependency map instead of peer nodes in the
+      main Chain.
+- [x] Resolve Standard SDD path patterns to the repository conventions:
+      `{slug}-requirements.md`, `{slug}-stories.md`, `{slug}-spec.md`,
+      `{slug}-architecture.md`, `{slug}-design.md`,
+      `{slug}-API_IMPLEMENTATION_GUIDE.md`, and `{slug}-tasks.md`.
 
 ## Rollout Notes
 

@@ -20,6 +20,7 @@ slice with the platform design principles in `CLAUDE.md`.
 - `docs/04-architecture/requirement-architecture.md`
 - `docs/04-architecture/requirement-data-model.md`
 - `docs/05-design/requirement-design.md`
+- Standard SDD skill family: `.claude/skills`
 - IBM i skill family: `wwa-lab/build-agent-skill`
 
 ## 1. Scope
@@ -36,7 +37,7 @@ Requirement Control Plane covers:
 - GitHub `docs/` document discovery and rendering
 - Business comments, approvals, and change requests bound to Git commit/blob
   versions
-- Profile-driven SDD document chain rendering for Standard Java and IBM i
+- Profile-driven SDD document chain rendering for Standard SDD and IBM i
 - CLI-agent execution manifest creation for long-running SDD production work
 - Artifact links to GitHub documents, PRs, review reports, and generated outputs
 - Requirement-to-source-to-document traceability
@@ -254,11 +255,19 @@ Requirement detail must show review history grouped by document and version.
 Requirement Management must render document stages from the active SDD profile,
 not from a hardcoded Java-only chain.
 
-### REQ-RCP-41: Standard Java profile
+### REQ-RCP-41: Standard SDD profile
 
-The Standard Java profile must support Requirement, User Story, Spec,
-Architecture, Design, Tasks, Code, and Test document stages with the existing SDD
-folder conventions.
+The Standard SDD profile must support a main Chain of Requirement, User Story,
+Spec, Architecture, Design, Tasks, Code, and Review stages. Data Flow and Data
+Model are Architecture supporting artifacts, and API Implementation Guide is a
+Design supporting artifact; they must remain visible in document and dependency
+maps but must not be rendered as peer stages in the main Chain.
+
+The Standard SDD Skill & Document Flow must mirror the real `.claude/skills`
+folders: `req-to-user-story`, `user-story-to-spec`, `spec-to-architecture`,
+`architecture-review`, `architecture-to-design`, `design-to-tasks`,
+`tasks-to-code`, `tasks-to-implementation`, `review-code-against-design`, and
+`review-doc-quality`.
 
 ### REQ-RCP-42: IBM i profile
 
@@ -267,8 +276,9 @@ Technical Design, Program Spec, File Spec, UT Plan, Test Scaffold, Spec Review,
 DDS Review, and Code Review stages. It must support BR-xx continuity, L1/L2/L3
 tiering, fast-path enhancement work, program chain, and file chain concepts.
 Its Skill & Document Flow must expose the full `wwa-lab/build-agent-skill`
-family as individual skills, including analyzer, generator, reviewer, precheck,
-and workflow-orchestrator skills.
+family as 16 individual skills, including analyzer, generator, reviewer,
+precheck, and workflow-orchestrator skills. The profile must not show IBM i
+skill entries that do not exist in the upstream `.claude/ibm-i-*` skill folders.
 
 ### REQ-RCP-43: Profile-owned document paths
 
@@ -286,14 +296,17 @@ an agent run, but must not execute repo-aware skills synchronously.
 Requirement Management must provide a profile-driven page that shows each
 skill's input documents, output documents, upstream skill dependencies, and
 document-to-document dependencies. The page must derive this map from the active
-SDD profile so Standard Java, IBM i, and future legacy profiles can expose their
+SDD profile so Standard SDD, IBM i, and future legacy profiles can expose their
 own workflow without hardcoded UI chains.
 
 The dependency map may include source and generated artifacts that are not
 Requirement Detail SDD stages, such as raw Jira input, existing RPGLE/CLLE
 source, DDS source, generated code, compile precheck reports, and workflow
-routing manifests. These flow artifacts must not pollute the GitHub SDD
-Documents panel.
+routing manifests. It may also include Standard SDD supporting artifacts such as
+Data Flow, Data Model, API Implementation Guide, code changes, tests, and review
+reports. These flow artifacts must not pollute the main Chain or the GitHub SDD
+Documents panel unless the active profile explicitly marks them as reviewable SDD
+documents.
 
 ## 7. Agent Execution Requirements
 

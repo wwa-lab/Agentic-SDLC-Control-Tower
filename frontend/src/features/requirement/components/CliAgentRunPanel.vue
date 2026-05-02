@@ -47,20 +47,30 @@ const targetStageLabel = computed(() => {
 
 const selectedSkill = computed(() => {
   const stageId = targetStage.value;
+  const producerContract = props.profile.skillDocumentContracts?.find(contract => contract.outputDocuments.includes(stageId));
+  if (producerContract) {
+    const producerSkill = props.profile.skills.find(skill => skill.skillId === producerContract.skillId);
+    if (producerSkill) return producerSkill;
+  }
   return props.profile.skills.find(skill => skill.triggerPoint === stageId)
     ?? props.profile.skills.find(skill => skill.skillId.includes(stageId))
     ?? props.profile.skills.find(skill => skill.triggerPoint === 'any-stage')
-    ?? (props.profile.id === 'standard-sdd' && stageId === 'architecture'
-      ? { skillId: 'architecture-blueprint', label: 'Architecture Blueprint', triggerPoint: 'architecture' }
-      : null)
     ?? null;
 });
+
+function stageDisplayName(stageId?: string | null) {
+  if (!stageId) return targetStageLabel.value;
+  return props.documents?.stages.find(stage => stage.sddType === stageId)?.stageLabel
+    ?? props.profile.documentStages.find(stage => stage.sddType === stageId)?.label
+    ?? props.profile.chainNodes.find(node => node.id === stageId)?.label
+    ?? stageId.split(/[-_]/).filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+}
 
 const nextAction = computed(() => {
   if (isMerged.value) {
     return {
       kind: 'refresh-documents',
-      kicker: 'GitHub Sync',
+      kicker: 'PR Merged',
       title: 'Refresh GitHub Docs',
       description: 'PR merge has been confirmed. Refresh the SDD index so the new documents become visible here.',
       primaryLabel: 'Refresh GitHub',
@@ -69,9 +79,9 @@ const nextAction = computed(() => {
   if (sourceIssue.value) {
     return {
       kind: 'refresh-source',
-      kicker: 'Source Blocker',
-      title: `Refresh ${sourceIssue.value.sourceType} source`,
-      description: `${sourceIssue.value.title} changed or could not be verified. Downstream document work is paused until the source is current.`,
+      kicker: 'Source Changed',
+      title: `${sourceIssue.value.sourceType} source needs refresh`,
+      description: `${sourceIssue.value.title} changed or could not be verified. Refresh it first so downstream documents are based on current facts.`,
       primaryLabel: 'Refresh Source',
     };
   }
@@ -79,19 +89,19 @@ const nextAction = computed(() => {
     const blockedStage = missingDocument.value?.stageLabel ? ` before generating ${missingDocument.value.stageLabel}` : '';
     return {
       kind: 'review-document',
-      kicker: 'Review Blocker',
-      title: `Review latest ${staleDocument.value.stageLabel}`,
-      description: `${staleDocument.value.title} changed after review. Open the latest version, rerun the gate if needed, then review it${blockedStage}.`,
-      primaryLabel: 'Open Document',
+      kicker: 'Review Needed',
+      title: `${staleDocument.value.stageLabel} changed after review`,
+      description: `${staleDocument.value.title} has newer content than the last reviewed version. Review the current version${blockedStage}.`,
+      primaryLabel: 'Review Document',
     };
   }
   if (latestRun.value && cliPrompt.value && !isMerged.value) {
     return {
       kind: 'continue-run',
       kicker: 'CLI Handoff',
-      title: `Continue ${latestRun.value.targetStage ?? targetStageLabel.value}`,
+      title: `Continue ${stageDisplayName(latestRun.value.targetStage)}`,
       description: 'Copy this prompt into your CLI. After the PR is merged, confirm it here with the GitHub PR URL.',
-      primaryLabel: copied.value ? 'Copied' : 'Copy Prompt',
+      primaryLabel: copied.value ? 'Copied' : 'Copy CLI Prompt',
     };
   }
   if (missingDocument.value) {
@@ -100,7 +110,7 @@ const nextAction = computed(() => {
       kicker: 'CLI Handoff',
       title: `Generate ${missingDocument.value.stageLabel}`,
       description: selectedSkill.value
-        ? 'No upstream blockers detected. Prepare a short prompt for the current missing document, then paste it into your CLI.'
+        ? 'No upstream blockers detected. Prepare a short CLI prompt for the missing document.'
         : 'No CLI skill is configured for this stage in the active profile.',
       primaryLabel: 'Prepare Prompt',
     };
@@ -109,7 +119,7 @@ const nextAction = computed(() => {
     kind: 'ready',
     kicker: 'Ready',
     title: 'Ready for review',
-    description: 'Sources and SDD documents are current. Open a document below to continue business review.',
+    description: 'Sources and SDD documents are current. Select a document and finish business review.',
     primaryLabel: 'Refresh',
   };
 });
@@ -233,30 +243,6 @@ function confirmMerge() {
         </div>
         <small v-if="mergeError">{{ mergeError }}</small>
       </form>
-
-      <details v-if="profileRuns.length" class="run-history">
-        <summary>
-          <span>Run history</span>
-          <strong>{{ profileRuns.length }} for {{ profile.name }}</strong>
-        </summary>
-        <div class="history-list">
-          <div v-for="run in profileRuns" :key="run.executionId" class="history-row">
-            <div>
-              <strong>{{ run.targetStage ?? targetStage }}</strong>
-              <small>{{ run.executionId }}</small>
-            </div>
-            <span>{{ run.status }}</span>
-          </div>
-          <div v-if="latestEvents.length" class="event-list">
-            <span class="event-heading">Latest Stage Events</span>
-            <div v-for="event in latestEvents" :key="event.id" class="event-row">
-              <strong>{{ event.stageLabel ?? event.stageId }}</strong>
-              <span>{{ event.state }}</span>
-              <small>{{ event.message ?? event.outputPath ?? event.errorMessage ?? 'Callback received' }}</small>
-            </div>
-          </div>
-        </div>
-      </details>
     </div>
   </RequirementCard>
 </template>
@@ -284,9 +270,7 @@ function confirmMerge() {
 }
 
 .action-kicker span,
-.merge-form label,
-.event-heading,
-.run-history summary span {
+.merge-form label {
   color: var(--color-on-surface-variant);
   font-family: var(--font-ui);
   font-size: 0.625rem;
@@ -421,125 +405,9 @@ function confirmMerge() {
   cursor: pointer;
 }
 
-.run-history {
-  grid-column: 1 / -1;
-  border: var(--border-ghost);
-  border-radius: var(--radius-sm);
-  background: rgba(137, 206, 255, 0.04);
-}
-
-.run-history summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 36px;
-  padding: 8px 10px;
-  cursor: pointer;
-}
-
-.run-history summary strong {
-  color: var(--color-on-surface-variant);
-  font-family: var(--font-ui);
-  font-size: 0.75rem;
-}
-
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0 10px 10px;
-}
-
-.history-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-container-low);
-}
-
-.history-row strong,
-.history-row span,
-.history-row small {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.history-row strong {
-  display: block;
-  color: var(--color-on-surface);
-  font-family: var(--font-ui);
-  font-size: 0.75rem;
-}
-
-.history-row small {
-  display: block;
-  margin-top: 2px;
-  color: var(--color-on-surface-variant);
-  font-family: var(--font-tech);
-  font-size: 0.6875rem;
-}
-
-.history-row span {
-  color: var(--color-secondary);
-  font-family: var(--font-tech);
-  font-size: 0.6875rem;
-}
-
-.event-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.event-row {
-  display: grid;
-  grid-template-columns: minmax(120px, 0.8fr) 90px minmax(0, 1.4fr);
-  gap: 8px;
-  align-items: center;
-  padding: 8px 10px;
-  border: var(--border-ghost);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-container-low);
-}
-
-.event-row strong,
-.event-row span,
-.event-row small {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.event-row strong {
-  color: var(--color-on-surface);
-  font-family: var(--font-ui);
-  font-size: 0.75rem;
-}
-
-.event-row span {
-  color: var(--color-secondary);
-  font-family: var(--font-tech);
-  font-size: 0.6875rem;
-}
-
-.event-row small {
-  color: var(--color-on-surface-variant);
-  font-family: var(--font-ui);
-  font-size: 0.6875rem;
-}
-
 @media (max-width: 1180px) {
   .next-action-panel,
-  .merge-input-row,
-  .history-row,
-  .event-row {
+  .merge-input-row {
     grid-template-columns: 1fr;
   }
 

@@ -173,14 +173,21 @@ The UI must require `text` when `decision` is `REJECTED`, and the backend should
 reject empty rejection reasons as a validation error. Approval can remain a
 single-click action.
 
+Business Review should keep the decision context close to the document being
+reviewed. When a document is selected, the panel should show a compact decision
+state, quality gate state, version identity, and a short Markdown preview with a
+GitHub link. This avoids forcing reviewers to jump between the SDD document
+viewer and the decision controls for simple approval or rejection work.
+
 Agent run history is not a primary BA-facing review panel. Control Tower should
 keep agent run manifests, stage events, and artifact links for audit, callback
 handling, and developer diagnostics. In the short-term manual model,
 Requirement Detail may show a compact `Next Action` panel for Developers and
 Technical Leads. That panel prepares a copyable CLI prompt and exposes manual
-PR merge confirmation; execution IDs, raw statuses, and stage events stay in a
-collapsed run history. BA-facing outcome remains SDD document freshness, review
-status, traceability, and GitHub links.
+PR merge confirmation. Execution IDs, raw statuses, and stage events remain
+available through backend APIs and logs for diagnostics, but they are not shown
+in the default Requirement Detail surface. BA-facing outcome remains SDD
+document freshness, review status, traceability, and GitHub links.
 
 ### CliAgentRunPanel
 
@@ -203,9 +210,10 @@ refreshStatus(): void
 ```
 
 The panel derives the next missing/current profile stage from SDD documents and
-filters run history to the active profile. It requests an agent manifest,
-displays the returned CLI prompt, and hides recent stage events under run
-history. The prompt should start with the real skill invocation, such as
+filters agent runs to the active profile when selecting the latest handoff. It
+requests an agent manifest and displays the returned CLI prompt. It should not
+show run history by default; diagnostic run/event details belong in APIs, logs,
+or an explicit future admin view. The prompt should start with the real skill invocation, such as
 `/skill-name please help me complete Program Spec for REQ-1024.` Callback URLs
 and run IDs are platform metadata and should stay out of the default copy text.
 The browser does not execute a terminal process.
@@ -221,6 +229,10 @@ missing document -> prepare CLI prompt
 merged PR -> refresh GitHub documents
 ready -> refresh or continue business review
 ```
+
+Copy should describe the human reason for the action, not implementation state.
+For example, prefer `Spec changed after review` over `Review Blocker`, and
+prefer `Continue User Stories` over raw stage keys such as `user-story`.
 
 This panel should appear before the profile workflow map. The workflow map is
 supporting context; the primary job of the page is to tell the user the one
@@ -436,11 +448,20 @@ The final file name is generated for readability and traceability, not as the
 project boundary. Missing documents should display resolved paths when token
 values are known, and raw template paths only when a token is still unknown.
 
-Standard Java profile stages:
+Standard SDD main Chain stages:
 
 ```text
-requirement, user-story, spec, architecture, design, tasks, code, test
+requirement, user-story, spec, architecture, design, tasks, code, review
 ```
+
+Standard SDD Skill & Document Flow is synced to this repository's
+`.claude/skills` folders and exposes 10 concrete skills: requirement to stories,
+stories to spec, spec to architecture, architecture review, architecture to
+design, design to tasks, tasks to code, tasks to implementation, code versus
+design review, and document quality review. Data Flow and Data Model are
+Architecture/Design supporting artifacts. API Implementation Guide is a Design
+supporting artifact. These appear in the document dependency map, not as peer
+nodes in the main Chain.
 
 IBM i profile stages:
 
@@ -448,6 +469,16 @@ IBM i profile stages:
 requirement-normalizer, functional-spec, technical-design, program-spec,
 file-spec, ut-plan, test-scaffold, spec-review, dds-review, code-review
 ```
+
+IBM i Skill & Document Flow is synced to the upstream
+`wwa-lab/build-agent-skill` `.claude/ibm-i-*` folders and exposes 16 concrete
+skills: requirement normalizer, program analyzer, impact analyzer, functional
+spec, technical design, program spec, file spec, code generator, DDS generator,
+UT plan generator, test scaffold, compile precheck, spec reviewer, DDS reviewer,
+code reviewer, and workflow orchestrator. Flow-only artifacts such as Mini
+Requirement, Existing Source, Generated Code, DDS Source, Compile Precheck, and
+Workflow Routing may appear in the capability map without becoming required SDD
+documents in Requirement Detail.
 
 ## Document Quality Gate Design
 

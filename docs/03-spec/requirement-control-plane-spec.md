@@ -89,10 +89,26 @@ generated knowledge graph outputs derived from released SDD baselines.
 ### F-RCP-PROFILE: Profile-Driven SDD
 
 - Use active SDD profile to render document stages.
-- Standard Java profile renders existing Java SDD chain.
+- Standard SDD profile renders the real `.claude/skills` family as 10 skill
+  nodes: `req-to-user-story`, `user-story-to-spec`, `spec-to-architecture`,
+  `architecture-review`, `architecture-to-design`, `design-to-tasks`,
+  `tasks-to-code`, `tasks-to-implementation`,
+  `review-code-against-design`, and `review-doc-quality`.
+- Standard SDD main Chain is the user-facing stage path:
+  Requirement -> User Story -> Spec -> Architecture -> Design -> Tasks -> Code
+  -> Review.
+- Standard SDD supporting artifacts are shown in document and dependency maps,
+  not as peer Chain stages: Data Flow and Data Model belong to
+  Architecture/Design support, and API Implementation Guide belongs to Design
+  support.
 - IBM i profile renders IBM i chain from `build-agent-skill` concepts and
   exposes all 16 IBM i skills as separate flow nodes, not just the workflow
   orchestrator.
+- The 16 IBM i flow nodes are sourced from upstream `.claude/ibm-i-*` skill
+  folders: requirement normalizer, program analyzer, impact analyzer,
+  functional spec, technical design, program spec, file spec, code generator,
+  DDS generator, UT plan, test scaffold, compile precheck, spec reviewer, DDS
+  reviewer, code reviewer, and workflow orchestrator.
 - Profile defines document stages, default path patterns, skill bindings, review
   gates, traceability key rules, and optional tiering.
 - Profile path patterns are templates only. Runtime document instances resolve
@@ -116,13 +132,17 @@ generated knowledge graph outputs derived from released SDD baselines.
   final callback API.
 - Requirement detail shows the prepared prompt and merge confirmation as the
   primary action. Execution IDs, raw statuses, stage events, final run status,
-  and artifacts are secondary run-history details.
+  and artifacts remain available for backend audit and diagnostics, but are not
+  shown in the default user-facing action panel.
 - The primary action is prioritized as a single next step: refresh changed
   sources, review changed documents, continue an in-flight CLI run, generate the
   next missing document, then refresh GitHub after merge confirmation.
 - When the next step is review, `Open Document` selects the changed document and
   moves focus to Business Review. Requirement detail shows workflow progress as
   compact context by default, with the full workflow catalog collapsed.
+- Business Review shows decision state, quality gate state, selected version,
+  and a compact Markdown preview for the selected document so reviewers can make
+  the approve/reject decision without switching context for routine checks.
 - After a developer merges the generated PR, Requirement detail allows manual
   merge confirmation with a GitHub PR URL. The confirmation is recorded as a
   stage event and triggers document refresh.
@@ -334,10 +354,10 @@ effective time.
 
 ## Profile Examples
 
-### Standard Java SDD
+### Standard SDD
 
 ```yaml
-profileId: standard-java-sdd
+profileId: standard-sdd
 stages:
   - requirement
   - user-story
@@ -346,7 +366,13 @@ stages:
   - design
   - tasks
   - code
-  - test
+  - review
+supportingArtifacts:
+  architecture:
+    - data-flow
+    - data-model
+  design:
+    - api-guide
 traceability:
   keyPattern: "REQ-[0-9]+"
 ```

@@ -248,7 +248,10 @@ class RequirementControllerTest {
                 .andExpect(jsonPath("$.data.id").value("standard-sdd"))
                 .andExpect(jsonPath("$.data.name").value("Standard SDD"))
                 .andExpect(jsonPath("$.data.usesOrchestrator").value(false))
-                .andExpect(jsonPath("$.data.skills.length()").value(2))
+                .andExpect(jsonPath("$.data.chainNodes.length()").value(8))
+                .andExpect(jsonPath("$.data.skills.length()").value(10))
+                .andExpect(jsonPath("$.data.skills[2].skillId").value("spec-to-architecture"))
+                .andExpect(jsonPath("$.data.skills[9].skillId").value("review-doc-quality"))
                 .andExpect(jsonPath("$.error").doesNotExist());
     }
 

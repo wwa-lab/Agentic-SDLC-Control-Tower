@@ -1084,7 +1084,8 @@ export const useRequirementStore = defineStore('requirement', () => {
       return;
     }
     try {
-      activeProfile.value = await requirementApi.getActiveProfile();
+      const backendProfile = await requirementApi.getActiveProfile();
+      activeProfile.value = getProfileById(backendProfile.id) ?? backendProfile;
     } catch (error) {
       console.error('Failed to load active profile:', error);
       activeProfile.value = getActiveProfile(workspaceId);
