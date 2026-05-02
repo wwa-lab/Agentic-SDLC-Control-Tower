@@ -7,6 +7,7 @@ import com.sdlctower.domain.teamspace.WorkspaceAccessDeniedException;
 import com.sdlctower.domain.codebuildmanagement.policy.CodeBuildManagementException;
 import com.sdlctower.domain.deploymentmanagement.policy.DeploymentException;
 import com.sdlctower.domain.testingmanagement.policy.TestingManagementException;
+import com.sdlctower.platform.access.PlatformAccessException;
 import com.sdlctower.platform.auth.PlatformAuthException;
 import com.sdlctower.shared.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -56,6 +57,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(ex.status())
                 .body(ApiResponse.fail(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PlatformAccessException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePlatformAccess(PlatformAccessException ex) {
+        return ResponseEntity
+                .status(ex.status())
+                .body(ApiResponse.fail(ex.code()));
     }
 
     @ExceptionHandler(WorkspaceAccessDeniedException.class)

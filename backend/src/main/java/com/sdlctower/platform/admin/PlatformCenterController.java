@@ -5,6 +5,8 @@ import com.sdlctower.platform.access.PlatformAccessService;
 import com.sdlctower.platform.access.PlatformUserDto;
 import com.sdlctower.platform.access.RoleAssignmentDto;
 import com.sdlctower.platform.access.UpsertPlatformUserRequest;
+import com.sdlctower.platform.audit.AuditQueryService;
+import com.sdlctower.platform.audit.AuditRecordDto;
 import com.sdlctower.platform.auth.AuthService;
 import com.sdlctower.platform.auth.CurrentUserDto;
 import com.sdlctower.platform.shared.CursorPageDto;
@@ -29,11 +31,13 @@ public class PlatformCenterController {
 
     private final PlatformCatalogService catalogService;
     private final PlatformAccessService accessService;
+    private final AuditQueryService auditQueryService;
     private final AuthService authService;
 
-    public PlatformCenterController(PlatformCatalogService catalogService, PlatformAccessService accessService, AuthService authService) {
+    public PlatformCenterController(PlatformCatalogService catalogService, PlatformAccessService accessService, AuditQueryService auditQueryService, AuthService authService) {
         this.catalogService = catalogService;
         this.accessService = accessService;
+        this.auditQueryService = auditQueryService;
         this.authService = authService;
     }
 
@@ -103,9 +107,25 @@ public class PlatformCenterController {
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/audit")
-    public ApiResponse<CursorPageDto<Map<String, Object>>> audit(HttpServletRequest request) {
+    public ApiResponse<CursorPageDto<AuditRecordDto>> audit(
+            HttpServletRequest request,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String actor,
+            @RequestParam(required = false) String objectType,
+            @RequestParam(required = false) String objectId,
+            @RequestParam(required = false) String outcome,
+            @RequestParam(required = false) String scopeType,
+            @RequestParam(required = false) String scopeId,
+            @RequestParam(required = false) String timeRange
+    ) {
         authService.requirePlatformAdmin(request);
-        return ApiResponse.ok(CursorPageDto.of(catalogService.audit()));
+        return ApiResponse.ok(auditQueryService.list(category, actor, objectType, objectId, outcome, scopeType, scopeId, timeRange));
+    }
+
+    @GetMapping(ApiConstants.API_V1 + "/platform/audit/{id}")
+    public ApiResponse<AuditRecordDto> auditDetail(HttpServletRequest request, @PathVariable String id) {
+        authService.requirePlatformAdmin(request);
+        return ApiResponse.ok(auditQueryService.detail(id));
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/access/users")
@@ -121,14 +141,14 @@ public class PlatformCenterController {
 
     @PostMapping(ApiConstants.API_V1 + "/platform/access/users")
     public ResponseEntity<ApiResponse<PlatformUserDto>> createUser(HttpServletRequest servletRequest, @RequestBody UpsertPlatformUserRequest request) {
-        authService.requirePlatformAdmin(servletRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(accessService.upsertUser(request)));
+        CurrentUserDto actor = authService.requirePlatformAdmin(servletRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(accessService.createUser(request, actor.staffId())));
     }
 
     @PutMapping(ApiConstants.API_V1 + "/platform/access/users/{staffId}")
     public ApiResponse<PlatformUserDto> updateUser(HttpServletRequest servletRequest, @PathVariable String staffId, @RequestBody UpsertPlatformUserRequest request) {
-        authService.requirePlatformAdmin(servletRequest);
-        return ApiResponse.ok(accessService.upsertUser(new UpsertPlatformUserRequest(
+        CurrentUserDto actor = authService.requirePlatformAdmin(servletRequest);
+        return ApiResponse.ok(accessService.updateUser(new UpsertPlatformUserRequest(
                 staffId,
                 request.displayName(),
                 request.staffName(),
@@ -136,7 +156,7 @@ public class PlatformCenterController {
                 request.email(),
                 request.profileSource(),
                 request.status()
-        )));
+        ), actor.staffId()));
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/access/assignments")
@@ -159,8 +179,8 @@ public class PlatformCenterController {
 
     @DeleteMapping(ApiConstants.API_V1 + "/platform/access/assignments/{id}")
     public ResponseEntity<Void> revoke(HttpServletRequest request, @PathVariable String id) {
-        authService.requirePlatformAdmin(request);
-        accessService.revoke(id);
+        CurrentUserDto actor = authService.requirePlatformAdmin(request);
+        accessService.revoke(id, actor.staffId());
         return ResponseEntity.noContent().build();
     }
 

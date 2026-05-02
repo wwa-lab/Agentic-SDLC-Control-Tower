@@ -24,6 +24,21 @@ export async function pcPost<T>(path: string, body?: unknown): Promise<T> {
   return envelope.data as T;
 }
 
+export async function pcPut<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`/api/v1${BASE}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: body != null ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `PUT ${path} failed: ${res.status}`);
+  }
+  const envelope = await res.json();
+  if (envelope.error) throw new Error(envelope.error.message ?? envelope.error);
+  return envelope.data as T;
+}
+
 export async function pcDelete(path: string): Promise<void> {
   const res = await fetch(`/api/v1${BASE}${path}`, { method: 'DELETE' });
   if (!res.ok && res.status !== 204) {
