@@ -42,7 +42,7 @@ INSERT INTO PLATFORM_CONFIGURATION
     (id, config_key, kind, scope_type, scope_id, parent_id, status, body, has_drift, last_modified_at)
 VALUES
     ('cfg-nav-density', 'shell.nav.density', 'component', 'platform', '*', NULL, 'active', '{"density":"high"}', FALSE, CURRENT_TIMESTAMP),
-    ('cfg-ai-default', 'ai.autonomy.default', 'ai-config', 'application', 'app-payment-gateway-pro', 'cfg-nav-density', 'active', '{"level":"L2"}', TRUE, CURRENT_TIMESTAMP);
+    ('cfg-nav-density-app', 'shell.nav.density', 'component', 'application', 'app-payment-gateway-pro', 'cfg-nav-density', 'active', '{"density":"compact"}', TRUE, CURRENT_TIMESTAMP);
 
 INSERT INTO PLATFORM_AUDIT
     (id, event_time, actor, actor_type, category, action, object_type, object_id, scope_type, scope_id, outcome, evidence_ref, payload)
@@ -53,6 +53,11 @@ INSERT INTO PLATFORM_POLICY
     (id, policy_key, name, category, scope_type, scope_id, bound_to, version_number, status, body, created_at, created_by)
 VALUES
     ('pol-release-approval', 'release-approval', 'Release Approval', 'approval', 'platform', '*', 'deploy.release', 1, 'active', '{"required":true}', CURRENT_TIMESTAMP, '43910516');
+
+INSERT INTO PLATFORM_POLICY_EXCEPTION
+    (id, policy_id, reason, requester_id, approver_id, created_at, expires_at, revoked_at)
+VALUES
+    ('pex-release-approval-demo', 'pol-release-approval', 'Temporary release approval exception for local smoke', '43910000', '43910516', CURRENT_TIMESTAMP, TIMESTAMP '2099-01-01 00:00:00', NULL);
 
 INSERT INTO PLATFORM_CREDENTIAL_REF
     (id, provider, external_ref, created_at)

@@ -9,7 +9,20 @@ import com.sdlctower.platform.audit.AuditQueryService;
 import com.sdlctower.platform.audit.AuditRecordDto;
 import com.sdlctower.platform.auth.AuthService;
 import com.sdlctower.platform.auth.CurrentUserDto;
+import com.sdlctower.platform.configuration.ConfigurationDetailDto;
+import com.sdlctower.platform.configuration.ConfigurationSummaryDto;
+import com.sdlctower.platform.configuration.PlatformConfigurationService;
+import com.sdlctower.platform.configuration.UpsertConfigurationRequest;
+import com.sdlctower.platform.policy.CreatePolicyExceptionRequest;
+import com.sdlctower.platform.policy.PlatformPolicyService;
+import com.sdlctower.platform.policy.PolicyDto;
+import com.sdlctower.platform.policy.PolicyExceptionDto;
+import com.sdlctower.platform.policy.UpsertPolicyRequest;
 import com.sdlctower.platform.shared.CursorPageDto;
+import com.sdlctower.platform.template.PlatformTemplateService;
+import com.sdlctower.platform.template.TemplateDetailDto;
+import com.sdlctower.platform.template.TemplateSummaryDto;
+import com.sdlctower.platform.template.TemplateVersionDto;
 import com.sdlctower.shared.ApiConstants;
 import com.sdlctower.shared.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,12 +45,18 @@ public class PlatformCenterController {
     private final PlatformCatalogService catalogService;
     private final PlatformAccessService accessService;
     private final AuditQueryService auditQueryService;
+    private final PlatformTemplateService templateService;
+    private final PlatformConfigurationService configurationService;
+    private final PlatformPolicyService policyService;
     private final AuthService authService;
 
-    public PlatformCenterController(PlatformCatalogService catalogService, PlatformAccessService accessService, AuditQueryService auditQueryService, AuthService authService) {
+    public PlatformCenterController(PlatformCatalogService catalogService, PlatformAccessService accessService, AuditQueryService auditQueryService, PlatformTemplateService templateService, PlatformConfigurationService configurationService, PlatformPolicyService policyService, AuthService authService) {
         this.catalogService = catalogService;
         this.accessService = accessService;
         this.auditQueryService = auditQueryService;
+        this.templateService = templateService;
+        this.configurationService = configurationService;
+        this.policyService = policyService;
         this.authService = authService;
     }
 
@@ -77,33 +96,57 @@ public class PlatformCenterController {
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/templates")
-    public ApiResponse<CursorPageDto<Map<String, Object>>> templates(HttpServletRequest request) {
+    public ApiResponse<CursorPageDto<TemplateSummaryDto>> templates(
+            HttpServletRequest request,
+            @RequestParam(required = false) String kind,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String q
+    ) {
         authService.requirePlatformAdmin(request);
-        return ApiResponse.ok(CursorPageDto.of(catalogService.templates()));
+        return ApiResponse.ok(templateService.list(kind, status, q));
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/templates/{id}")
-    public ApiResponse<Map<String, Object>> templateDetail(HttpServletRequest request, @PathVariable String id) {
+    public ApiResponse<TemplateDetailDto> templateDetail(HttpServletRequest request, @PathVariable String id) {
         authService.requirePlatformAdmin(request);
-        return ApiResponse.ok(catalogService.templateDetail(id));
+        return ApiResponse.ok(templateService.detail(id));
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/templates/{id}/versions")
-    public ApiResponse<List<Map<String, Object>>> templateVersions(HttpServletRequest request, @PathVariable String id) {
+    public ApiResponse<List<TemplateVersionDto>> templateVersions(HttpServletRequest request, @PathVariable String id) {
         authService.requirePlatformAdmin(request);
-        return ApiResponse.ok(catalogService.templateVersions(id));
+        return ApiResponse.ok(templateService.versions(id));
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/configurations")
-    public ApiResponse<CursorPageDto<Map<String, Object>>> configurations(HttpServletRequest request) {
+    public ApiResponse<CursorPageDto<ConfigurationSummaryDto>> configurations(
+            HttpServletRequest request,
+            @RequestParam(required = false) String kind,
+            @RequestParam(required = false) String scopeType,
+            @RequestParam(required = false) String scopeId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String q
+    ) {
         authService.requirePlatformAdmin(request);
-        return ApiResponse.ok(CursorPageDto.of(catalogService.configurations()));
+        return ApiResponse.ok(configurationService.list(kind, scopeType, scopeId, status, q));
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/configurations/{id}")
-    public ApiResponse<Map<String, Object>> configurationDetail(HttpServletRequest request, @PathVariable String id) {
+    public ApiResponse<ConfigurationDetailDto> configurationDetail(HttpServletRequest request, @PathVariable String id) {
         authService.requirePlatformAdmin(request);
-        return ApiResponse.ok(catalogService.configurationDetail(id));
+        return ApiResponse.ok(configurationService.detail(id));
+    }
+
+    @PostMapping(ApiConstants.API_V1 + "/platform/configurations")
+    public ResponseEntity<ApiResponse<ConfigurationDetailDto>> createConfiguration(HttpServletRequest servletRequest, @RequestBody UpsertConfigurationRequest request) {
+        CurrentUserDto actor = authService.requirePlatformAdmin(servletRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(configurationService.create(request, actor.staffId())));
+    }
+
+    @PutMapping(ApiConstants.API_V1 + "/platform/configurations/{id}")
+    public ApiResponse<ConfigurationDetailDto> updateConfiguration(HttpServletRequest servletRequest, @PathVariable String id, @RequestBody UpsertConfigurationRequest request) {
+        CurrentUserDto actor = authService.requirePlatformAdmin(servletRequest);
+        return ApiResponse.ok(configurationService.update(id, request, actor.staffId()));
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/audit")
@@ -185,15 +228,66 @@ public class PlatformCenterController {
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/policies")
-    public ApiResponse<CursorPageDto<Map<String, Object>>> policies(HttpServletRequest request) {
+    public ApiResponse<CursorPageDto<PolicyDto>> policies(
+            HttpServletRequest request,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String scopeType,
+            @RequestParam(required = false) String scopeId,
+            @RequestParam(required = false) String boundTo,
+            @RequestParam(required = false) String q
+    ) {
         authService.requirePlatformAdmin(request);
-        return ApiResponse.ok(CursorPageDto.of(catalogService.policies()));
+        return ApiResponse.ok(policyService.list(category, status, scopeType, scopeId, boundTo, q));
+    }
+
+    @GetMapping(ApiConstants.API_V1 + "/platform/policies/{policyId}")
+    public ApiResponse<PolicyDto> policyDetail(HttpServletRequest request, @PathVariable String policyId) {
+        authService.requirePlatformAdmin(request);
+        return ApiResponse.ok(policyService.detail(policyId));
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/policies/{policyId}/exceptions")
-    public ApiResponse<List<Map<String, Object>>> policyExceptions(HttpServletRequest request, @PathVariable String policyId) {
+    public ApiResponse<List<PolicyExceptionDto>> policyExceptions(HttpServletRequest request, @PathVariable String policyId) {
         authService.requirePlatformAdmin(request);
-        return ApiResponse.ok(catalogService.policyExceptions(policyId));
+        return ApiResponse.ok(policyService.exceptions(policyId));
+    }
+
+    @PostMapping(ApiConstants.API_V1 + "/platform/policies")
+    public ResponseEntity<ApiResponse<PolicyDto>> createPolicy(HttpServletRequest servletRequest, @RequestBody UpsertPolicyRequest request) {
+        CurrentUserDto actor = authService.requirePlatformAdmin(servletRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(policyService.create(request, actor.staffId())));
+    }
+
+    @PutMapping(ApiConstants.API_V1 + "/platform/policies/{policyId}")
+    public ApiResponse<PolicyDto> updatePolicy(HttpServletRequest servletRequest, @PathVariable String policyId, @RequestBody UpsertPolicyRequest request) {
+        CurrentUserDto actor = authService.requirePlatformAdmin(servletRequest);
+        return ApiResponse.ok(policyService.update(policyId, request, actor.staffId()));
+    }
+
+    @PostMapping(ApiConstants.API_V1 + "/platform/policies/{policyId}/activate")
+    public ApiResponse<PolicyDto> activatePolicy(HttpServletRequest servletRequest, @PathVariable String policyId) {
+        CurrentUserDto actor = authService.requirePlatformAdmin(servletRequest);
+        return ApiResponse.ok(policyService.activate(policyId, actor.staffId()));
+    }
+
+    @PostMapping(ApiConstants.API_V1 + "/platform/policies/{policyId}/deactivate")
+    public ApiResponse<PolicyDto> deactivatePolicy(HttpServletRequest servletRequest, @PathVariable String policyId) {
+        CurrentUserDto actor = authService.requirePlatformAdmin(servletRequest);
+        return ApiResponse.ok(policyService.deactivate(policyId, actor.staffId()));
+    }
+
+    @PostMapping(ApiConstants.API_V1 + "/platform/policies/{policyId}/exceptions")
+    public ResponseEntity<ApiResponse<PolicyExceptionDto>> addPolicyException(HttpServletRequest servletRequest, @PathVariable String policyId, @RequestBody CreatePolicyExceptionRequest request) {
+        CurrentUserDto actor = authService.requirePlatformAdmin(servletRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(policyService.addException(policyId, request, actor.staffId())));
+    }
+
+    @DeleteMapping(ApiConstants.API_V1 + "/platform/policies/{policyId}/exceptions/{exceptionId}")
+    public ResponseEntity<Void> revokePolicyException(HttpServletRequest servletRequest, @PathVariable String policyId, @PathVariable String exceptionId) {
+        CurrentUserDto actor = authService.requirePlatformAdmin(servletRequest);
+        policyService.revokeException(policyId, exceptionId, actor.staffId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping(ApiConstants.API_V1 + "/platform/integrations/adapters")
