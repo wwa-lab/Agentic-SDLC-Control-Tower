@@ -64,7 +64,8 @@ public class AuthService {
                 null,
                 List.of("GUEST"),
                 true,
-                List.of(new ScopeDto("demo", "public-demo"))
+                List.of(new ScopeDto("demo", "public-demo")),
+                properties.isDemoMode()
         );
     }
 

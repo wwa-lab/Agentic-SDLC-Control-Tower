@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useWorkspaceStore } from '@/shared/stores/workspaceStore';
 import { useShellUiStore } from '@/shell/stores/shellUiStore';
 import { useSessionStore } from '@/shell/stores/sessionStore';
@@ -16,17 +17,28 @@ const workspaceStore = useWorkspaceStore();
 const shellUiStore = useShellUiStore();
 const sessionStore = useSessionStore();
 const { config } = useShellConfig();
+const router = useRouter();
+const route = useRoute();
+
+async function initAndLoad() {
+  await workspaceStore.load();
+  // After loading workspaces, redirect from root to first available workspace.
+  if (route.path === '/' || route.path === '') {
+    const key = workspaceStore.workspaces[0]?.workspaceKey ?? 'payment-gateway-pro';
+    router.replace(`/${key}`);
+  }
+}
 
 onMounted(async () => {
   await sessionStore.init();
   if (sessionStore.isAuthenticated) {
-    workspaceStore.load();
+    initAndLoad();
   }
 });
 
 watch(() => sessionStore.isAuthenticated, (isAuthenticated) => {
   if (isAuthenticated) {
-    workspaceStore.load();
+    initAndLoad();
   }
 });
 </script>

@@ -17,7 +17,7 @@ public record WorkspaceContextDto(
         Boolean demoMode
 ) {
 
-    public static WorkspaceContextDto fromEntity(WorkspaceContext entity) {
+    public static WorkspaceContextDto fromEntity(WorkspaceContextEntity entity) {
         return new WorkspaceContextDto(
                 entity.getWorkspaceId(),
                 entity.getWorkspace(),

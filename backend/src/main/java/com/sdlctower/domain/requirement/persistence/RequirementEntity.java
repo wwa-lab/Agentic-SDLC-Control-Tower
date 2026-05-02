@@ -2,12 +2,17 @@ package com.sdlctower.domain.requirement.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.hibernate.annotations.Filter;
+import com.sdlctower.shared.persistence.WorkspacePrePersistListener;
 
 @Entity
 @Table(name = "requirement")
+@Filter(name = "workspace_filter", condition = "workspace_id = :workspaceId")
+@EntityListeners(WorkspacePrePersistListener.class)
 public class RequirementEntity {
 
     @Id

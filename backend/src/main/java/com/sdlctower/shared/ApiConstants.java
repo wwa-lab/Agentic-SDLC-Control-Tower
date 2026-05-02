@@ -10,7 +10,18 @@ public final class ApiConstants {
 
     public static final String API_V1 = "/api/v1";
 
-    public static final String WORKSPACE_CONTEXT = API_V1 + "/workspace-context";
+    /** Workspace-scoped URL prefix. All domain controllers use this. */
+    public static final String WORKSPACES = API_V1 + "/workspaces";
+    public static final String WORKSPACE_SCOPED = WORKSPACES + "/{workspaceId}";
+
+    /** Auth workspace endpoints (allowlisted — no workspace prefix). */
+    public static final String AUTH_WORKSPACE_SWITCH = API_V1 + "/auth/workspace";
+    public static final String AUTH_WORKSPACES_LIST = API_V1 + "/auth/workspaces";
+    public static final String AUTH_WORKSPACES_BY_KEY = API_V1 + "/auth/workspaces/by-key/{key}";
+
+    public static final String WORKSPACE_CONTEXT = WORKSPACE_SCOPED + "/context";
+    /** Legacy single-row workspace context endpoint (demo/guest path only). */
+    public static final String WORKSPACE_CONTEXT_LEGACY = API_V1 + "/workspace-context";
     public static final String NAV_ENTRIES = API_V1 + "/nav/entries";
     public static final String AUTH = API_V1 + "/auth";
     public static final String AUTH_PROVIDERS = AUTH + "/providers";
@@ -22,15 +33,15 @@ public final class ApiConstants {
     public static final String AUTH_TEAMBOOK_CALLBACK = AUTH + "/sso/teambook/callback";
     public static final String SHELL_HELP_LINKS = API_V1 + "/shell/help-links";
     public static final String SUPPORT_CONTACT = API_V1 + "/support/contact";
-    public static final String DASHBOARD = API_V1 + "/dashboard";
+    public static final String DASHBOARD = WORKSPACE_SCOPED + "/dashboard";
     public static final String DASHBOARD_SUMMARY = DASHBOARD + "/summary";
 
-    public static final String INCIDENTS = API_V1 + "/incidents";
+    public static final String INCIDENTS = WORKSPACE_SCOPED + "/incidents";
     public static final String INCIDENT_DETAIL = INCIDENTS + "/{incidentId}";
     public static final String INCIDENT_ACTION_APPROVE = INCIDENT_DETAIL + "/actions/{actionId}/approve";
     public static final String INCIDENT_ACTION_REJECT = INCIDENT_DETAIL + "/actions/{actionId}/reject";
 
-    public static final String REQUIREMENTS = API_V1 + "/requirements";
+    public static final String REQUIREMENTS = WORKSPACE_SCOPED + "/requirements";
     public static final String REQUIREMENT_DETAIL = REQUIREMENTS + "/{requirementId}";
     public static final String REQUIREMENT_CHAIN = REQUIREMENT_DETAIL + "/chain";
     public static final String REQUIREMENT_ANALYSIS = REQUIREMENT_DETAIL + "/analysis";
@@ -67,16 +78,16 @@ public final class ApiConstants {
 
     public static final String PIPELINE_PROFILES = API_V1 + "/pipeline-profiles";
     public static final String PIPELINE_PROFILES_ACTIVE = PIPELINE_PROFILES + "/active";
-    public static final String TEAM_SPACE = API_V1 + "/team-space";
-    public static final String PROJECT_SPACE = API_V1 + "/project-space";
-    public static final String PROJECT_MANAGEMENT = API_V1 + "/project-management";
-    public static final String DESIGN_MANAGEMENT = API_V1 + "/design-management";
-    public static final String TESTING = API_V1 + "/testing";
-    public static final String TESTING_MANAGEMENT = API_V1 + "/testing-management";
-    public static final String REPORTS_BASE = API_V1 + "/reports";
-    public static final String CODE_BUILD_MANAGEMENT = API_V1 + "/code-build-management";
+    public static final String TEAM_SPACE = WORKSPACE_SCOPED + "/team-space";
+    public static final String PROJECT_SPACE = WORKSPACE_SCOPED + "/project-space";
+    public static final String PROJECT_MANAGEMENT = WORKSPACE_SCOPED + "/project-management";
+    public static final String DESIGN_MANAGEMENT = WORKSPACE_SCOPED + "/design-management";
+    public static final String TESTING = WORKSPACE_SCOPED + "/testing";
+    public static final String TESTING_MANAGEMENT = WORKSPACE_SCOPED + "/testing-management";
+    public static final String REPORTS_BASE = WORKSPACE_SCOPED + "/reports";
+    public static final String CODE_BUILD_MANAGEMENT = WORKSPACE_SCOPED + "/code-build-management";
 
-    public static final String DEPLOYMENT_MANAGEMENT = API_V1 + "/deployment-management";
+    public static final String DEPLOYMENT_MANAGEMENT = WORKSPACE_SCOPED + "/deployment-management";
     public static final String DEPLOYMENT_CATALOG = DEPLOYMENT_MANAGEMENT + "/catalog";
     public static final String DEPLOYMENT_APPLICATIONS = DEPLOYMENT_MANAGEMENT + "/applications";
     public static final String DEPLOYMENT_APPLICATION_DETAIL = DEPLOYMENT_APPLICATIONS + "/{applicationId}";
@@ -88,10 +99,17 @@ public final class ApiConstants {
     public static final String DEPLOYMENT_DEPLOY_DETAIL = DEPLOYMENT_DEPLOYS + "/{deployId}";
     public static final String DEPLOYMENT_DEPLOY_AI_SUMMARY = DEPLOYMENT_DEPLOY_DETAIL + "/ai-summary/regenerate";
     public static final String DEPLOYMENT_TRACEABILITY = DEPLOYMENT_MANAGEMENT + "/traceability";
-    public static final String DEPLOYMENT_WORKSPACE_AI_SUMMARY = DEPLOYMENT_MANAGEMENT + "/workspaces/{workspaceId}/ai-summary/regenerate";
-    public static final String DEPLOYMENT_WEBHOOKS_JENKINS = DEPLOYMENT_MANAGEMENT + "/webhooks/jenkins";
+    public static final String DEPLOYMENT_WORKSPACE_AI_SUMMARY = DEPLOYMENT_MANAGEMENT + "/ai-summary/regenerate";
 
-    public static final String AI_CENTER = API_V1 + "/ai-center";
+    /** Webhook endpoints — NOT workspace-scoped; workspace resolved from payload. */
+    public static final String WEBHOOKS_BASE = API_V1 + "/integration/webhooks";
+    public static final String WEBHOOKS_JENKINS = WEBHOOKS_BASE + "/jenkins";
+    public static final String WEBHOOKS_GITHUB = WEBHOOKS_BASE + "/github";
+
+    /** Cross-workspace fleet reports — AUDITOR / PLATFORM_ADMIN only. */
+    public static final String REPORTS_FLEET = API_V1 + "/reports/fleet";
+
+    public static final String AI_CENTER = WORKSPACE_SCOPED + "/ai-center";
     public static final String AI_CENTER_METRICS = AI_CENTER + "/metrics";
     public static final String AI_CENTER_STAGE_COVERAGE = AI_CENTER + "/stage-coverage";
     public static final String AI_CENTER_SKILLS = AI_CENTER + "/skills";

@@ -21,15 +21,35 @@ public class WorkspaceContextService {
     }
 
     public WorkspaceContextDto getCurrentWorkspaceContext(CurrentUserDto user) {
+        // Workspace-scoped request: derive context from the holder (set by interceptor).
+        WorkspaceContext ctx = WorkspaceContextHolder.maybeCurrent().orElse(null);
+        if (ctx != null) {
+            return fromHolder(ctx);
+        }
+
+        // Legacy path (/workspace-context): guest → demo context, staff → read from DB.
         if (user != null && "guest".equals(user.mode())) {
             return demoContext();
         }
-        WorkspaceContext entity = repository.findTopByOrderByIdAsc()
+        WorkspaceContextEntity entity = repository.findTopByOrderByIdAsc()
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace context not found"));
         if (user != null && !hasRealDataScope(user, entity)) {
             throw new PlatformAuthException(HttpStatus.FORBIDDEN, "WORKSPACE_SCOPE_REQUIRED");
         }
         return WorkspaceContextDto.fromEntity(entity);
+    }
+
+    private WorkspaceContextDto fromHolder(WorkspaceContext ctx) {
+        return new WorkspaceContextDto(
+                ctx.workspaceId(),
+                ctx.workspaceName(),
+                ctx.applicationId(),
+                ctx.applicationId(),
+                ctx.snowGroupId(),
+                ctx.snowGroupId(),
+                null, null, null,
+                ctx.demoMode()
+        );
     }
 
     private WorkspaceContextDto demoContext() {
@@ -47,14 +67,14 @@ public class WorkspaceContextService {
         );
     }
 
-    private boolean hasRealDataScope(CurrentUserDto user, WorkspaceContext entity) {
+    private boolean hasRealDataScope(CurrentUserDto user, WorkspaceContextEntity entity) {
         if (user.scopes() == null) {
             return false;
         }
         return user.scopes().stream().anyMatch(scope -> matchesScope(scope, entity));
     }
 
-    private boolean matchesScope(ScopeDto scope, WorkspaceContext entity) {
+    private boolean matchesScope(ScopeDto scope, WorkspaceContextEntity entity) {
         if (scope == null || scope.scopeType() == null || scope.scopeId() == null) {
             return false;
         }

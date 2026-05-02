@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useWorkspaceStore } from '@/shared/stores/workspaceStore';
 import { ChevronRight, RefreshCw } from 'lucide-vue-next';
+import WorkspaceSwitcher from './WorkspaceSwitcher.vue';
 
 const store = useWorkspaceStore();
 </script>
@@ -22,10 +23,7 @@ const store = useWorkspaceStore();
 
     <!-- Normal state -->
     <div v-else class="context-chain animate-fade-in">
-      <div class="context-item">
-        <span class="text-label">Workspace</span>
-        <span class="text-tech">{{ store.context.workspace }}</span>
-      </div>
+      <WorkspaceSwitcher />
 
       <ChevronRight :size="14" class="separator" />
 
@@ -110,6 +108,7 @@ const store = useWorkspaceStore();
   color: var(--color-on-surface-variant);
   opacity: 0.5;
   margin-top: 10px;
+  flex-shrink: 0;
 }
 
 .icon-btn {

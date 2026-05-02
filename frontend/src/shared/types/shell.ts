@@ -28,6 +28,16 @@ export interface CurrentUser {
   roles: string[];
   readOnly: boolean;
   scopes: Array<{ scopeType: string; scopeId: string }>;
+  demoMode?: boolean;
+}
+
+export interface Workspace {
+  workspaceId: string;
+  workspaceKey: string;
+  name: string;
+  applicationId: string;
+  snowGroupId: string;
+  profileId: string;
 }
 
 export interface AuthProviderOption {

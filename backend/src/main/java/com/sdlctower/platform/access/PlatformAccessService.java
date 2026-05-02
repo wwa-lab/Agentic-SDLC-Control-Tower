@@ -65,7 +65,8 @@ public class PlatformAccessService {
                 user.getAvatarUrl(),
                 roles,
                 false,
-                scopes
+                scopes,
+                false
         );
     }
 

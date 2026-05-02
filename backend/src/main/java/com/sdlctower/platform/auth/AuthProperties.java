@@ -10,6 +10,7 @@ public class AuthProperties {
     private boolean teamBookEnabled = false;
     private int failedLoginLimit = 5;
     private long failedLoginWindowSeconds = 300;
+    private boolean demoMode = false;
 
     public String getSessionSecret() {
         return sessionSecret;
@@ -49,5 +50,13 @@ public class AuthProperties {
 
     public void setFailedLoginWindowSeconds(long failedLoginWindowSeconds) {
         this.failedLoginWindowSeconds = failedLoginWindowSeconds;
+    }
+
+    public boolean isDemoMode() {
+        return demoMode;
+    }
+
+    public void setDemoMode(boolean demoMode) {
+        this.demoMode = demoMode;
     }
 }

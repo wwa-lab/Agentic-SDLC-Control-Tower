@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { useShellConfig } from '@/shell/composables/useShellConfig';
+import { useWorkspaceStore } from '@/shared/stores/workspaceStore';
 import { NAVIGATION_ITEMS, ICON_MAP } from '@/router';
 import type { SystemStatus } from '@/shared/types/shell';
 
@@ -26,8 +27,12 @@ const STATUS_LED: Record<SystemStatus, string> = {
 
 const router = useRouter();
 const { config } = useShellConfig();
+const workspaceStore = useWorkspaceStore();
 
-const navigate = (path: string) => {
+const navigate = (featurePath: string) => {
+  const key = workspaceStore.activeWorkspaceKey;
+  if (!key) return;
+  const path = featurePath === '/' ? `/${key}` : `/${key}${featurePath}`;
   router.push(path);
 };
 </script>

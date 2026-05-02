@@ -1,12 +1,9 @@
 import { defineStore } from 'pinia';
 import { computed, readonly, ref } from 'vue';
-import type { WorkspaceContext } from '@/shared/types/shell';
-import { getWorkspaceContext } from '@/shared/api/workspaceApi';
+import type { Workspace, WorkspaceContext } from '@/shared/types/shell';
+import { getWorkspaceContext, listMyWorkspaces } from '@/shared/api/workspaceApi';
+import { setActiveWorkspaceId } from '@/shared/api/client';
 
-/**
- * Pinia store for workspace context.
- * Single source of truth — replaces the old singleton composable.
- */
 export const useWorkspaceStore = defineStore('workspace', () => {
   const baseContext = ref<WorkspaceContext>({
     workspaceId: null,
@@ -18,9 +15,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     projectId: null,
     project: null,
     environment: null,
-    demoMode: false
+    demoMode: false,
   });
   const routeContext = ref<Partial<WorkspaceContext> | null>(null);
+  const workspaces = ref<Workspace[]>([]);
+  const activeWorkspace = ref<Workspace | null>(null);
 
   const loading = ref(false);
   const error = ref<string | null>(null);
@@ -38,16 +37,39 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     demoMode: routeContext.value?.demoMode ?? baseContext.value.demoMode,
   }));
 
+  const activeWorkspaceKey = computed(() => activeWorkspace.value?.workspaceKey ?? null);
+
   async function load(): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
-      baseContext.value = await getWorkspaceContext();
+      workspaces.value = await listMyWorkspaces();
+      // For guests (empty list), fall back to the legacy demo context endpoint.
+      if (workspaces.value.length === 0) {
+        baseContext.value = await getWorkspaceContext();
+      }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load workspace context';
     } finally {
       loading.value = false;
     }
+  }
+
+  function setActive(ws: Workspace): void {
+    activeWorkspace.value = ws;
+    baseContext.value = {
+      workspaceId: ws.workspaceId,
+      workspace: ws.name,
+      applicationId: ws.applicationId,
+      application: ws.applicationId,
+      snowGroupId: ws.snowGroupId,
+      snowGroup: ws.snowGroupId,
+      projectId: null,
+      project: null,
+      environment: null,
+      demoMode: false,
+    };
+    setActiveWorkspaceId(ws.workspaceId);
   }
 
   function setRouteContext(next: Partial<WorkspaceContext>) {
@@ -60,9 +82,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   return {
     context,
+    workspaces: readonly(workspaces),
+    activeWorkspace: readonly(activeWorkspace),
+    activeWorkspaceKey,
     loading: readonly(loading),
     error: readonly(error),
     load,
+    setActive,
     setRouteContext,
     clearRouteContext,
   };

@@ -11,5 +11,6 @@ public record CurrentUserDto(
         String avatarUrl,
         List<String> roles,
         Boolean readOnly,
-        List<ScopeDto> scopes
+        List<ScopeDto> scopes,
+        boolean demoMode
 ) {}
