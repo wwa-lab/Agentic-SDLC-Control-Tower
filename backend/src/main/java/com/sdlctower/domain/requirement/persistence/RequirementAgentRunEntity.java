@@ -2,18 +2,23 @@ package com.sdlctower.domain.requirement.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import com.sdlctower.shared.persistence.WorkspacePrePersistListener;
 
 @Entity
 @Table(name = "requirement_agent_run")
+@EntityListeners(WorkspacePrePersistListener.class)
 public class RequirementAgentRunEntity {
     @Id
     @Column(name = "execution_id")
     private String executionId;
     @Column(name = "requirement_id", nullable = false)
     private String requirementId;
+    @Column(name = "workspace_id", nullable = false)
+    private String workspaceId;
     @Column(name = "profile_id", nullable = false)
     private String profileId;
     @Column(name = "skill_key", nullable = false)
@@ -58,6 +63,7 @@ public class RequirementAgentRunEntity {
 
     public String getExecutionId() { return executionId; }
     public String getRequirementId() { return requirementId; }
+    public String getWorkspaceId() { return workspaceId; }
     public String getProfileId() { return profileId; }
     public String getSkillKey() { return skillKey; }
     public String getTargetStage() { return targetStage; }

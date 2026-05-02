@@ -3,6 +3,7 @@ package com.sdlctower.platform.workspace;
 import com.sdlctower.platform.auth.AuthProperties;
 import com.sdlctower.platform.auth.AuthService;
 import com.sdlctower.platform.auth.CurrentUserDto;
+import com.sdlctower.platform.auth.PlatformAuthException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
@@ -35,7 +36,7 @@ public class WorkspaceContextInterceptor implements HandlerInterceptor {
             "/api/v1/shell/",
             "/api/v1/support/",
             "/api/v1/pipeline-profiles",
-            "/api/v1/workspace-context"  // legacy single-row endpoint used by demo path
+            "/api/v1/workspace-context"
     );
 
     private final AuthService authService;
@@ -51,7 +52,7 @@ public class WorkspaceContextInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler) {
         String path = req.getRequestURI();
 
         if (isAllowlisted(path)) {
@@ -59,39 +60,35 @@ public class WorkspaceContextInterceptor implements HandlerInterceptor {
         }
 
         if (!path.startsWith(WORKSPACE_PREFIX)) {
-            res.sendError(HttpStatus.NOT_FOUND.value(), "WORKSPACE_PREFIX_REQUIRED");
-            return false;
+            throw new PlatformAuthException(HttpStatus.NOT_FOUND, "WORKSPACE_PREFIX_REQUIRED");
         }
 
         String workspaceId = extractWorkspaceId(path);
         if (workspaceId == null || workspaceId.isBlank()) {
-            res.sendError(HttpStatus.NOT_FOUND.value(), "WORKSPACE_PREFIX_REQUIRED");
-            return false;
+            throw new PlatformAuthException(HttpStatus.NOT_FOUND, "WORKSPACE_PREFIX_REQUIRED");
         }
 
         CurrentUserDto user = authService.fromRequest(req).orElse(null);
 
         if (DEMO_WORKSPACE_ID.equals(workspaceId)) {
-            return handleDemoWorkspace(user, res);
+            handleDemoWorkspace(user);
+            return true;
         }
 
-        if (user == null) {
-            res.sendError(HttpStatus.UNAUTHORIZED.value(), "AUTH_REQUIRED");
-            return false;
+        if (user == null && !authProperties.isAllowAnonymousWorkspaceAccess()) {
+            throw new PlatformAuthException(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED");
         }
 
         WorkspaceContext ctx;
         try {
             ctx = resolver.resolveById(workspaceId, false);
         } catch (WorkspaceNotFoundException e) {
-            res.sendError(HttpStatus.NOT_FOUND.value(), "WORKSPACE_NOT_FOUND");
-            return false;
+            throw new PlatformAuthException(HttpStatus.NOT_FOUND, "WORKSPACE_NOT_FOUND");
         }
 
-        if (!resolver.hasScope(user, workspaceId)) {
+        if (user != null && !resolver.hasScope(user, workspaceId)) {
             log.warn("workspace.access_denied staffId={} workspaceId={}", user.staffId(), workspaceId);
-            res.sendError(HttpStatus.FORBIDDEN.value(), "WORKSPACE_SCOPE_REQUIRED");
-            return false;
+            throw new PlatformAuthException(HttpStatus.FORBIDDEN, "WORKSPACE_SCOPE_REQUIRED");
         }
 
         WorkspaceContextHolder.set(ctx);
@@ -103,19 +100,16 @@ public class WorkspaceContextInterceptor implements HandlerInterceptor {
         WorkspaceContextHolder.clear();
     }
 
-    private boolean handleDemoWorkspace(CurrentUserDto user, HttpServletResponse res) throws Exception {
+    private void handleDemoWorkspace(CurrentUserDto user) {
         if (user != null && !"guest".equals(user.mode())) {
-            res.sendError(HttpStatus.FORBIDDEN.value(), "WORKSPACE_SCOPE_REQUIRED");
-            return false;
+            throw new PlatformAuthException(HttpStatus.FORBIDDEN, "WORKSPACE_SCOPE_REQUIRED");
         }
         if (!authProperties.isDemoMode()) {
-            res.sendError(HttpStatus.FORBIDDEN.value(), "DEMO_DISABLED");
-            return false;
+            throw new PlatformAuthException(HttpStatus.FORBIDDEN, "DEMO_DISABLED");
         }
         WorkspaceContextHolder.set(new WorkspaceContext(
-                DEMO_WORKSPACE_ID, DEMO_WORKSPACE_ID, "Demo Workspace",
-                "demo-app", "demo-snow", "standard-java-sdd", true));
-        return true;
+                "demo-workspace", DEMO_WORKSPACE_ID, "Demo Workspace",
+                "demo-application", "demo-snow-group", "standard-java-sdd", true));
     }
 
     private boolean isAllowlisted(String path) {

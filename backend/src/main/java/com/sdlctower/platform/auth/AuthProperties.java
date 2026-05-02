@@ -11,6 +11,7 @@ public class AuthProperties {
     private int failedLoginLimit = 5;
     private long failedLoginWindowSeconds = 300;
     private boolean demoMode = false;
+    private boolean allowAnonymousWorkspaceAccess = false;
 
     public String getSessionSecret() {
         return sessionSecret;
@@ -58,5 +59,13 @@ public class AuthProperties {
 
     public void setDemoMode(boolean demoMode) {
         this.demoMode = demoMode;
+    }
+
+    public boolean isAllowAnonymousWorkspaceAccess() {
+        return allowAnonymousWorkspaceAccess;
+    }
+
+    public void setAllowAnonymousWorkspaceAccess(boolean allowAnonymousWorkspaceAccess) {
+        this.allowAnonymousWorkspaceAccess = allowAnonymousWorkspaceAccess;
     }
 }

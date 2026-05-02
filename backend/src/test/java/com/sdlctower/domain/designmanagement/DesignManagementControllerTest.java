@@ -31,7 +31,7 @@ class DesignManagementControllerTest {
 
     @Test
     void catalogAggregateReturnsSeededData() throws Exception {
-        mockMvc.perform(get(ApiConstants.DESIGN_MANAGEMENT + "/catalog")
+        mockMvc.perform(get(ApiConstants.DESIGN_MANAGEMENT + "/catalog", "ws-default-001")
                         .param("workspaceId", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.summary.data.totalArtifacts").value(4))
@@ -41,7 +41,7 @@ class DesignManagementControllerTest {
 
     @Test
     void viewerAggregateReturnsSeededSections() throws Exception {
-        mockMvc.perform(get(ApiConstants.DESIGN_MANAGEMENT + "/artifacts/art-2041"))
+        mockMvc.perform(get(ApiConstants.DESIGN_MANAGEMENT + "/artifacts/art-2041", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.header.data.title").value("Control Tower Dashboard"))
                 .andExpect(jsonPath("$.data.versions.data.length()").value(2))
@@ -52,7 +52,7 @@ class DesignManagementControllerTest {
 
     @Test
     void traceabilityAggregateReturnsMatrixAndGaps() throws Exception {
-        mockMvc.perform(get(ApiConstants.DESIGN_MANAGEMENT + "/traceability")
+        mockMvc.perform(get(ApiConstants.DESIGN_MANAGEMENT + "/traceability", "ws-default-001")
                         .param("workspaceId", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.matrix.data.length()").value(greaterThan(0)))
@@ -62,7 +62,7 @@ class DesignManagementControllerTest {
 
     @Test
     void rawEndpointReturnsHtmlAndHeaders() throws Exception {
-        mockMvc.perform(get(ApiConstants.DESIGN_MANAGEMENT + "/artifacts/art-2041/raw"))
+        mockMvc.perform(get(ApiConstants.DESIGN_MANAGEMENT + "/artifacts/art-2041/raw", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Security-Policy", containsString("cdn.tailwindcss.com")))
                 .andExpect(header().string("X-Frame-Options", "SAMEORIGIN"))
@@ -71,7 +71,7 @@ class DesignManagementControllerTest {
 
     @Test
     void rawEndpointDeniesRetiredArtifactForNonAdmin() throws Exception {
-        mockMvc.perform(get(ApiConstants.DESIGN_MANAGEMENT + "/artifacts/art-2044/raw")
+        mockMvc.perform(get(ApiConstants.DESIGN_MANAGEMENT + "/artifacts/art-2044/raw", "ws-default-001")
                         .header(ProjectManagementActorResolver.ACTOR_ID_HEADER, "u-020"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value(containsString("DM_ROLE_REQUIRED")));
@@ -79,7 +79,7 @@ class DesignManagementControllerTest {
 
     @Test
     void publishVersionRejectsStaleVersionFence() throws Exception {
-        mockMvc.perform(post(ApiConstants.DESIGN_MANAGEMENT + "/artifacts/art-2041/versions")
+        mockMvc.perform(post(ApiConstants.DESIGN_MANAGEMENT + "/artifacts/art-2041/versions", "ws-default-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -94,7 +94,7 @@ class DesignManagementControllerTest {
 
     @Test
     void registerRejectsPiiHtml() throws Exception {
-        mockMvc.perform(post(ApiConstants.DESIGN_MANAGEMENT + "/artifacts")
+        mockMvc.perform(post(ApiConstants.DESIGN_MANAGEMENT + "/artifacts", "ws-default-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

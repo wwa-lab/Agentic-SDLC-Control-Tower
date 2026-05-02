@@ -27,7 +27,7 @@ class TestingManagementControllerTest {
 
     @Test
     void catalogAggregateReturnsSeededData() throws Exception {
-        mockMvc.perform(get(ApiConstants.TESTING + "/catalog").param("workspaceId", "ws-default-001"))
+        mockMvc.perform(get(ApiConstants.TESTING + "/catalog", "ws-default-001").param("workspaceId", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.summary.data.totalPlans").value(4))
                 .andExpect(jsonPath("$.data.grid.data.length()").value(4))
@@ -36,14 +36,14 @@ class TestingManagementControllerTest {
 
     @Test
     void aliasBasePathAlsoWorks() throws Exception {
-        mockMvc.perform(get(ApiConstants.TESTING_MANAGEMENT + "/catalog").param("workspaceId", "ws-default-001"))
+        mockMvc.perform(get(ApiConstants.TESTING_MANAGEMENT + "/catalog", "ws-default-001").param("workspaceId", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.summary.data.totalPlans").value(4));
     }
 
     @Test
     void planAggregateReturnsSections() throws Exception {
-        mockMvc.perform(get(ApiConstants.TESTING + "/plans/plan-auth-001"))
+        mockMvc.perform(get(ApiConstants.TESTING + "/plans/plan-auth-001", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.header.data.name").value("Gateway Authentication Regression"))
                 .andExpect(jsonPath("$.data.cases.data.length()").value(3))
@@ -53,7 +53,7 @@ class TestingManagementControllerTest {
 
     @Test
     void caseAggregateRendersAllChipColors() throws Exception {
-        mockMvc.perform(get(ApiConstants.TESTING + "/cases/case-color-1102"))
+        mockMvc.perform(get(ApiConstants.TESTING + "/cases/case-color-1102", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.detail.data.linkedReqs.length()").value(4))
                 .andExpect(jsonPath("$.data.detail.data.linkedReqs[0].chipColor").value("GREEN"))
@@ -64,7 +64,7 @@ class TestingManagementControllerTest {
 
     @Test
     void runAggregateIncludesTruncatedFailureExcerpt() throws Exception {
-        mockMvc.perform(get(ApiConstants.TESTING + "/runs/run-auth-001"))
+        mockMvc.perform(get(ApiConstants.TESTING + "/runs/run-auth-001", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.header.data.planId").value("plan-auth-001"))
                 .andExpect(jsonPath("$.data.caseResults.data[1].failureExcerpt").value(containsString("3ds timeout")))
@@ -73,7 +73,7 @@ class TestingManagementControllerTest {
 
     @Test
     void traceabilityAggregateReturnsBuckets() throws Exception {
-        mockMvc.perform(get(ApiConstants.TESTING + "/traceability").param("workspaceId", "ws-default-001"))
+        mockMvc.perform(get(ApiConstants.TESTING + "/traceability", "ws-default-001").param("workspaceId", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.summary.data.totalRequirements").value(greaterThan(0)))
                 .andExpect(jsonPath("$.data.reqRows.data.length()").value(greaterThan(0)));

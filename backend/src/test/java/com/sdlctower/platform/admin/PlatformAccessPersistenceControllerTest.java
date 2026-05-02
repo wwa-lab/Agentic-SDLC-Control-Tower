@@ -38,7 +38,7 @@ class PlatformAccessPersistenceControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "staffId": "43929999",
+                                  "staffId": "43929998",
                                   "displayName": "Persistent User",
                                   "email": "persistent@example.com",
                                   "profileSource": "manual",
@@ -46,15 +46,15 @@ class PlatformAccessPersistenceControllerTest {
                                 }
                                 """))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.staffId").value("43929999"));
+                .andExpect(jsonPath("$.data.staffId").value("43929998"));
 
         mockMvc.perform(get(ApiConstants.API_V1 + "/platform/access/users")
                         .cookie(admin)
-                        .param("q", "43929999"))
+                        .param("q", "43929998"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.data[0].displayName").value("Persistent User"));
 
-        mockMvc.perform(put(ApiConstants.API_V1 + "/platform/access/users/43929999")
+        mockMvc.perform(put(ApiConstants.API_V1 + "/platform/access/users/43929998")
                         .cookie(admin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -71,7 +71,7 @@ class PlatformAccessPersistenceControllerTest {
         mockMvc.perform(get(ApiConstants.API_V1 + "/platform/audit")
                         .cookie(admin)
                         .param("category", "permission_change")
-                        .param("objectId", "43929999"))
+                        .param("objectId", "43929998"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.data[0].action").value("user.deactivate"));
     }

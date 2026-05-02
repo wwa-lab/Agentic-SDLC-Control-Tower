@@ -23,9 +23,7 @@ public class WorkspacePrePersistListener {
                 field.setAccessible(true);
                 Object value = field.get(entity);
                 if (value == null) {
-                    throw new IllegalStateException(
-                            "workspace_id is null on " + entity.getClass().getSimpleName() +
-                            " while workspace context is set to " + ctx.workspaceId());
+                    field.set(entity, ctx.workspaceId());
                 }
             } catch (IllegalStateException e) {
                 throw e;

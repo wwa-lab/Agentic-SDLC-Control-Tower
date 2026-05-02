@@ -14,12 +14,14 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
+@TestPropertySource(properties = "app.auth.allow-anonymous-workspace-access=false")
 class WorkspaceContextControllerTest {
 
     @Autowired
@@ -27,32 +29,27 @@ class WorkspaceContextControllerTest {
 
     @Test
     void anonymousRequestIsRejected() throws Exception {
-        mockMvc.perform(get(ApiConstants.WORKSPACE_CONTEXT))
+        mockMvc.perform(get(ApiConstants.WORKSPACE_CONTEXT, "ws-default-001"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("AUTH_REQUIRED"));
     }
 
     @Test
     void staffRequestReturnsRealScopedContext() throws Exception {
-        mockMvc.perform(get(ApiConstants.WORKSPACE_CONTEXT).cookie(loginCookie("43910516")))
+        mockMvc.perform(get(ApiConstants.WORKSPACE_CONTEXT, "ws-default-001").cookie(loginCookie("43910516")))
                 .andExpect(status().isOk())
-                // Verify ApiResponse envelope
                 .andExpect(jsonPath("$.error").doesNotExist())
                 .andExpect(jsonPath("$.data").exists())
-                // Verify DTO fields inside data
-                .andExpect(jsonPath("$.data.workspace").value("Global SDLC Tower"))
-                .andExpect(jsonPath("$.data.application").value("Payment-Gateway-Pro"))
-                .andExpect(jsonPath("$.data.snowGroup").value("FIN-TECH-OPS"))
-                .andExpect(jsonPath("$.data.project").value("Q2-Cloud-Migration"))
-                .andExpect(jsonPath("$.data.environment").value("Production"))
-                // Verify entity internals are NOT leaked
+                .andExpect(jsonPath("$.data.workspace").value("Payment Gateway Pro"))
+                .andExpect(jsonPath("$.data.application").value("app-payment-gateway-pro"))
+                .andExpect(jsonPath("$.data.snowGroup").value("snow-fin-tech-ops"))
                 .andExpect(jsonPath("$.data.id").doesNotExist())
                 .andExpect(jsonPath("$.data.snow_group").doesNotExist());
     }
 
     @Test
     void guestRequestReturnsDemoContext() throws Exception {
-        mockMvc.perform(get(ApiConstants.WORKSPACE_CONTEXT).cookie(guestCookie()))
+        mockMvc.perform(get(ApiConstants.WORKSPACE_CONTEXT, "demo").cookie(guestCookie()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.workspaceId").value("demo-workspace"))
                 .andExpect(jsonPath("$.data.applicationId").value("demo-application"))

@@ -40,7 +40,7 @@ class RequirementControllerTest {
 
     @Test
     void listRequirementsReturns200WithDistributionAndRequirements() throws Exception {
-        mockMvc.perform(get(ApiConstants.REQUIREMENTS))
+        mockMvc.perform(get(ApiConstants.REQUIREMENTS, "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.statusDistribution.draft").value(2))
                 .andExpect(jsonPath("$.data.statusDistribution.DRAFT").value(2))
@@ -49,9 +49,9 @@ class RequirementControllerTest {
                 .andExpect(jsonPath("$.data.statusDistribution.inProgress").value(2))
                 .andExpect(jsonPath("$.data.statusDistribution.delivered").value(1))
                 .andExpect(jsonPath("$.data.statusDistribution.archived").value(1))
-                .andExpect(jsonPath("$.data.items.length()").value(10))
-                .andExpect(jsonPath("$.data.totalCount").value(10))
-                .andExpect(jsonPath("$.data.requirements.length()").value(10))
+                .andExpect(jsonPath("$.data.items.length()").value(11))
+                .andExpect(jsonPath("$.data.totalCount").value(11))
+                .andExpect(jsonPath("$.data.requirements.length()").value(11))
                 .andExpect(jsonPath("$.data.requirements[0].id").value("REQ-0001"))
                 .andExpect(jsonPath("$.data.requirements[0].priority").value("Critical"))
                 .andExpect(jsonPath("$.data.requirements[0].status").value("Approved"))
@@ -66,7 +66,7 @@ class RequirementControllerTest {
 
     @Test
     void listRequirementsFiltersByPriority() throws Exception {
-        mockMvc.perform(get(ApiConstants.REQUIREMENTS).param("priority", "Critical"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENTS, "ws-default-001").param("priority", "Critical"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.requirements.length()").value(2))
                 .andExpect(jsonPath("$.data.requirements[0].priority").value("Critical"))
@@ -75,7 +75,7 @@ class RequirementControllerTest {
 
     @Test
     void listRequirementsFiltersByCategory() throws Exception {
-        mockMvc.perform(get(ApiConstants.REQUIREMENTS).param("category", "Technical"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENTS, "ws-default-001").param("category", "Technical"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.requirements.length()").value(2))
                 .andExpect(jsonPath("$.data.requirements[0].category").value("Technical"))
@@ -84,7 +84,7 @@ class RequirementControllerTest {
 
     @Test
     void listRequirementsFiltersByStatus() throws Exception {
-        mockMvc.perform(get(ApiConstants.REQUIREMENTS).param("status", "Draft"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENTS, "ws-default-001").param("status", "Draft"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.requirements.length()").value(2))
                 .andExpect(jsonPath("$.data.requirements[0].status").value("Draft"))
@@ -93,7 +93,7 @@ class RequirementControllerTest {
 
     @Test
     void listRequirementsFiltersBySearch() throws Exception {
-        mockMvc.perform(get(ApiConstants.REQUIREMENTS).param("search", "SSO"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENTS, "ws-default-001").param("search", "SSO"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.requirements.length()").value(1))
                 .andExpect(jsonPath("$.data.requirements[0].id").value("REQ-0001"));
@@ -101,7 +101,7 @@ class RequirementControllerTest {
 
     @Test
     void getRequirementDetailReturns200WithAllSixSections() throws Exception {
-        mockMvc.perform(get("/api/v1/requirements/REQ-0001"))
+        mockMvc.perform(get("/api/v1/workspaces/ws-default-001/requirements/REQ-0001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.header.data.id").value("REQ-0001"))
                 .andExpect(jsonPath("$.data.header.data.title").value("User Authentication and SSO Integration"))
@@ -136,14 +136,14 @@ class RequirementControllerTest {
 
     @Test
     void getRequirementDetailReturns404ForUnknownId() throws Exception {
-        mockMvc.perform(get("/api/v1/requirements/REQ-9999"))
+        mockMvc.perform(get("/api/v1/workspaces/ws-default-001/requirements/REQ-9999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Requirement not found: REQ-9999"));
     }
 
     @Test
     void getRequirementDetailReturnsNullAiAnalysisForDraftRequirement() throws Exception {
-        mockMvc.perform(get("/api/v1/requirements/REQ-0003"))
+        mockMvc.perform(get("/api/v1/workspaces/ws-default-001/requirements/REQ-0003"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.header.data.status").value("Draft"))
                 .andExpect(jsonPath("$.data.linkedStories.data.stories.length()").value(0))
@@ -153,7 +153,7 @@ class RequirementControllerTest {
 
     @Test
     void generateStoriesReturns202WithExecutionMetadata() throws Exception {
-        mockMvc.perform(post("/api/v1/requirements/REQ-0001/generate-stories")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/requirements/REQ-0001/generate-stories")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.executionId").value("EXEC-STORY-REQ-0001"))
@@ -166,7 +166,7 @@ class RequirementControllerTest {
 
     @Test
     void generateSpecReturns202ForRequirementScope() throws Exception {
-        mockMvc.perform(post("/api/v1/requirements/REQ-0001/generate-spec")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/requirements/REQ-0001/generate-spec")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"storyIds\":[\"US-001\",\"US-002\"]}"))
                 .andExpect(status().isAccepted())
@@ -183,7 +183,7 @@ class RequirementControllerTest {
 
     @Test
     void generateSpecReturns202ForLegacyStoryScope() throws Exception {
-        mockMvc.perform(post("/api/v1/requirements/stories/US-001/generate-spec")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/requirements/stories/US-001/generate-spec")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.executionId").value("EXEC-SPEC-REQ-0001"))
@@ -196,7 +196,7 @@ class RequirementControllerTest {
 
     @Test
     void analyzeRequirementReturns202WithExecutionMetadata() throws Exception {
-        mockMvc.perform(post("/api/v1/requirements/REQ-0001/analyze")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/requirements/REQ-0001/analyze")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.executionId").value("EXEC-ANALYSIS-REQ-0001"))
@@ -209,7 +209,7 @@ class RequirementControllerTest {
 
     @Test
     void generateStoriesReturns404ForUnknownRequirement() throws Exception {
-        mockMvc.perform(post("/api/v1/requirements/REQ-9999/generate-stories")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/requirements/REQ-9999/generate-stories")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Requirement not found: REQ-9999"));
@@ -217,7 +217,7 @@ class RequirementControllerTest {
 
     @Test
     void generateSpecReturns400WhenStoryIdsMissing() throws Exception {
-        mockMvc.perform(post("/api/v1/requirements/REQ-0001/generate-spec")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/requirements/REQ-0001/generate-spec")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())
@@ -226,7 +226,7 @@ class RequirementControllerTest {
 
     @Test
     void generateSpecReturns400WhenStoryNotLinkedToRequirement() throws Exception {
-        mockMvc.perform(post("/api/v1/requirements/REQ-0001/generate-spec")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/requirements/REQ-0001/generate-spec")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"storyIds\":[\"US-010\"]}"))
                 .andExpect(status().isBadRequest())
@@ -235,7 +235,7 @@ class RequirementControllerTest {
 
     @Test
     void generateSpecReturns404ForUnknownStoryOnLegacyRoute() throws Exception {
-        mockMvc.perform(post("/api/v1/requirements/stories/US-999/generate-spec")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/requirements/stories/US-999/generate-spec")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Story not found: US-999"));
@@ -257,7 +257,7 @@ class RequirementControllerTest {
 
     @Test
     void invokeSkillReturnsOrchestratorResultForIbmI() throws Exception {
-        mockMvc.perform(post("/api/v1/requirements/REQ-0001/invoke-skill")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/requirements/REQ-0001/invoke-skill")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"skillId\":\"ibm-i-workflow-orchestrator\"}"))
                 .andExpect(status().isAccepted())
@@ -270,7 +270,7 @@ class RequirementControllerTest {
 
     @Test
     void normalizeRequirementReturnsDraft() throws Exception {
-        mockMvc.perform(post("/api/v1/requirements/normalize")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/requirements/normalize")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -322,7 +322,7 @@ class RequirementControllerTest {
                 createZipArchive(entries)
         );
 
-        mockMvc.perform(multipart("/api/v1/requirements/normalize")
+        mockMvc.perform(multipart("/api/v1/workspaces/ws-default-001/requirements/normalize")
                         .file(archive)
                         .param("kb_name", "requirement-intake")
                         .param("profileId", "standard-sdd"))
@@ -362,7 +362,7 @@ class RequirementControllerTest {
                 utf8("<html><body><h1>Scope</h1><p>Priority: High</p><p>Capture mixed raw requirement sources.</p></body></html>")
         );
 
-        mockMvc.perform(multipart("/api/v1/requirements/normalize")
+        mockMvc.perform(multipart("/api/v1/workspaces/ws-default-001/requirements/normalize")
                         .file(summary)
                         .file(scope)
                         .param("kb_name", "requirement-intake")
@@ -387,7 +387,7 @@ class RequirementControllerTest {
                 utf8("Need KB name")
         );
 
-        mockMvc.perform(multipart("/api/v1/requirements/normalize")
+        mockMvc.perform(multipart("/api/v1/workspaces/ws-default-001/requirements/normalize")
                         .file(summary)
                         .param("profileId", "standard-sdd"))
                 .andExpect(status().isBadRequest())
@@ -409,7 +409,7 @@ class RequirementControllerTest {
                 utf8("<html><body><p>Alert support within five minutes.</p></body></html>")
         );
 
-        String responseBody = mockMvc.perform(multipart(ApiConstants.REQUIREMENT_IMPORTS)
+        String responseBody = mockMvc.perform(multipart(ApiConstants.REQUIREMENT_IMPORTS, "ws-default-001")
                         .file(summary)
                         .file(scope)
                         .param("kb_name", "example_kb")
@@ -428,7 +428,7 @@ class RequirementControllerTest {
 
         String importId = objectMapper.readTree(responseBody).path("data").path("importId").asText();
 
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_IMPORTS + "/" + importId))
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_IMPORTS + "/" + importId, "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.importId").value(importId))
                 .andExpect(jsonPath("$.data.status").value("DRAFT_READY"))
@@ -449,7 +449,7 @@ class RequirementControllerTest {
                 new byte[] {0x01, 0x02, 0x03}
         );
 
-        mockMvc.perform(multipart(ApiConstants.REQUIREMENT_IMPORTS)
+        mockMvc.perform(multipart(ApiConstants.REQUIREMENT_IMPORTS, "ws-default-001")
                         .file(executable)
                         .param("kb_name", "example_kb")
                         .param("profileId", "standard-sdd"))
@@ -466,7 +466,7 @@ class RequirementControllerTest {
 
     @Test
     void createRequirementReturnsCreatedItem() throws Exception {
-        mockMvc.perform(post("/api/v1/requirements")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/requirements")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

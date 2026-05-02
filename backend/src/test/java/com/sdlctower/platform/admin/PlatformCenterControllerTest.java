@@ -1,5 +1,6 @@
 package com.sdlctower.platform.admin;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -51,7 +52,7 @@ class PlatformCenterControllerTest {
 
         mockMvc.perform(get(ApiConstants.API_V1 + "/platform/access/me").cookie(loginCookie("43910516")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.roles[0]").value("PLATFORM_ADMIN"));
+                .andExpect(jsonPath("$.data.roles").value(hasItem("PLATFORM_ADMIN")));
     }
 
     private Cookie loginCookie(String staffId) throws Exception {

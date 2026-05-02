@@ -2,12 +2,15 @@ package com.sdlctower.domain.requirement.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import com.sdlctower.shared.persistence.WorkspacePrePersistListener;
 
 @Entity
 @Table(name = "requirement_document_review")
+@EntityListeners(WorkspacePrePersistListener.class)
 public class RequirementDocumentReviewEntity {
     @Id
     private String id;
@@ -15,6 +18,8 @@ public class RequirementDocumentReviewEntity {
     private String documentId;
     @Column(name = "requirement_id", nullable = false)
     private String requirementId;
+    @Column(name = "workspace_id", nullable = false)
+    private String workspaceId;
     @Column(nullable = false)
     private String decision;
     @Column(columnDefinition = "CLOB")
@@ -59,6 +64,7 @@ public class RequirementDocumentReviewEntity {
     public String getId() { return id; }
     public String getDocumentId() { return documentId; }
     public String getRequirementId() { return requirementId; }
+    public String getWorkspaceId() { return workspaceId; }
     public String getDecision() { return decision; }
     public String getComment() { return comment; }
     public String getReviewerId() { return reviewerId; }

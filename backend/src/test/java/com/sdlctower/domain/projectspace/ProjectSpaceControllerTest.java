@@ -24,7 +24,7 @@ class ProjectSpaceControllerTest {
 
     @Test
     void aggregateReturns200WithAllSections() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-42"))
+        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-42", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.projectId").value("proj-42"))
                 .andExpect(jsonPath("$.data.workspaceId").value("ws-default-001"))
@@ -41,7 +41,7 @@ class ProjectSpaceControllerTest {
 
     @Test
     void summaryEndpointReturnsRawDto() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-42/summary"))
+        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-42/summary", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value("proj-42"))
                 .andExpect(jsonPath("$.data.applicationName").value("Payment-Gateway-Pro"))
@@ -51,7 +51,7 @@ class ProjectSpaceControllerTest {
 
     @Test
     void chainAlwaysReturns11Nodes() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-11/chain"))
+        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-11/chain", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.nodes.length()").value(11))
                 .andExpect(jsonPath("$.data.nodes[2].nodeKey").value("SPEC"));
@@ -59,7 +59,7 @@ class ProjectSpaceControllerTest {
 
     @Test
     void risksAreReturnedInSeverityOrder() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-88/risks"))
+        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-88/risks", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].severity").value("CRITICAL"))
                 .andExpect(jsonPath("$.data.items[1].severity").value("HIGH"));
@@ -67,7 +67,7 @@ class ProjectSpaceControllerTest {
 
     @Test
     void environmentsExposeDriftBand() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-88/environments"))
+        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-88/environments", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.environments[2].kind").value("STAGING"))
                 .andExpect(jsonPath("$.data.environments[2].drift.band").value("MAJOR"));
@@ -75,28 +75,28 @@ class ProjectSpaceControllerTest {
 
     @Test
     void aggregateReturns400ForInvalidProjectId() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/INVALID"))
+        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/INVALID", "ws-default-001"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Invalid projectId: INVALID"));
     }
 
     @Test
     void aggregateReturns403ForDeniedProject() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-private-01"))
+        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-private-01", "ws-default-001"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value("Project access denied: proj-private-01"));
     }
 
     @Test
     void aggregateReturns404ForUnknownProject() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-missing-001"))
+        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-missing-001", "ws-default-001"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Project proj-missing-001 not found"));
     }
 
     @Test
     void aggregateIsolatesProjectionFailures() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-degraded-001"))
+        mockMvc.perform(get(ApiConstants.PROJECT_SPACE + "/proj-degraded-001", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.summary.data.id").value("proj-degraded-001"))
                 .andExpect(jsonPath("$.data.environments.data").value(nullValue()))

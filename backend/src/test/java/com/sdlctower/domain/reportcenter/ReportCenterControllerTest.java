@@ -28,7 +28,7 @@ class ReportCenterControllerTest {
 
     @Test
     void catalogReturnsEnabledEfficiencyReports() throws Exception {
-        mockMvc.perform(get(ApiConstants.REPORTS_BASE + "/catalog"))
+        mockMvc.perform(get(ApiConstants.REPORTS_BASE + "/catalog", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.categories[0].reports.length()").value(5))
                 .andExpect(jsonPath("$.data.categories[0].reports[0].reportKey").value("eff.lead-time"));
@@ -36,7 +36,7 @@ class ReportCenterControllerTest {
 
     @Test
     void runReturnsRenderedSections() throws Exception {
-        mockMvc.perform(post(ApiConstants.REPORTS_BASE + "/eff.lead-time/run")
+        mockMvc.perform(post(ApiConstants.REPORTS_BASE + "/eff.lead-time/run", "ws-default-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -55,7 +55,7 @@ class ReportCenterControllerTest {
 
     @Test
     void runRejectsUnsupportedGrouping() throws Exception {
-        mockMvc.perform(post(ApiConstants.REPORTS_BASE + "/eff.lead-time/run")
+        mockMvc.perform(post(ApiConstants.REPORTS_BASE + "/eff.lead-time/run", "ws-default-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -71,7 +71,7 @@ class ReportCenterControllerTest {
 
     @Test
     void runRejectsForbiddenWorkspaceScope() throws Exception {
-        mockMvc.perform(post(ApiConstants.REPORTS_BASE + "/eff.lead-time/run")
+        mockMvc.perform(post(ApiConstants.REPORTS_BASE + "/eff.lead-time/run", "ws-default-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -87,7 +87,7 @@ class ReportCenterControllerTest {
 
     @Test
     void exportReturnsAcceptedJob() throws Exception {
-        mockMvc.perform(post(ApiConstants.REPORTS_BASE + "/eff.lead-time/export")
+        mockMvc.perform(post(ApiConstants.REPORTS_BASE + "/eff.lead-time/export", "ws-default-001")
                         .queryParam("format", "csv")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -105,7 +105,7 @@ class ReportCenterControllerTest {
 
     @Test
     void historyReturnsCallerRuns() throws Exception {
-        mockMvc.perform(post(ApiConstants.REPORTS_BASE + "/eff.lead-time/run")
+        mockMvc.perform(post(ApiConstants.REPORTS_BASE + "/eff.lead-time/run", "ws-default-001")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
@@ -117,7 +117,7 @@ class ReportCenterControllerTest {
                         }
                         """)).andExpect(status().isOk());
 
-        mockMvc.perform(get(ApiConstants.REPORTS_BASE + "/history"))
+        mockMvc.perform(get(ApiConstants.REPORTS_BASE + "/history", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(greaterThan(0)));
     }

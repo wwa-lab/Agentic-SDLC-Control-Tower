@@ -2,17 +2,22 @@ package com.sdlctower.domain.requirement.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import com.sdlctower.shared.persistence.WorkspacePrePersistListener;
 
 @Entity
 @Table(name = "requirement_source_reference")
+@EntityListeners(WorkspacePrePersistListener.class)
 public class RequirementSourceReferenceEntity {
     @Id
     private String id;
     @Column(name = "requirement_id", nullable = false)
     private String requirementId;
+    @Column(name = "workspace_id", nullable = false)
+    private String workspaceId;
     @Column(name = "source_type", nullable = false)
     private String sourceType;
     @Column(name = "external_id")
@@ -69,6 +74,7 @@ public class RequirementSourceReferenceEntity {
 
     public String getId() { return id; }
     public String getRequirementId() { return requirementId; }
+    public String getWorkspaceId() { return workspaceId; }
     public String getSourceType() { return sourceType; }
     public String getExternalId() { return externalId; }
     public String getTitle() { return title; }

@@ -30,7 +30,7 @@ class IncidentControllerTest {
     @Test
     @Order(1)
     void listIncidentsReturns200WithSeverityAndIncidents() throws Exception {
-        mockMvc.perform(get(ApiConstants.INCIDENTS))
+        mockMvc.perform(get(ApiConstants.INCIDENTS, "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").exists())
                 .andExpect(jsonPath("$.data.severityDistribution.p1").value(1))
@@ -48,7 +48,7 @@ class IncidentControllerTest {
     @Test
     @Order(2)
     void getIncidentDetailReturns200WithAllSevenSections() throws Exception {
-        mockMvc.perform(get("/api/v1/incidents/INC-0422"))
+        mockMvc.perform(get("/api/v1/workspaces/ws-default-001/incidents/INC-0422"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.header").exists())
                 .andExpect(jsonPath("$.data.header.data.id").value("INC-0422"))
@@ -83,7 +83,7 @@ class IncidentControllerTest {
     @Test
     @Order(3)
     void getIncidentDetailReturns404ForUnknownId() throws Exception {
-        mockMvc.perform(get("/api/v1/incidents/INC-9999"))
+        mockMvc.perform(get("/api/v1/workspaces/ws-default-001/incidents/INC-9999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Incident not found: INC-9999"));
     }
@@ -92,7 +92,7 @@ class IncidentControllerTest {
     @Order(4)
     void approveActionReturns200AndPersistsState() throws Exception {
         // Approve the action
-        mockMvc.perform(post("/api/v1/incidents/INC-0422/actions/ACT-001/approve")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/incidents/INC-0422/actions/ACT-001/approve")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.actionId").value("ACT-001"))
@@ -102,7 +102,7 @@ class IncidentControllerTest {
                 .andExpect(jsonPath("$.error").doesNotExist());
 
         // Verify state persisted: re-fetch detail should show updated action + governance entry
-        mockMvc.perform(get("/api/v1/incidents/INC-0422"))
+        mockMvc.perform(get("/api/v1/workspaces/ws-default-001/incidents/INC-0422"))
                 .andExpect(jsonPath("$.data.actions.data.actions[0].executionStatus").value("approved"))
                 .andExpect(jsonPath("$.data.governance.data.entries.length()").value(1))
                 .andExpect(jsonPath("$.data.governance.data.entries[0].actionTaken").value("approve"));
@@ -111,7 +111,7 @@ class IncidentControllerTest {
     @Test
     @Order(5)
     void rejectActionReturns200WithReason() throws Exception {
-        mockMvc.perform(post("/api/v1/incidents/INC-0421/actions/ACT-002/reject")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/incidents/INC-0421/actions/ACT-002/reject")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"reason\":\"Prefer to investigate root cause first\"}"))
                 .andExpect(status().isOk())
@@ -125,7 +125,7 @@ class IncidentControllerTest {
     @Test
     @Order(6)
     void rejectActionReturns400WhenReasonMissing() throws Exception {
-        mockMvc.perform(post("/api/v1/incidents/INC-0422/actions/ACT-001/reject")
+        mockMvc.perform(post("/api/v1/workspaces/ws-default-001/incidents/INC-0422/actions/ACT-001/reject")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())

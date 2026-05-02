@@ -29,12 +29,12 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void sourceAndDocumentEndpointsReturnProfileDrivenSections() throws Exception {
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_SOURCES, "REQ-0001"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_SOURCES, "ws-default-001", "REQ-0001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(2))
                 .andExpect(jsonPath("$.data[0].sourceType").value("JIRA"));
 
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_SDD_DOCUMENTS, "REQ-0001"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_SDD_DOCUMENTS, "ws-default-001", "REQ-0001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.profileId").value("standard-sdd"))
                 .andExpect(jsonPath("$.data.workspace.applicationName").value("Payment Gateway"))
@@ -46,7 +46,7 @@ class RequirementControlPlaneControllerTest {
                 .andExpect(jsonPath("$.data.stages[0].title").value("SSO Requirement"))
                 .andExpect(jsonPath("$.data.stages[3].freshnessStatus").value("MISSING_DOCUMENT"));
 
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_SDD_DOCUMENTS, "REQ-0001")
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_SDD_DOCUMENTS, "ws-default-001", "REQ-0001")
                         .param("profileId", "ibm-i"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.profileId").value("ibm-i"))
@@ -62,7 +62,7 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void sourceRefreshUsesConfiguredProviderAndPreservesSourceMetadata() throws Exception {
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_SOURCE_REFRESH, "SRC-REQ-0001-JIRA"))
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_SOURCE_REFRESH, "ws-default-001", "SRC-REQ-0001-JIRA"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.sourceType").value("JIRA"))
                 .andExpect(jsonPath("$.data.externalId").value("AUTH-123"))
@@ -72,7 +72,7 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void documentViewerFetchesMarkdownFromGateway() throws Exception {
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_SDD_DOCUMENT_DETAIL, "DOC-REQ-0001-SPEC"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_SDD_DOCUMENT_DETAIL, "ws-default-001", "DOC-REQ-0001-SPEC"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.markdown", containsString("Source of truth")))
                 .andExpect(jsonPath("$.data.markdown", containsString("# SSO Functional Spec")))
@@ -83,7 +83,7 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void refreshSddDocumentsReindexesFromGitHubBranch() throws Exception {
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_SDD_DOCUMENTS_REFRESH, "REQ-0005")
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_SDD_DOCUMENTS_REFRESH, "ws-default-001", "REQ-0005")
                         .param("profileId", "ibm-i"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.profileId").value("ibm-i"))
@@ -98,7 +98,7 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void reviewCreationIsBoundToCommitAndBlobVersion() throws Exception {
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE_RUNS, "DOC-REQ-0001-SPEC")
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE_RUNS, "ws-default-001", "DOC-REQ-0001-SPEC")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -111,7 +111,7 @@ class RequirementControlPlaneControllerTest {
                 .andExpect(jsonPath("$.data.passed").value(true))
                 .andExpect(jsonPath("$.data.stale").value(false));
 
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "DOC-REQ-0001-SPEC")
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "ws-default-001", "DOC-REQ-0001-SPEC")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -125,7 +125,7 @@ class RequirementControlPlaneControllerTest {
                 .andExpect(jsonPath("$.data.decision").value("APPROVED"))
                 .andExpect(jsonPath("$.data.stale").value(false));
 
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "DOC-REQ-0001-SPEC")
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "ws-default-001", "DOC-REQ-0001-SPEC")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -141,7 +141,7 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void approvedReviewRequiresPassingQualityGate() throws Exception {
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "DOC-REQ-0001-STORY")
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "ws-default-001", "DOC-REQ-0001-STORY")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -157,7 +157,7 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void qualityGateRunCanBeTriggeredPerDocumentAndRequirement() throws Exception {
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE_RUNS, "DOC-REQ-0001-REQ")
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE_RUNS, "ws-default-001", "DOC-REQ-0001-REQ")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -174,12 +174,12 @@ class RequirementControlPlaneControllerTest {
                 .andExpect(jsonPath("$.data.dimensions.length()").value(5))
                 .andExpect(jsonPath("$.data.findings.length()").value(2));
 
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE, "DOC-REQ-0001-REQ"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_DOCUMENT_QUALITY_GATE, "ws-default-001", "DOC-REQ-0001-REQ"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.documentId").value("DOC-REQ-0001-REQ"))
                 .andExpect(jsonPath("$.data.score").value(88));
 
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_QUALITY_GATE_RUNS, "REQ-0001")
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_QUALITY_GATE_RUNS, "ws-default-001", "REQ-0001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -189,7 +189,7 @@ class RequirementControlPlaneControllerTest {
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.length()").value(3));
 
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_SDD_DOCUMENTS, "REQ-0001"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_SDD_DOCUMENTS, "ws-default-001", "REQ-0001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.stages[0].qualityGate.score").value(88))
                 .andExpect(jsonPath("$.data.stages[0].qualityGate.passed").value(true));
@@ -197,7 +197,7 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void rejectedReviewRequiresReason() throws Exception {
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "DOC-REQ-0001-SPEC")
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "ws-default-001", "DOC-REQ-0001-SPEC")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -209,7 +209,7 @@ class RequirementControlPlaneControllerTest {
                                 """))
                 .andExpect(status().isBadRequest());
 
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "DOC-REQ-0001-SPEC")
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_DOCUMENT_REVIEWS, "ws-default-001", "DOC-REQ-0001-SPEC")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -226,7 +226,7 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void agentRunCallbackCreatesArtifactLinksAndTraceability() throws Exception {
-        String body = mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUNS, "REQ-0001")
+        String body = mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUNS, "ws-default-001", "REQ-0001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -245,7 +245,7 @@ class RequirementControlPlaneControllerTest {
 
         String executionId = body.replaceAll("(?s).*\"executionId\":\"([^\"]+)\".*", "$1");
 
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUN_CALLBACK, executionId)
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUN_CALLBACK, "ws-default-001", executionId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -267,7 +267,7 @@ class RequirementControlPlaneControllerTest {
                 .andExpect(jsonPath("$.data.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.data.artifactLinks.length()").value(1));
 
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_TRACEABILITY, "REQ-0001"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_TRACEABILITY, "ws-default-001", "REQ-0001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.agentRuns.length()", greaterThan(0)))
                 .andExpect(jsonPath("$.data.artifactLinks.length()", greaterThan(0)))
@@ -276,7 +276,7 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void confirmAgentRunMergeRecordsManualPrAndRefreshesDocuments() throws Exception {
-        String body = mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUNS, "REQ-0001")
+        String body = mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUNS, "ws-default-001", "REQ-0001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -292,7 +292,7 @@ class RequirementControlPlaneControllerTest {
 
         String executionId = body.replaceAll("(?s).*\"executionId\":\"([^\"]+)\".*", "$1");
 
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUN_MERGE_CONFIRMATION, executionId)
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUN_MERGE_CONFIRMATION, "ws-default-001", executionId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -310,7 +310,7 @@ class RequirementControlPlaneControllerTest {
 
     @Test
     void confirmAgentRunMergeRejectsNonGithubPrUrl() throws Exception {
-        String body = mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUNS, "REQ-0001")
+        String body = mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUNS, "ws-default-001", "REQ-0001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -326,7 +326,7 @@ class RequirementControlPlaneControllerTest {
 
         String executionId = body.replaceAll("(?s).*\"executionId\":\"([^\"]+)\".*", "$1");
 
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUN_MERGE_CONFIRMATION, executionId)
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUN_MERGE_CONFIRMATION, "ws-default-001", executionId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
