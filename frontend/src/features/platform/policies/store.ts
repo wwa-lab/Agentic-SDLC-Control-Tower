@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { Policy, PolicyException, LoadState } from '../shared/types';
+import type { CursorPage, Policy, PolicyException, LoadState } from '../shared/types';
 import { MOCK_POLICIES, MOCK_POLICY_EXCEPTIONS } from './mocks';
-import { withMockLatency, PC_USE_MOCK } from '../shared/api';
+import { withMockLatency, PC_USE_MOCK, pcGet } from '../shared/api';
 
 export const usePoliciesStore = defineStore('platform-policies', () => {
   const status = ref<LoadState>('idle');
@@ -33,6 +33,9 @@ export const usePoliciesStore = defineStore('platform-policies', () => {
       if (PC_USE_MOCK) {
         items.value = await withMockLatency(() => MOCK_POLICIES);
         exceptions.value = MOCK_POLICY_EXCEPTIONS;
+      } else {
+        items.value = (await pcGet<CursorPage<Policy>>('/policies')).data;
+        exceptions.value = [];
       }
       status.value = 'ready';
     } catch (e) {

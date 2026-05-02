@@ -5,6 +5,7 @@
 Implement the first SDD foundation slice for the product:
 
 - shared application shell
+- staff-id login, guest mode, Contact Us, and User Guideline entry points
 
 ## Implementation Strategy
 
@@ -54,7 +55,9 @@ Done when: all four items reviewed; any changes reflected back into spec and sto
 - Create `AppShell.vue` with slot-based layout regions (nav, top bar, content, AI panel)
 - Create `PrimaryNav.vue` with 13 navigation entries and left-edge active indicator
 - Create `TopContextBar.vue` rendering `WorkspaceContext` with empty-safe fallbacks
-- Create `GlobalActionBar.vue` with search, notification, and audit entry points
+- Create `GlobalActionBar.vue` with search, notification, audit, Contact Us, and User Guideline entry points
+- Create `LoginView.vue` with provider discovery, optional TeamBook SSO entry, staff-id login, and Continue as Guest
+- Create `ContactUsModal.vue` with title/category/description and success/error states
 - Create `AiCommandPanel.vue` with summary, reasoning, evidence, and action zones (320px right rail)
 
 Depends on: A1
@@ -75,8 +78,11 @@ Done when: all 13 routes are navigable; each route highlights the correct nav it
 ### A4: Add Shell State Contracts
 
 - Define `WorkspaceContext` TypeScript type in `src/types/`
+- Define `CurrentUser`, `SupportRequest`, and `HelpLinks` TypeScript types in `src/types/`
 - Define `ShellPageConfig` TypeScript type in `src/types/`
 - Create `useWorkspaceContext()` composable with static mocked data
+- Create `useSession()` composable with mock manual staff, TeamBook staff profile, and guest modes
+- Create `useHelpLinks()` composable with mock Confluence URL
 - Implement route-to-nav-key mapping via Vue Router route metadata
 - Add safe fallback rendering for missing optional context fields (`snowGroup`, `project`, `environment`)
 
@@ -88,9 +94,14 @@ Done when: context bar renders from composable state; nav active state driven by
 - Verify active nav state is unique per route
 - Verify top context field order is stable across all pages
 - Verify global utilities (search, notifications, audit) render consistently
+- Verify auth provider discovery can render TeamBook when enabled and hide it when disabled
+- Verify login rejects empty password and accepts non-empty password
+- Verify guest mode renders demo context and disables mutating actions
+- Verify Contact Us form submit shows mocked Jira key
+- Verify User Guideline button opens configured URL
 - Verify page content errors do not collapse the surrounding shell
 - Verify AI panel remains layout-stable when page content changes
-- Verify story S1–S5 acceptance criteria against the running app
+- Verify story S1–S9 plus S6A acceptance criteria against the running app
 
 Depends on: A4
 Done when: all checks pass; the frontend shell is visually complete and navigable with mocked data
@@ -101,8 +112,8 @@ Done when: all checks pass; the frontend shell is visually complete and navigabl
 - Four Round 1 pages show placeholder content inside the shell
 - `WorkspaceContext` displays with empty-safe fallbacks
 - AI Command Panel is a persistent right-side region
-- All story S1–S5 acceptance criteria verifiable in the browser
-- No backend dependency; all data is static or mocked
+- All story S1–S9 plus S6A acceptance criteria verifiable in the browser
+- No backend dependency in Phase A; session, help links, support submit, and context data are static or mocked
 - `npm run dev` and `npm run build` both succeed
 
 ---
@@ -124,12 +135,31 @@ Done when: `./mvnw spring-boot:run -Dspring.profiles.active=local` starts with H
 
 - Create `WorkspaceContext` JPA entity and repository
 - Create `GET /api/v1/workspace-context` REST endpoint
-- Return workspace, application, snowGroup, project, environment
+- Return workspace/application/SNOW/project ids plus display names, environment, and demoMode
 - Seed H2 with sample workspace context data via `data.sql` or `CommandLineRunner`
 - Validate response shape matches frontend `WorkspaceContext` TypeScript type
 
 Depends on: B0
 Done when: API returns valid JSON matching the frontend contract; H2 seed data renders correctly
+
+### B1A: Implement Auth And Guest APIs
+
+- Create `POST /api/v1/auth/login` accepting `staffId` and non-empty `password`
+- Create `GET /api/v1/auth/providers` returning enabled manual / TeamBook / guest providers
+- Create `GET /api/v1/auth/sso/teambook/start` and callback stubs behind internal config flag
+- Create `POST /api/v1/auth/guest` returning guest read-only identity
+- Create `GET /api/v1/auth/me` returning current staff or guest identity
+- Create `POST /api/v1/auth/logout` invalidating staff or guest session
+- Store password as hash/dev placeholder hash, never plaintext
+- Use signed server-validated tokens or a shared session store in deployed profiles
+- Add backend-configured session expiry with `/auth/me` returning 401 after expiry
+- Rate-limit repeated failed login attempts by staff id and source
+- Reject TeamBook-authenticated staff ids that do not map to active `PlatformUser`
+- Include optional `staffName`, `avatarUrl`, and `authProvider` in `CurrentUser`
+- Enforce guest write attempts return 403 from shared write guard
+
+Depends on: B0
+Done when: provider discovery, manual staff login, optional TeamBook SSO stub, guest mode, and current-user session work end to end
 
 ### B2: Implement Navigation Configuration API
 
@@ -140,9 +170,22 @@ Done when: API returns valid JSON matching the frontend contract; H2 seed data r
 Depends on: B0
 Done when: API returns the 13 entries in correct order
 
+### B2A: Implement Help And Support APIs
+
+- Create `GET /api/v1/shell/help-links` returning configured `userGuidelineUrl`
+- Create `POST /api/v1/support/contact` validating title/category/description
+- Persist support request before the Jira call and return `requestId`
+- Implement Jira story creation via configured Jira adapter or stub in local profile
+- Add outbox/retry path so Jira outage returns `status=pending` instead of losing the request
+- Return `status`, `requestId`, and created `jiraKey` / `jiraUrl` when available
+
+Depends on: B0
+Done when: Contact Us creates a Jira story when Jira is healthy, returns pending when Jira is unavailable, and guideline URL is returned from config
+
 ### B3: Connect Frontend to Backend
 
 - Replace mocked `useWorkspaceContext()` data with API call to `GET /api/v1/workspace-context`
+- Replace mocked `useSession()` and `useHelpLinks()` with live API calls
 - Add API client utility in frontend (`src/api/`)
 - Configure Vite dev server proxy to Spring Boot backend
 - Handle loading and error states in context bar
@@ -166,5 +209,6 @@ Done when: full stack runs locally with H2; Oracle config is validated or docume
 - REST APIs serve workspace context and navigation entries
 - Frontend fetches live data from backend instead of mocks
 - API response shapes match frontend TypeScript contracts
+- Staff-id login, optional TeamBook provider discovery/stub, guest mode, Contact Us, and User Guideline work locally
 - `./mvnw spring-boot:run` and `npm run dev` work together locally
 - Oracle profile is configured and ready for production connection

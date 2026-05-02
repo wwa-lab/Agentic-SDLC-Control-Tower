@@ -2,7 +2,8 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { TemplateSummary, TemplateDetail, TemplateVersion, LoadState } from '../shared/types';
 import { MOCK_TEMPLATES, MOCK_TEMPLATE_DETAIL, MOCK_VERSIONS } from './mocks';
-import { withMockLatency, PC_USE_MOCK } from '../shared/api';
+import { withMockLatency, PC_USE_MOCK, pcGet } from '../shared/api';
+import type { CursorPage } from '../shared/types';
 
 export const useTemplatesStore = defineStore('platform-templates', () => {
   const status = ref<LoadState>('idle');
@@ -31,6 +32,11 @@ export const useTemplatesStore = defineStore('platform-templates', () => {
         items.value = data;
         total.value = data.length;
         cursor.value = null;
+      } else {
+        const page = await pcGet<CursorPage<TemplateSummary>>('/templates');
+        items.value = page.data;
+        total.value = page.pagination.total;
+        cursor.value = page.pagination.nextCursor;
       }
       status.value = 'ready';
     } catch (e) {
@@ -49,6 +55,9 @@ export const useTemplatesStore = defineStore('platform-templates', () => {
           ? { ...MOCK_TEMPLATE_DETAIL, template: { ...found, description: `Description for ${found.name}` } }
           : null;
         versions.value = await withMockLatency(() => MOCK_VERSIONS);
+      } else {
+        detail.value = await pcGet<TemplateDetail>(`/templates/${id}`);
+        versions.value = await pcGet<TemplateVersion[]>(`/templates/${id}/versions`);
       }
       detailStatus.value = 'ready';
     } catch {

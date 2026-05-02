@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { ConfigurationSummary, LoadState } from '../shared/types';
+import type { ConfigurationSummary, CursorPage, LoadState } from '../shared/types';
 import { MOCK_CONFIGURATIONS } from './mocks';
-import { withMockLatency, PC_USE_MOCK } from '../shared/api';
+import { withMockLatency, PC_USE_MOCK, pcGet } from '../shared/api';
 
 export const useConfigurationsStore = defineStore('platform-configurations', () => {
   const status = ref<LoadState>('idle');
@@ -23,6 +23,8 @@ export const useConfigurationsStore = defineStore('platform-configurations', () 
     try {
       if (PC_USE_MOCK) {
         items.value = await withMockLatency(() => MOCK_CONFIGURATIONS);
+      } else {
+        items.value = (await pcGet<CursorPage<ConfigurationSummary>>('/configurations')).data;
       }
       status.value = 'ready';
     } catch (e) {

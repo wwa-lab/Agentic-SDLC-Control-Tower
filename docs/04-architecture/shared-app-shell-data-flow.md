@@ -32,6 +32,13 @@ sequenceDiagram
     Vite-->>Browser: index.html + JS bundle
     Browser->>App: Mount Vue app
     App->>Router: Install router
+    App->>Backend: GET /api/v1/auth/me
+    alt No session
+        Backend-->>App: 401
+        App->>Router: Route to /login
+    else Staff or guest session
+        Backend-->>App: CurrentUser
+    end
     App->>Router: Resolve initial route (/)
     Router->>Shell: Mount AppShell
     Shell->>WS: onMounted() calls load()
@@ -47,6 +54,48 @@ sequenceDiagram
     Shell->>Shell: Render TopContextBar with context
     Router->>Shell: Mount page view via router-view
 ```
+
+---
+
+## 1A. Login And Guest Entry Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Login as LoginView
+    participant Auth as Auth API
+    participant TeamBook as TeamBook SSO
+    participant Session as sessionStore
+    participant Router as Vue Router
+
+    Login->>Auth: GET /api/v1/auth/providers
+    Auth-->>Login: enabled providers
+
+    User->>Login: Continue with TeamBook
+    Login->>Auth: GET /api/v1/auth/sso/teambook/start
+    Auth->>TeamBook: redirect / validate internal SSO
+    TeamBook-->>Auth: staff id + nStaff Name + avatar URL
+    Auth-->>Login: redirect success or user_not_provisioned
+    Login->>Session: setCurrentUser(authProvider=teambook)
+    Login->>Router: push("/")
+
+    User->>Login: Enter staff id + password
+    Login->>Auth: POST /api/v1/auth/login
+    Auth-->>Login: CurrentUser(mode=staff)
+    Login->>Session: setCurrentUser()
+    Login->>Router: push("/")
+
+    User->>Login: Continue as Guest
+    Login->>Auth: POST /api/v1/auth/guest
+    Auth-->>Login: CurrentUser(mode=guest, readOnly=true)
+    Login->>Session: setCurrentUser()
+    Login->>Router: push("/")
+```
+
+Guest mode then loads demo workspace context and demo/public data. Mutating
+actions remain disabled in the UI and rejected by backend write guards.
+TeamBook is discovered from backend configuration; local/external deployments can
+omit it and still expose manual staff-id login plus guest mode.
 
 ---
 
@@ -80,6 +129,10 @@ sequenceDiagram
 
     WS-->>Shell: Reactive update triggers re-render
 ```
+
+When `CurrentUser.mode = guest`, the backend returns a `WorkspaceContext` with
+`demoMode = true`, and downstream feature APIs must use demo/public data rather
+than real Application + SNOW team partitions.
 
 ### Context Display States
 
@@ -211,6 +264,45 @@ graph LR
 
 Default is `dark` ("Tactical Command" mode). Theme preference persists
 in `localStorage` under key `sdlc-tower-theme`.
+
+---
+
+## 5A. Contact Us Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Shell as GlobalActionBar
+    participant Modal as ContactUsModal
+    participant API as /api/v1/support/contact
+    participant Jira as Jira Project
+
+    User->>Shell: Click Contact Us
+    Shell->>Modal: open()
+    User->>Modal: Fill title/category/description
+    Modal->>API: POST support request + route/context/reporter
+    API->>Jira: Create story
+    Jira-->>API: Jira key + URL
+    API-->>Modal: 201 { jiraKey, jiraUrl }
+    Modal-->>User: Show created issue link
+```
+
+---
+
+## 5B. User Guideline Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Shell as GlobalActionBar
+    participant API as /api/v1/shell/help-links
+    participant Browser
+
+    User->>Shell: Click User Guideline
+    Shell->>API: GET help links
+    API-->>Shell: userGuidelineUrl
+    Shell->>Browser: window.open(url, "_blank")
+```
 
 ---
 

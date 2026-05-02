@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue';
 import { useFontScale } from '@/shared/composables/useFontScale';
 import { useTheme } from '@/shared/composables/useTheme';
-import { Search, Bell, History, Sun, Moon, Type } from 'lucide-vue-next';
+import { useSessionStore } from '@/shell/stores/sessionStore';
+import { getHelpLinks } from '@/shared/api/shellApi';
+import ContactUsModal from './ContactUsModal.vue';
+import { Search, Bell, History, Sun, Moon, Type, LifeBuoy, BookOpen, LogOut } from 'lucide-vue-next';
 
 const emit = defineEmits<{
   search: [];
@@ -11,6 +15,23 @@ const emit = defineEmits<{
 
 const { theme, toggleTheme } = useTheme();
 const { currentFontScale, cycleFontScale } = useFontScale();
+const session = useSessionStore();
+const contactOpen = ref(false);
+const guidelineUrl = ref<string | null>(null);
+
+onMounted(async () => {
+  try {
+    guidelineUrl.value = (await getHelpLinks()).userGuidelineUrl;
+  } catch {
+    guidelineUrl.value = null;
+  }
+});
+
+function openGuideline() {
+  if (guidelineUrl.value) {
+    window.open(guidelineUrl.value, '_blank', 'noopener,noreferrer');
+  }
+}
 </script>
 
 <template>
@@ -34,6 +55,14 @@ const { currentFontScale, cycleFontScale } = useFontScale();
     <button class="icon-btn" title="Search" @click="emit('search')"><Search :size="18" /></button>
     <button class="icon-btn" title="Notifications" @click="emit('notifications')"><Bell :size="18" /></button>
     <button class="icon-btn" title="Audit / History" @click="emit('audit')"><History :size="18" /></button>
+    <button class="icon-btn" title="Contact Us" @click="contactOpen = true"><LifeBuoy :size="18" /></button>
+    <button class="icon-btn" title="User Guideline" :disabled="!guidelineUrl" @click="openGuideline"><BookOpen :size="18" /></button>
+    <button class="user-chip" title="Logout" @click="session.logout">
+      <img v-if="session.currentUser?.avatarUrl" :src="session.currentUser.avatarUrl" alt="" />
+      <span v-else>{{ session.currentUser?.displayName?.slice(0, 1) ?? 'U' }}</span>
+      <LogOut :size="14" />
+    </button>
+    <ContactUsModal :open="contactOpen" @close="contactOpen = false" />
   </div>
 </template>
 
@@ -62,6 +91,37 @@ const { currentFontScale, cycleFontScale } = useFontScale();
 .icon-btn:hover {
   background: var(--nav-hover-bg);
   color: var(--color-on-surface);
+}
+
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.user-chip {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface);
+  cursor: pointer;
+  padding: 0 8px;
+}
+
+.user-chip img,
+.user-chip span {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--color-secondary-container);
+  color: var(--color-on-secondary-container);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .font-scale-btn {

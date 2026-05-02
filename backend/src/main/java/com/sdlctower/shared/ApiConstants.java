@@ -12,6 +12,16 @@ public final class ApiConstants {
 
     public static final String WORKSPACE_CONTEXT = API_V1 + "/workspace-context";
     public static final String NAV_ENTRIES = API_V1 + "/nav/entries";
+    public static final String AUTH = API_V1 + "/auth";
+    public static final String AUTH_PROVIDERS = AUTH + "/providers";
+    public static final String AUTH_LOGIN = AUTH + "/login";
+    public static final String AUTH_GUEST = AUTH + "/guest";
+    public static final String AUTH_ME = AUTH + "/me";
+    public static final String AUTH_LOGOUT = AUTH + "/logout";
+    public static final String AUTH_TEAMBOOK_START = AUTH + "/sso/teambook/start";
+    public static final String AUTH_TEAMBOOK_CALLBACK = AUTH + "/sso/teambook/callback";
+    public static final String SHELL_HELP_LINKS = API_V1 + "/shell/help-links";
+    public static final String SUPPORT_CONTACT = API_V1 + "/support/contact";
     public static final String DASHBOARD = API_V1 + "/dashboard";
     public static final String DASHBOARD_SUMMARY = DASHBOARD + "/summary";
 

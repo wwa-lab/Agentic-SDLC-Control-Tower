@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the architecture of the **Platform Center** slice — the privileged admin surface that houses the six platform capabilities defined in PRD §12.1–§12.6. It covers system context, component breakdown, data flow, state boundaries, and integration boundaries. All diagrams use Mermaid 8.x-compatible syntax.
+This document describes the architecture of the **Platform Center** slice — the privileged admin surface that houses the six platform capabilities defined in PRD §12.1–§12.6 plus the Day 1 platform foundation for Application, SNOW Group, Workspace binding, and scope resolution. It covers system context, component breakdown, data flow, state boundaries, and integration boundaries. All diagrams use Mermaid 8.x-compatible syntax.
 
 ## Source
 
@@ -15,12 +15,13 @@ This document describes the architecture of the **Platform Center** slice — th
 | Driver | Implication |
 |--------|------------|
 | Platform Center must hold **six distinct but related capabilities** | Six parallel sub-modules that share the app shell, nav rail, and audit layer; each sub-module owns its own store, service, and tables |
+| Multi-team / multi-platform support is required from Day 1 | Application and SNOW Group become platform master data, not display-only shell context |
 | All mutations must be **audited atomically** (REQ-PC-86) | Audit write is synchronous and in-transaction; audit repository is a shared dependency of all six mutation services |
 | Single V1 role (`PLATFORM_ADMIN`) | Permission gate is a single route-level guard + controller-level annotation; no per-capability role matrix in V1 |
 | **Read-heavy + rare mutations** | Catalog list endpoints optimized for pagination and simple filters; mutations use optimistic concurrency where needed |
-| **Platform-scoped + workspace-scoped** records coexist | Entities carry `scope_type` + `scope_id` pair; queries resolve scope explicitly |
+| **Platform, application, SNOW group, workspace, and project** records coexist | Entities carry `scope_type` + `scope_id` pair; queries resolve scope through `PlatformScopeResolver` |
 | Credentials must never leak | Connection entity stores only `credential_ref`; a secret-store stub handles resolution server-side |
-| Package-by-feature backend (CLAUDE.md Lesson #3) | Sub-packages under `com.sdlctower.platform.{template,configuration,audit,access,policy,integration}` |
+| Package-by-feature backend (CLAUDE.md Lesson #3) | Sub-packages under `com.sdlctower.platform.{foundation,template,configuration,audit,access,policy,integration}` |
 
 ---
 
@@ -38,6 +39,7 @@ graph LR
 
     subgraph Backend[Spring Boot Backend]
         PCAPI[Platform Center API]
+        FND[Platform Foundation]
         WS[workspace-context]
         NAV[navigation]
     end
@@ -53,6 +55,7 @@ graph LR
     AUD -. V2 .-> SHELL
     SHELL --> PC
     PC -->|REST| PCAPI
+    PC -->|scope pickers| FND
     PC -->|scope chip| WS
     SHELL -->|nav entries| NAV
 
@@ -64,7 +67,7 @@ graph LR
     PC -. deep-link incident_event .-> INC
 ```
 
-Platform Center is a client of the shared app shell (for nav and workspace context) and a peer of other domain UIs (AI Center, Incident) through deep-links. Its backend is a self-contained module that reads/writes its own tables plus optionally performs outbound calls to external systems during connection tests.
+Platform Center is a client of the shared app shell (for nav and workspace context) and a peer of other domain UIs (AI Center, Incident) through deep-links. Its backend is a self-contained module that reads/writes its own tables plus optionally performs outbound calls to external systems during connection tests. The foundation sub-module provides canonical Application / SNOW Group / Workspace records and the scope chain used by all other Platform Center capabilities.
 
 ---
 
@@ -79,7 +82,8 @@ Platform Center is a client of the shared app shell (for nav and workspace conte
 | API — Controller | Spring `@RestController` per capability | `backend/.../platform/{template,configuration,audit,access,policy,integration}/` |
 | API — Service | Business rules, permission checks, audit writes | same packages |
 | API — Repository | Spring Data JPA repositories | same packages |
-| API — Shared | Audit writer, scope resolver, permission guard | `backend/.../platform/shared/` (NEW for this slice) |
+| API — Foundation | Application, SNOW Group, Workspace, and scope resolution | `backend/.../platform/foundation/` |
+| API — Shared | Audit writer, permission guard, cursor helpers | `backend/.../platform/shared/` (NEW for this slice) |
 | Data | Per-capability tables + shared `PLATFORM_AUDIT` | Flyway migrations V40+ |
 | Integration | Outbound adapter test calls, secret-store resolution | `backend/.../platform/integration/adapter/` |
 
@@ -249,8 +253,9 @@ Key design points:
 
 - **`AuditWriter` is a shared bean** injected into every mutation service. It writes a single `PLATFORM_AUDIT` row inside the caller's transaction. It never starts its own transaction.
 - **`AdminAuthGuard`** is a single Spring `HandlerInterceptor` (or method-level annotation `@RequireRole(PLATFORM_ADMIN)`) registered for every Platform Center controller path.
-- **`InheritanceResolver`** walks the four-layer chain (platform → application → snow-group → project) for a given template or configuration and emits the resolved record with per-field provenance.
-- **`ScopeResolver`** parses and validates scope query params (`scopeType:scopeId`).
+- **`PlatformScopeResolver`** resolves application, SNOW group, workspace, and project context into the ordered chain `platform → application → snow_group → workspace → project`.
+- **`InheritanceResolver`** walks the resolved scope chain for a given template or configuration and emits the resolved record with per-field provenance.
+- **`ScopeResolver`** parses and validates scope query params (`scopeType:scopeId`) before handing them to `PlatformScopeResolver`.
 - **`AdapterTester`** is a strategy pattern with implementations per adapter (`JiraAdapterTester`, `ConfluenceAdapterTester`, `GitlabAdapterTester`, etc.); V1 implementations can return canned success/failure for non-prod adapter kinds to keep the slice self-contained.
 - **`SecretStoreStub`** is an in-memory map of `credentialRef → credentialValue` backed by a `PLATFORM_CREDENTIAL_REF` lookup table; production wiring to an external secret store is a future concern.
 
@@ -435,7 +440,7 @@ Secret values for `PLATFORM_CREDENTIAL_REF` are seeded in local profile only; pr
 
 ### Security
 
-- Every Platform Center endpoint requires `PLATFORM_ADMIN`; unauthenticated requests return 401 (delegated to a future auth slice); authenticated non-admin returns 403
+- Every Platform Center endpoint requires `PLATFORM_ADMIN`; unauthenticated requests return 401 via the shared app shell auth/session layer; authenticated non-admin or guest requests return 403
 - No endpoint returns credential plain-text; credentials live in `PLATFORM_CREDENTIAL_REF` and only `credentialRef` is ever serialized
 - The `PLATFORM_AUDIT` table is append-only at the application layer (no update/delete paths)
 - Last-admin guard (FR-43) prevents UI lockout
@@ -474,5 +479,5 @@ Secret values for `PLATFORM_CREDENTIAL_REF` are seeded in local profile only; pr
 | Should Platform Center audit reads (e.g., "admin viewed role assignment X")? | No — V1 audits mutations only |
 | Does the drift indicator update on every catalog fetch, or cached? | Computed inline; cache is a V2 optimization |
 | Is there a `PLATFORM_ADMIN` user seeded in H2 for local dev? | Yes — a default admin `admin@sdlctower.local` is seeded via Flyway |
-| Are credentials scoped per workspace (data isolation enforced in query), or per-user-visibility? | Per-workspace at the data layer (query filters by workspace scope), per-role at the controller layer |
+| Are credentials scoped per workspace (data isolation enforced in query), or per-user-visibility? | Per-workspace at the data layer, with application/SNOW group ids recorded for ownership filtering; per-role at the controller layer |
 | Can a policy exception outlive its parent policy? | Yes — exceptions survive policy deactivation for audit purposes |

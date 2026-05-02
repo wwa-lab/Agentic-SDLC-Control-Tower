@@ -1,26 +1,39 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
 import { useWorkspaceStore } from '@/shared/stores/workspaceStore';
 import { useShellUiStore } from '@/shell/stores/shellUiStore';
+import { useSessionStore } from '@/shell/stores/sessionStore';
 import { useShellConfig } from '@/shell/composables/useShellConfig';
 import PrimaryNav from './PrimaryNav.vue';
 import TopContextBar from './TopContextBar.vue';
 import GlobalActionBar from './GlobalActionBar.vue';
 import PageHeader from './PageHeader.vue';
 import AiCommandPanel from './AiCommandPanel.vue';
+import LoginView from './LoginView.vue';
 import DataRibbon from '@/shared/components/DataRibbon.vue';
 
 const workspaceStore = useWorkspaceStore();
 const shellUiStore = useShellUiStore();
+const sessionStore = useSessionStore();
 const { config } = useShellConfig();
 
-onMounted(() => {
-  workspaceStore.load();
+onMounted(async () => {
+  await sessionStore.init();
+  if (sessionStore.isAuthenticated) {
+    workspaceStore.load();
+  }
+});
+
+watch(() => sessionStore.isAuthenticated, (isAuthenticated) => {
+  if (isAuthenticated) {
+    workspaceStore.load();
+  }
 });
 </script>
 
 <template>
-  <div class="app-shell">
+  <LoginView v-if="sessionStore.initialized && !sessionStore.isAuthenticated" />
+  <div v-else-if="sessionStore.initialized" class="app-shell">
     <!-- Left Nav (overridable) -->
     <slot name="nav">
       <PrimaryNav />
@@ -55,6 +68,7 @@ onMounted(() => {
       <AiCommandPanel v-if="config.showAiPanel" :content="shellUiStore.resolvedAiPanelContent" />
     </slot>
   </div>
+  <div v-else class="shell-loading">Loading SDLC Tower...</div>
 </template>
 
 <style scoped>
@@ -98,5 +112,15 @@ onMounted(() => {
 .page-container {
   flex: 1;
   min-width: 0;
+}
+
+.shell-loading {
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  background-color: var(--color-surface);
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
 }
 </style>

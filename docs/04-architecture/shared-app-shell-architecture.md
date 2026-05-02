@@ -230,8 +230,11 @@ graph LR
     end
 
     subgraph Backend["Spring Boot :8080"]
+        AUTH_API["/api/v1/auth/*"]
         WC_API["GET /api/v1/workspace-context"]
         NAV_API["GET /api/v1/nav/entries"]
+        HELP_API["GET /api/v1/shell/help-links"]
+        SUPPORT_API["POST /api/v1/support/contact"]
         HEALTH["GET /actuator/health"]
     end
 
@@ -241,23 +244,28 @@ graph LR
     end
 
     FE -->|fetch| PROXY
+    PROXY -->|forward| AUTH_API
     PROXY -->|forward| WC_API
     PROXY -->|forward| NAV_API
+    PROXY -->|forward| HELP_API
+    PROXY -->|forward| SUPPORT_API
     WC_API --> STORE
     FW -->|V1 schema + V2 seed| STORE
 ```
 
 - Frontend uses Vite proxy (`/api` to `http://localhost:8080`) during development
-- Backend serves workspace context and navigation entries via versioned REST APIs
+- Backend serves auth/session, optional TeamBook provider discovery, workspace context, navigation entries, help links, and Contact Us via versioned REST APIs
 - Schema is managed by Flyway migrations, not JPA auto-DDL
 - CORS is configured for `localhost:5173` during development
 
 ## 9. Security Considerations
 
-- The shell itself does not enforce authentication or authorization in V1
-- Authentication and session management will be handled by the Spring Boot backend in later slices
-- The shell must not expose workspace-scoped data without backend-enforced context validation
-- Navigation entries render the full set in V1; permission-based filtering is deferred but the architecture must not make it structurally difficult to add
+- The shell routes unauthenticated users to enabled auth providers: TeamBook SSO where configured, manual staff-id login, or guest mode.
+- Backend session and write guards are authoritative; frontend read-only state is only a UX projection.
+- TeamBook authenticates identity and enriches profile only; `PlatformUser` and role assignments remain the authorization source of truth.
+- Guest mode uses demo/public data and must not expose real Application + SNOW team partitions.
+- Authenticated staff data is partitioned by Application + SNOW Group scope. The shared service is common, but real team data is not shared across ownership boundaries.
+- Navigation entries render the full set in V1; write actions are filtered by role/mode.
 
 ## 10. Risks
 

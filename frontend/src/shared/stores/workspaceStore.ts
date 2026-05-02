@@ -9,11 +9,16 @@ import { getWorkspaceContext } from '@/shared/api/workspaceApi';
  */
 export const useWorkspaceStore = defineStore('workspace', () => {
   const baseContext = ref<WorkspaceContext>({
+    workspaceId: null,
     workspace: '',
+    applicationId: null,
     application: '',
+    snowGroupId: null,
     snowGroup: null,
+    projectId: null,
     project: null,
-    environment: null
+    environment: null,
+    demoMode: false
   });
   const routeContext = ref<Partial<WorkspaceContext> | null>(null);
 
@@ -21,11 +26,16 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const error = ref<string | null>(null);
 
   const context = computed<WorkspaceContext>(() => ({
+    workspaceId: routeContext.value?.workspaceId ?? baseContext.value.workspaceId,
     workspace: routeContext.value?.workspace ?? baseContext.value.workspace,
+    applicationId: routeContext.value?.applicationId ?? baseContext.value.applicationId,
     application: routeContext.value?.application ?? baseContext.value.application,
+    snowGroupId: routeContext.value?.snowGroupId ?? baseContext.value.snowGroupId,
     snowGroup: routeContext.value?.snowGroup ?? baseContext.value.snowGroup,
+    projectId: routeContext.value?.projectId ?? baseContext.value.projectId,
     project: routeContext.value?.project ?? baseContext.value.project,
     environment: routeContext.value?.environment ?? baseContext.value.environment,
+    demoMode: routeContext.value?.demoMode ?? baseContext.value.demoMode,
   }));
 
   async function load(): Promise<void> {

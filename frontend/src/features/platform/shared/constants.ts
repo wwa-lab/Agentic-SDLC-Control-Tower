@@ -1,6 +1,6 @@
 import type { ScopeType, TemplateKind, PolicyCategory, AdapterKind, AuditCategory } from './types';
 
-export const SCOPE_ORDER: readonly ScopeType[] = ['platform', 'application', 'workspace', 'project'];
+export const SCOPE_ORDER: readonly ScopeType[] = ['platform', 'application', 'snow_group', 'workspace', 'project'];
 
 export const TEMPLATE_KIND_LABELS: Record<TemplateKind, string> = {
   page: 'Page',
@@ -52,5 +52,4 @@ export const PLATFORM_SUBSECTIONS = [
 
 export type SubSectionKey = (typeof PLATFORM_SUBSECTIONS)[number]['key'];
 
-export const PC_USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true'
-  || typeof import.meta.env.VITE_USE_MOCK_API === 'undefined';
+export const PC_USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';

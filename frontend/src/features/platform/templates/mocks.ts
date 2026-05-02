@@ -28,7 +28,7 @@ export const MOCK_TEMPLATE_DETAIL: TemplateDetail = {
     defaultMilestones: {
       effectiveValue: ['Kickoff', 'Design', 'Build', 'Rollout'],
       winningLayer: 'platform',
-      layers: { platform: ['Kickoff', 'Design', 'Build', 'Rollout'], application: null, snowGroup: null, project: null },
+      layers: { platform: ['Kickoff', 'Design', 'Build', 'Rollout'], application: null, snowGroup: null, workspace: null, project: null },
     },
   },
 };

@@ -113,7 +113,7 @@ app:
         icon: Cpu
         order: 11
       - key: reports
-        label: Reports
+        label: Report Center
         path: /reports
         coming-soon: false
         icon: BarChart

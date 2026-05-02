@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { NavItem, ShellPageConfig, ShellAction } from '@/shared/types/shell';
+import { useSessionStore } from '@/shell/stores/sessionStore';
 import {
   LayoutDashboard,
   Users,
@@ -34,7 +35,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { key: 'deployment', label: 'Deployment', path: '/deployment', icon: 'Send' },
   { key: 'incidents', label: 'Incident Management', path: '/incidents', icon: 'AlertTriangle' },
   { key: 'ai-center', label: 'AI Center', path: '/ai-center', icon: 'Cpu' },
-  { key: 'reports', label: 'Reports', path: '/reports', icon: 'BarChart' },
+  { key: 'reports', label: 'Report Center', path: '/reports', icon: 'BarChart' },
   { key: 'platform', label: 'Platform Center', path: '/platform', icon: 'Settings' }
 ];
 
@@ -249,6 +250,20 @@ const routes = NAVIGATION_ITEMS.map(item => {
   return { ...base, name: item.key };
 });
 
+routes.push({
+  path: '/403',
+  name: 'forbidden',
+  component: () => import('@/features/platform/shell/ForbiddenView.vue'),
+  meta: {
+    title: 'Forbidden',
+    navKey: '',
+    comingSoon: false,
+    subtitle: 'This area requires platform administrator access',
+    actions: undefined,
+    showAiPanel: false,
+  },
+});
+
 export const router = createRouter({
   history: createWebHistory(),
   routes,
@@ -264,4 +279,28 @@ export const router = createRouter({
     }
     return { top: 0 };
   },
+});
+
+router.beforeEach(async to => {
+  if (!to.path.startsWith('/platform')) {
+    return true;
+  }
+
+  const sessionStore = useSessionStore();
+  if (!sessionStore.initialized) {
+    await sessionStore.init();
+  }
+
+  if (!sessionStore.currentUser) {
+    return true;
+  }
+
+  if (sessionStore.currentUser.roles.includes('PLATFORM_ADMIN')) {
+    return true;
+  }
+
+  return {
+    path: '/403',
+    query: { redirect: to.fullPath },
+  };
 });

@@ -15,14 +15,15 @@ All diagrams use Mermaid 8.x-compatible syntax.
 ## Flows in this document
 
 1. Platform Center initial load (Phase A vs Phase B)
-2. Sub-section navigation and lazy fetch
-3. Catalog fetch with filters + cursor pagination
-4. Detail view with inheritance resolution (templates)
-5. Mutation flow with atomic audit write
-6. Connection test flow (external call)
-7. Error isolation and partial failure
-8. Route-guard 403 flow
-9. Refresh strategy after mutations
+2. Platform foundation scope resolution
+3. Sub-section navigation and lazy fetch
+4. Catalog fetch with filters + cursor pagination
+5. Detail view with inheritance resolution (templates)
+6. Mutation flow with atomic audit write
+7. Connection test flow (external call)
+8. Error isolation and partial failure
+9. Route-guard 403 flow
+10. Refresh strategy after mutations
 
 ---
 
@@ -182,6 +183,27 @@ URL state is the source of truth for filters — filters are written to the URL 
 
 ---
 
+## 1A. Platform Foundation Scope Resolution
+
+```mermaid
+sequenceDiagram
+    participant UI as Scope Picker or Domain Slice
+    participant API as /api/v1/platform/foundation/scope/resolve
+    participant Resolver as PlatformScopeResolver
+    participant Repo as Foundation Repositories
+
+    UI->>API: GET ?projectId=proj-42
+    API->>Resolver: resolve(projectId)
+    Resolver->>Repo: lookup workspace/application/SNOW group
+    Repo-->>Resolver: workspace + app + snow group ids
+    Resolver-->>API: ordered scope chain
+    API-->>UI: platform:* -> application:app-* -> snow_group:snow-* -> workspace:ws-* -> project:proj-42
+```
+
+The resolver is the single source for scope ordering. Inheritance, access checks, policy lookup, audit scoping, and integration ownership reuse this chain instead of re-implementing application / SNOW group lookup in each domain.
+
+---
+
 ## 4. Detail View with Inheritance Resolution (Templates)
 
 ```mermaid
@@ -196,15 +218,15 @@ sequenceDiagram
 
     Row->>Detail: onClick(row)
     Detail->>Store: loadDetail(id)
-    Store->>API: GET /api/v1/platform/templates/{id}?scope=project:P-42
+    Store->>API: GET /api/v1/platform/templates/{id}?scope=project:proj-42
     API->>Svc: getDetail(id, scope)
     Svc->>DB: SELECT template + current version
-    Svc->>DB: SELECT overrides for each layer
-    Svc->>Resolver: resolve(platform, app, group, project)
+    Svc->>Resolver: resolve scope chain
+    Resolver->>DB: SELECT overrides for each scope in chain
     Resolver-->>Svc: fields + provenance map
     Svc-->>API: DetailPayload
     API-->>Store: 200 { data: { template, version, inheritance: {...} } }
-    Store-->>Detail: render with chips (Platform/App/Group/Project)
+    Store-->>Detail: render with chips (Platform/App/SNOW Group/Workspace/Project)
 ```
 
 Response shape (illustrative):
@@ -235,6 +257,7 @@ Response shape (illustrative):
           "platform":    ["Kickoff","Design","Build"],
           "application": null,
           "snowGroup":   null,
+          "workspace":   null,
           "project":     ["Kickoff","Design","Build","Rollout"]
         }
       }
@@ -368,7 +391,7 @@ sequenceDiagram
     User->>Router: navigate /platform
     Router->>Guard: beforeEach
     Guard->>API: GET /access/me
-    API-->>Guard: 200 { userId, roles: ["WORKSPACE_MEMBER"] }
+    API-->>Guard: 200 { staffId, roles: ["WORKSPACE_MEMBER"] }
     Guard->>Guard: roles.includes("PLATFORM_ADMIN") == false
     Guard->>Router: next("/platform/forbidden")
     Router->>View403: render
@@ -376,7 +399,7 @@ sequenceDiagram
     View403->>Router: navigate /
 ```
 
-If `/access/me` itself fails, the guard treats it as "not admin" and renders 403 with a generic message. An authenticated session is assumed to exist (handled by a future auth slice); a 401 from `/access/me` still routes to 403 in this slice.
+If `/access/me` itself fails, the guard treats it as "not admin" and renders 403 with a generic message. The authenticated or guest session is owned by the shared app shell; a 401 from `/access/me` still routes to 403 in this slice.
 
 ---
 
@@ -445,6 +468,10 @@ stateDiagram-v2
 
 | Concept | TypeScript FE type | Java BE DTO / entity | DB table |
 |---------|-------------------|----------------------|----------|
+| Application | `PlatformApplication` | `PlatformApplicationDto` / `PlatformApplication` entity | `PLATFORM_APPLICATION` |
+| SNOW group | `PlatformSnowGroup` | `PlatformSnowGroupDto` / `PlatformSnowGroup` entity | `PLATFORM_SNOW_GROUP` |
+| Workspace binding | `PlatformWorkspace` | `PlatformWorkspaceDto` / `PlatformWorkspace` entity | `PLATFORM_WORKSPACE` |
+| Scope resolution | `PlatformScopeResolution` | `PlatformScopeResolutionDto` / computed resolver | n/a |
 | Template row | `TemplateSummary` | `TemplateDto` / `Template` entity | `PLATFORM_TEMPLATE` |
 | Template version | `TemplateVersion` | `TemplateVersionDto` / `TemplateVersion` entity | `PLATFORM_TEMPLATE_VERSION` |
 | Config row | `ConfigurationSummary` | `ConfigurationDto` / `Configuration` entity | `PLATFORM_CONFIGURATION` |

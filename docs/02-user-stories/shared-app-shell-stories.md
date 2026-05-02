@@ -104,11 +104,78 @@ So that search, notifications, and audit are always reachable
 - The shell includes audit/history entry
 - These utilities appear in a consistent area of the shell
 
+## Story S6: Log In With Staff ID
+
+As a staff user
+I want to log in with my staff id and a non-empty password
+So that the system can apply my team scope and permissions
+
+### Acceptance Criteria
+
+- The login screen accepts staff id such as `43910516`
+- Password is required and cannot be empty
+- Successful login creates a current-user session with staff id, roles, and scope grants
+- Failed login shows an inline error without clearing the staff id field
+
+## Story S6A: Log In With TeamBook SSO In Internal Deployments
+
+As an internal staff user
+I want to enter the platform through TeamBook SSO when it is available
+So that I do not need a separate platform password and the shell can show my company profile
+
+### Acceptance Criteria
+
+- Internal environments can show a TeamBook SSO entry point before the manual staff-id form
+- TeamBook callback maps the company identity to staff id, nStaff Name, and avatar URL
+- The current-user session includes `authProvider = "teambook"` and profile fields when TeamBook returns them
+- TeamBook authentication does not grant access by itself; the staff id must map to an active `PlatformUser` with role assignments
+- Local or external environments can hide TeamBook and continue to use manual staff-id login and guest mode
+
+## Story S7: Browse In Guest Mode
+
+As a visitor
+I want to continue as a guest
+So that I can understand the system's core capabilities without requesting access first
+
+### Acceptance Criteria
+
+- The login screen includes a "Continue as Guest" action
+- Guest mode enters the normal shell and navigation
+- Guest mode uses read-only demo data, not real Application + SNOW team data
+- Mutating actions are hidden or disabled with a read-only reason
+- API write attempts from a guest return 403
+
+## Story S8: Raise A Support Issue From Contact Us
+
+As a user or guest
+I want to submit a Contact Us form
+So that a support story is created in the internal Jira project
+
+### Acceptance Criteria
+
+- The shell has a global Contact Us button
+- Clicking it opens a form with title, category, and description
+- Submitting the form sends current route, current context, reporter identity, and timestamp
+- On success, the UI shows the created Jira key and link
+- On failure, the form remains open and shows retry guidance
+
+## Story S9: Open User Guideline
+
+As a user or guest
+I want a User Guideline button
+So that I can jump to the official Confluence guideline page
+
+### Acceptance Criteria
+
+- The shell has a global User Guideline button
+- Clicking it opens the configured Confluence URL in a new tab
+- If the URL is missing, the button is disabled with a tooltip
+
 ## Assumptions
 
 - Desktop-first; mobile layout is out of scope for V1 shell
-- Shell renders with static or mocked `WorkspaceContext`; no live backend dependency
-- All 13 navigation entries are rendered for every user; permission filtering is deferred
+- Shell renders with either authenticated user context or guest demo context
+- All 13 navigation entries are rendered for authenticated users and guests; mutating actions obey role/mode restrictions
 - Vue 3 with Composition API and `<script setup>` is the frontend implementation target
 - AI Command Panel is a layout container only; behavior and content logic are deferred
 
@@ -124,12 +191,13 @@ So that search, notifications, and audit are always reachable
 - Should the nav labels use the full PRD vocabulary (e.g., "Code & Build Management") or shortened forms (e.g., "Code & Build")?
 - Should the shell support a collapsed/minimized navigation state in V1?
 - What is the fallback behavior when the AI Command Panel has no page-scoped content?
+- What exact Jira project key and Confluence guideline URL should each environment use?
 
 ## Out Of Scope For This Slice
 
 - page-specific business widgets
 - live data integration
-- permission-driven menu filtering
+- full enterprise SSO / directory sync
 - mobile layout optimization
 - full AI action workflow behavior
 - design token finalization

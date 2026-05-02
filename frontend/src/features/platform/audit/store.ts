@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { AuditRecord, LoadState } from '../shared/types';
+import type { AuditRecord, CursorPage, LoadState } from '../shared/types';
 import { MOCK_AUDIT_RECORDS } from './mocks';
-import { withMockLatency, PC_USE_MOCK } from '../shared/api';
+import { withMockLatency, PC_USE_MOCK, pcGet } from '../shared/api';
 
 export const useAuditStore = defineStore('platform-audit', () => {
   const status = ref<LoadState>('idle');
@@ -26,6 +26,11 @@ export const useAuditStore = defineStore('platform-audit', () => {
         items.value = await withMockLatency(() => MOCK_AUDIT_RECORDS);
         total.value = MOCK_AUDIT_RECORDS.length;
         cursor.value = null;
+      } else {
+        const page = await pcGet<CursorPage<AuditRecord>>('/audit');
+        items.value = page.data;
+        total.value = page.pagination.total;
+        cursor.value = page.pagination.nextCursor;
       }
       status.value = 'ready';
     } catch (e) {

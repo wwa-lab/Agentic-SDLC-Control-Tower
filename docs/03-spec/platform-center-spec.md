@@ -41,6 +41,54 @@ On initial visit, `/platform` redirects to `/platform/templates`.
 
 **Source:** S-PC-01
 
+### FR-04: Platform foundation master-data APIs
+
+Platform Center exposes read APIs for canonical ownership records used by every scoped object:
+
+- `GET /api/v1/platform/foundation/applications`
+- `GET /api/v1/platform/foundation/snow-groups`
+- `GET /api/v1/platform/foundation/workspaces`
+
+Each record returns a stable id, key/name fields, status, and ownership metadata. These APIs drive scope pickers and prevent UI forms from accepting free-text Application or SNOW Group labels.
+
+**Source:** S-PC-04; REQ-PC-02A
+
+### FR-05: Scope type contract
+
+The shared `ScopeType` enum is:
+
+`platform | application | snow_group | workspace | project`
+
+`platform` scope uses sentinel id `"*"`. All other scope types must reference known records in the platform foundation model.
+
+**Source:** S-PC-06; REQ-PC-02B, REQ-PC-43
+
+### FR-05A: Data isolation rule
+
+The shared service must enforce Application + SNOW Group data isolation server-side. Authenticated non-admin users receive data only for scopes assigned to their staff id. Platform Admins can manage access records globally. Guest users receive only demo/public read-only data and never real team data. If scope resolution fails for a real-data request, the service fails closed instead of issuing an unscoped query.
+
+**Source:** REQ-PC-02D
+
+### FR-06: Scope resolution API
+
+`GET /api/v1/platform/foundation/scope/resolve` accepts one of `projectId`, `workspaceId`, `applicationId`, or `snowGroupId` and returns an ordered scope chain. The deepest available context wins.
+
+Resolution order:
+
+`platform:* -> application:<id> -> snow_group:<id> -> workspace:<id> -> project:<id>`
+
+Consumer slices use this API or the backend `PlatformScopeResolver` service before resolving configurations, policies, permissions, audit scope, or integration ownership.
+
+**Source:** S-PC-05; REQ-PC-02B, REQ-PC-02C
+
+---
+
+### FR-07: Platform foundation is not a domain content store
+
+Foundation records are ownership metadata only. Platform Center must not copy Jira, Confluence, ServiceNow, GitHub, or CI/CD content bodies into these records; it stores ids, labels, ownership, status, and integration references.
+
+**Source:** REQ-PC-02A, CLAUDE.md Platform Design Principles
+
 ---
 
 ### FR-10: Template catalog API
@@ -53,7 +101,7 @@ Response payload is a `CursorPage<Template>` envelope (see FR-90).
 
 ### FR-11: Template detail with inheritance resolution
 
-`GET /api/v1/platform/templates/{id}?scope={workspace|application|project}:{id}` returns the template record plus a resolved-inheritance section that lists, per overridable field, the winning layer and the values at each of the four layers (Platform / Application / SNOW Group / Project).
+`GET /api/v1/platform/templates/{id}?scope={platform|application|snow_group|workspace|project}:{id}` returns the template record plus a resolved-inheritance section that lists, per overridable field, the winning layer and the values at each layer (Platform / Application / SNOW Group / Workspace / Project).
 
 **Source:** S-PC-11; REQ-PC-11
 
@@ -131,13 +179,19 @@ The Platform Center HTTP surface never exposes POST/PATCH/DELETE on `/api/v1/pla
 
 ### FR-40: Role assignment catalog API
 
-`GET /api/v1/platform/access/assignments` returns assignments filterable by `userId`, `role`, `scopeType`, `scopeId`, with cursor pagination.
+`GET /api/v1/platform/access/assignments` returns assignments filterable by `staffId`, `role`, `scopeType`, `scopeId`, with cursor pagination.
 
 **Source:** S-PC-40; REQ-PC-41
 
+### FR-40A: User catalog API
+
+`GET /api/v1/platform/access/users` returns users filterable by `staffId`, `status`, `profileSource`, and `q`. `POST /api/v1/platform/access/users` creates a user with staff id and display metadata. `PUT /api/v1/platform/access/users/{staffId}` updates display metadata, profile metadata, or status. Optional TeamBook metadata (`staffName`, `avatarUrl`, `profileSource`, `lastProfileSyncAt`) is display-only and never grants access by itself. These endpoints require `PLATFORM_ADMIN`.
+
+**Source:** REQ-PC-42A
+
 ### FR-41: Assign role
 
-`POST /api/v1/platform/access/assignments` with `{ userId, role, scopeType, scopeId }` creates an assignment. Valid roles are `PLATFORM_ADMIN`, `WORKSPACE_ADMIN`, `WORKSPACE_MEMBER`, `WORKSPACE_VIEWER`, `AUDITOR`. Valid `scopeType` values are `platform`, `application`, `workspace`, `project`; `platform` scope uses sentinel id `"*"`.
+`POST /api/v1/platform/access/assignments` with `{ staffId, role, scopeType, scopeId }` creates an assignment. Valid roles are `PLATFORM_ADMIN`, `WORKSPACE_ADMIN`, `WORKSPACE_MEMBER`, `WORKSPACE_VIEWER`, `AUDITOR`. Valid `scopeType` values are `platform`, `application`, `snow_group`, `workspace`, `project`; `platform` scope uses sentinel id `"*"`.
 
 **Source:** S-PC-41; REQ-PC-42, REQ-PC-43
 
@@ -197,13 +251,13 @@ Revoking an assignment with `role = PLATFORM_ADMIN` where the mutation would lea
 
 ### FR-61: Connection catalog API
 
-`GET /api/v1/platform/integrations/connections` returns connections filterable by `kind`, `scopeWorkspaceId`, `status`, `syncMode`. Response is a `CursorPage<Connection>`. Credential values are **never** returned; only `credentialRef` (an opaque reference).
+`GET /api/v1/platform/integrations/connections` returns connections filterable by `kind`, `scopeWorkspaceId`, `applicationId`, `snowGroupId`, `status`, `syncMode`. Response is a `CursorPage<Connection>`. Credential values are **never** returned; only `credentialRef` (an opaque reference).
 
 **Source:** S-PC-60, S-PC-61; REQ-PC-61, REQ-PC-62
 
 ### FR-62: Create connection
 
-`POST /api/v1/platform/integrations/connections` creates a connection with `{ kind, scopeWorkspaceId, credentialRef, syncMode, pullSchedule?, pushUrl? }`. Validates: `credentialRef` format, `syncMode ∈ { 'pull', 'push', 'both' }`, and that schedule / URL are provided consistently with `syncMode`.
+`POST /api/v1/platform/integrations/connections` creates a connection with `{ kind, scopeWorkspaceId, applicationId?, snowGroupId?, credentialRef, syncMode, pullSchedule?, pushUrl? }`. If `applicationId` or `snowGroupId` is omitted, the backend resolves it from the workspace. Validates: `credentialRef` format, `syncMode ∈ { 'pull', 'push', 'both' }`, and that schedule / URL are provided consistently with `syncMode`.
 
 **Source:** S-PC-61; REQ-PC-61, REQ-PC-64
 
@@ -252,7 +306,7 @@ The following actions render a destructive confirmation dialog naming the target
 
 ### FR-80: Workspace-context binding
 
-All Platform Center pages display the active workspace chip from the shared app shell's workspace-context store. The chip is informational only; it does not filter catalog views (since Platform Center shows cross-workspace data). Catalog rows that are workspace-scoped display an explicit workspace chip on the row.
+All Platform Center pages display the active context chip from the shared app shell's workspace-context store. The chip is informational only; it does not filter catalog views (since Platform Center shows cross-scope data). Catalog rows display explicit scope chips for platform, application, SNOW group, workspace, or project scope.
 
 **Source:** REQ-PC-81
 
@@ -353,14 +407,19 @@ sequenceDiagram
 
 | Entity | Primary purpose | Key fields |
 |--------|-----------------|-----------|
+| `PlatformApplication` | Canonical application / product boundary | id, key, name, ownerSnowGroupId, criticality, status |
+| `PlatformSnowGroup` | Canonical ServiceNow ownership group | id, servicenowGroupName, displayName, ownerEmail, escalationPolicy, status |
+| `PlatformWorkspace` | Workspace bound to application and SNOW group | id, key, name, applicationId, snowGroupId, status |
+| `PlatformScopeResolution` | Read model returned by scope resolver | inputType, inputId, scopeChain, applicationId, snowGroupId, workspaceId, projectId |
 | `Template` | Reusable template record with versions | id, key, kind, name, status, ownerId, currentVersionId |
 | `TemplateVersion` | Versioned body snapshot of a template | id, templateId, version, body (JSON), createdAt, createdBy |
 | `Configuration` | Configuration entry with scope and parent | id, key, kind, scopeType, scopeId, parentId, body, status |
 | `AuditRecord` | Append-only audit event | id, timestamp, actor, actorType, category, action, objectType, objectId, scope, outcome, payloadJson |
-| `RoleAssignment` | Binding of user → role → scope | id, userId, role, scopeType, scopeId, grantedBy, grantedAt |
+| `PlatformUser` | Staff-id user managed by Platform Admin | staffId, displayName, staffName, avatarUrl, email, profileSource, status |
+| `RoleAssignment` | Binding of staff user → role → scope | id, staffId, role, scopeType, scopeId, grantedBy, grantedAt |
 | `Policy` | Governance policy (versioned, scoped, bound) | id, key, category, scopeType, scopeId, boundTo, version, status, body |
 | `PolicyException` | Exception carve-out on a policy | id, policyId, reason, requesterId, approverId, expiresAt |
-| `Connection` | Adapter instance (integration configuration) | id, kind, scopeWorkspaceId, credentialRef, syncMode, pullSchedule, pushUrl, status, lastSyncAt |
+| `Connection` | Adapter instance (integration configuration) | id, kind, scopeWorkspaceId, applicationId, snowGroupId, credentialRef, syncMode, pullSchedule, pushUrl, status, lastSyncAt |
 
 Full entity attribute tables live in [platform-center-data-model.md](../04-architecture/platform-center-data-model.md).
 
@@ -370,7 +429,7 @@ Full entity attribute tables live in [platform-center-data-model.md](../04-archi
 
 | Integration | Direction | Purpose | Status |
 |-------------|-----------|---------|--------|
-| `shared-app-shell` workspace-context | read | Fetch active workspace for scope chips | [Verified] endpoint exists |
+| `shared-app-shell` workspace-context | read | Fetch active workspace/application/SNOW group display context | [Verified] endpoint exists; id fields must be added |
 | `shared-app-shell` navigation | read | Consume nav entry `platform` | [Verified] seeded in backend |
 | `ai-center` run detail route | deep-link | Audit `skill_execution` records link to `/ai-center/runs/{id}` | [Assumption] AI Center route pattern |
 | `incident` detail route | deep-link | Audit `incident_event` records link to `/incidents/{id}` | [Verified] route exists |
@@ -398,7 +457,7 @@ Full entity attribute tables live in [platform-center-data-model.md](../04-archi
 | Policy runtime enforcement not in this slice | Consumers may have inconsistent enforcement logic | Document policy resolver API contract explicitly; provide a resolver interface in `platform/policy/` that consumer slices call |
 | Credential storage is stubbed in V1 | Secrets may leak via logs or migrations if not careful | Never return plain credentials through any API; log only `credentialRef`; add a test asserting credential strings don't appear in logs |
 | Audit write in same transaction blocks hot-path mutations | Mutation latency increases | Audit writes are single-row inserts; budget remains within NFR-01 for V1 volume |
-| Template inheritance resolution on every detail fetch | Slow when chain grows | V1 resolves inline (acceptable at ≤ 4 layers); V2 can add a cache |
+| Template inheritance resolution on every detail fetch | Slow when chain grows | V1 resolves inline (acceptable at ≤ 5 layers); V2 can add a cache |
 | `AUDITOR` role is not UI-wired in V1 | Governance gap | Document clearly in REQ-PC-40 that V1 gates on `PLATFORM_ADMIN` only |
 | Last-admin guard can be bypassed via direct DB access | Lockout possible | Scope is "don't lock the UI out"; full DB-level guard requires a trigger, deferred |
 
@@ -419,7 +478,7 @@ Full entity attribute tables live in [platform-center-data-model.md](../04-archi
 
 | Q | Default answer (unless user changes) |
 |---|---|
-| How are users identified across the platform (email vs. internal UUID)? | Internal UUID; email is a display hint — matches existing patterns |
+| How are users identified across the platform? | Staff id is the primary identifier; email, TeamBook nStaff Name, and avatar are optional profile metadata |
 | Does the audit log include reads? | No — V1 records only mutations; reads are not audited |
 | Does creating a `draft` template also create a first `TemplateVersion`? | Yes — creation initializes `v1` with an empty body |
 | If a policy is deactivated, do exceptions remain? | Yes — exceptions are orphaned but preserved for audit |

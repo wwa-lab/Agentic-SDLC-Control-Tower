@@ -2,8 +2,11 @@ import { ref, computed } from 'vue';
 import type { CurrentUser } from './types';
 
 const currentUser = ref<CurrentUser>({
-  userId: 'admin@sdlctower.local',
+  staffId: '43910516',
   displayName: 'Platform Admin',
+  staffName: null,
+  avatarUrl: null,
+  authProvider: 'manual',
   roles: ['PLATFORM_ADMIN'],
   scopes: [{ scopeType: 'platform', scopeId: '*' }],
 });

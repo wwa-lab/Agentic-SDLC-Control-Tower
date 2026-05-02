@@ -1,13 +1,14 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { RoleAssignment, LoadState } from '../shared/types';
+import type { CursorPage, LoadState, PlatformUser, RoleAssignment } from '../shared/types';
 import { MOCK_ROLE_ASSIGNMENTS } from './mocks';
-import { withMockLatency, PC_USE_MOCK } from '../shared/api';
+import { withMockLatency, PC_USE_MOCK, pcGet } from '../shared/api';
 
 export const useAccessStore = defineStore('platform-access', () => {
   const status = ref<LoadState>('idle');
   const error = ref<string | null>(null);
   const items = ref<RoleAssignment[]>([]);
+  const users = ref<PlatformUser[]>([]);
 
   const tableState = computed(() => {
     if (status.value === 'loading') return 'loading' as const;
@@ -26,6 +27,10 @@ export const useAccessStore = defineStore('platform-access', () => {
     try {
       if (PC_USE_MOCK) {
         items.value = await withMockLatency(() => MOCK_ROLE_ASSIGNMENTS);
+        users.value = [];
+      } else {
+        items.value = (await pcGet<CursorPage<RoleAssignment>>('/access/assignments')).data;
+        users.value = (await pcGet<CursorPage<PlatformUser>>('/access/users')).data;
       }
       status.value = 'ready';
     } catch (e) {
@@ -34,5 +39,5 @@ export const useAccessStore = defineStore('platform-access', () => {
     }
   }
 
-  return { status, error, items, tableState, platformAdminCount, fetchAssignments };
+  return { status, error, items, users, tableState, platformAdminCount, fetchAssignments };
 });

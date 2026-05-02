@@ -29,7 +29,7 @@ This slice delivers **all six platform capabilities** defined in PRD §12.1 thro
 1. **Template Management** (PRD §12.1) — Page, flow, project, policy, metric, and AI templates with inheritance, versioning, and override semantics
 2. **Configuration Management** (PRD §12.2) — Page, field, component, flow, view, notification, and AI configurations with team/project override support
 3. **Audit Management** (PRD §12.3) — Read-only browse of audit records covering configuration changes, permission changes, approvals, AI actions, skill executions, and policy hits
-4. **Access Management** (PRD §12.4) — RBAC-first role/permission model with platform, application, workspace, and project scope bindings
+4. **Access Management** (PRD §12.4) — RBAC-first role/permission model with platform, application, SNOW group, workspace, and project scope bindings
 5. **Policy & Governance** (PRD §12.5) — Action policies, approval rules, autonomy level defaults, risk thresholds, and exception handling
 6. **Integration Framework** (PRD §12.6) — External-system adapter registry (Jira, Confluence, GitLab, Jenkins, ServiceNow) with workspace-scoped credentials and sync/push modes
 
@@ -44,7 +44,7 @@ Platform Center does **not** deliver:
 - Low-code / no-code page composer UI (deferred per PRD §18.3 "复杂自定义低代码平台")
 - Template marketplace or cross-tenant template federation
 - Attribute-based access control (ABAC) editor UI — PRD §12.4 calls out ABAC as secondary to RBAC for V1
-- Authentication / SSO / identity provider connection (assumed pre-existing via enterprise SSO)
+- Identity-provider connection configuration (TeamBook SSO is owned by the shared app shell / infrastructure layer)
 - Skill registry editor UI (Skill objects are surfaced in AI Center, not re-edited here)
 - Report-builder UI (Report Center handles deep reporting)
 - Dynamic risk-threshold evaluation engine — V1 stores threshold configuration; runtime enforcement is handled by the per-domain Skill execution pipeline
@@ -80,6 +80,52 @@ Platform Center must appear as a top-level navigation item (`key = "platform"`) 
 Platform Center must present the six PRD §12 capabilities (Template, Configuration, Audit, Access, Policy, Integration) as the central reusable foundation, not as scattered widgets in other pages.
 
 > Source: PRD §11.13, §12.1–§12.6
+
+### REQ-PC-02A: Application and SNOW Group are platform master data
+
+Platform Center must own stable platform master data for `Application` and `SNOW Group`. These objects are not just display strings in the shell context and must be addressable by stable ids from access control, configuration overrides, policy bindings, audit records, integrations, and cross-domain reporting.
+
+Day 1 canonical relationships:
+
+- `Application` represents a product or system boundary that may span multiple workspaces and projects.
+- `SNOW Group` represents the operational ownership / escalation boundary used by ServiceNow and internal support processes.
+- `Workspace` belongs to exactly one default application and one default SNOW group in V1.
+- `Project` resolves to application and SNOW group through its workspace unless explicitly overridden later.
+
+> Source: product decision for Day 1 multi-team / multi-platform readiness
+
+### REQ-PC-02B: Scope hierarchy includes SNOW Group
+
+Every platform-owned scope-aware object must support this shared hierarchy:
+
+**Platform Default → Application Default → SNOW Group Override → Workspace Override → Project Override**
+
+The V1 resolver must be able to return the effective record and the winning layer. `workspace` remains a supported operational scope because existing slices already use `workspaceId`, but `snow_group` is a first-class scope rather than a label under workspace.
+
+> Source: PRD §9.3, product decision
+
+### REQ-PC-02C: Scope resolution service
+
+Platform Center must expose a reusable scope resolution contract that maps `projectId`, `workspaceId`, `applicationId`, and `snowGroupId` into an ordered scope chain. Consumer slices should call this resolver instead of duplicating application / SNOW group lookup logic.
+
+> Source: product decision
+
+### REQ-PC-02D: Shared service, isolated team data
+
+The Control Tower service is shared, but real data must not be shared across
+different Application + SNOW Group ownership boundaries. All authenticated
+business data access must resolve the user's allowed scopes and filter by those
+scopes server-side.
+
+Platform Admins may configure users and scopes globally, but normal users must
+only see the Application + SNOW Group data they are granted. Guest mode is
+handled as a separate demo/public read-only scope and must not expose real team
+data.
+
+If ownership scope cannot be resolved for a real-data request, the service must
+fail closed rather than falling back to an unscoped query.
+
+> Source: product decision
 
 ### REQ-PC-03: Privileged admin surface with a single V1 role
 
@@ -119,9 +165,9 @@ Each list entry must show at minimum: template key, human-readable name, kind, v
 
 ### REQ-PC-11: Template inheritance, versioning, overrides
 
-Templates must model and display the four-layer inheritance chain defined in PRD §9.3:
+Templates must model and display the Day 1 inheritance chain derived from PRD §9.3:
 
-**Platform Default → Application Default → SNOW Group Override → Project Override**
+**Platform Default → Application Default → SNOW Group Override → Workspace Override → Project Override**
 
 The detail view of any template must render the inheritance chain and highlight which layer currently supplies each field value (inherited / overridden / explicit).
 
@@ -174,7 +220,7 @@ Platform Center must display configurations grouped by the seven kinds in PRD §
 
 ### REQ-PC-21: Team and project scope overrides
 
-Configurations must support scope overrides at three levels beyond platform default: `application`, `snow_group`, and `project`. Each configuration entry records its `scope_type` and `scope_id`, enabling a resolve-time lookup that returns the narrowest applicable override.
+Configurations must support scope overrides beyond platform default at `application`, `snow_group`, `workspace`, and `project`. Each configuration entry records its `scope_type` and `scope_id`, enabling a resolve-time lookup that returns the narrowest applicable override.
 
 > Source: PRD §9.3, §12.2
 
@@ -213,7 +259,7 @@ Platform Center must provide a read-only audit log viewer showing records for al
 - `incident_event` — incident created / state-changed / resolved
 - `policy_hit` — policy rule matched and influenced an outcome
 
-Each record displays: timestamp, actor (user or AI/Skill), action kind, affected object, workspace/project scope, outcome, evidence link.
+Each record displays: timestamp, actor (user or AI/Skill), action kind, affected object, platform/application/SNOW group/workspace/project scope, outcome, evidence link.
 
 > Source: PRD §12.3, §16.2
 
@@ -225,7 +271,7 @@ Audit log must support filtering by:
 - Actor (user or Skill key)
 - Object type / object id
 - Time range (24h / 7d / 30d / custom)
-- Workspace / application / project scope
+- Workspace / application / SNOW group / project scope
 - Outcome (`success`, `failure`, `rejected`, `rolled_back`)
 
 ### REQ-PC-32: Audit retention policy (V1)
@@ -260,7 +306,7 @@ V1 enforcement scope for Platform Center itself: the entire page is gated behind
 
 ### REQ-PC-41: Role assignments catalog
 
-Platform Center must show a browsable list of role assignments with columns: user identifier, role, scope kind (`platform` / `application` / `workspace` / `project`), scope id, granted-by, granted-at.
+Platform Center must show a browsable list of role assignments with columns: user identifier, role, scope kind (`platform` / `application` / `snow_group` / `workspace` / `project`), scope id, granted-by, granted-at.
 
 ### REQ-PC-42: Role assignment CRUD
 
@@ -268,9 +314,26 @@ V1 supports: create a role assignment (pick user + role + scope), revoke an assi
 
 > Source: PRD §12.4
 
+### REQ-PC-42A: User catalog managed by Platform Admin
+
+Platform Center must provide a user catalog managed only by `PLATFORM_ADMIN`.
+Users are identified primarily by staff id (for example `43910516`). Platform
+Admins can create, update, deactivate, and assign scopes/roles to users. Normal
+users cannot self-register or change other users' grants.
+
+V1 password validation only requires a non-empty password during login, but the
+platform must not persist plaintext passwords.
+
+The user catalog must also support optional profile metadata from TeamBook SSO:
+nStaff Name, avatar URL, profile source, and last profile sync timestamp. These
+fields are for display/profile enrichment only and must not grant access without
+role assignments.
+
+> Source: product decision
+
 ### REQ-PC-43: Scope model
 
-Every permission / assignment is bound to a scope represented as a pair `(scope_type, scope_id)` where `scope_type ∈ { 'platform', 'application', 'workspace', 'project' }`. Scope `platform` uses a sentinel id (e.g., `"*"`).
+Every permission / assignment is bound to a scope represented as a pair `(scope_type, scope_id)` where `scope_type ∈ { 'platform', 'application', 'snow_group', 'workspace', 'project' }`. Scope `platform` uses a sentinel id (e.g., `"*"`).
 
 > Source: PRD §12.4
 
@@ -286,7 +349,7 @@ V1 does not provide an ABAC rule editor. The data model must reserve placeholder
 
 ### REQ-PC-50: Policy catalog
 
-Platform Center must present a catalog of governance policies. Each policy has: key, human-readable name, category (`action`, `approval`, `autonomy`, `risk-threshold`, `exception`), scope (platform / application / workspace / project), status (`active` / `inactive` / `draft`), bound-to (Skill key or action kind), version.
+Platform Center must present a catalog of governance policies. Each policy has: key, human-readable name, category (`action`, `approval`, `autonomy`, `risk-threshold`, `exception`), scope (platform / application / SNOW group / workspace / project), status (`active` / `inactive` / `draft`), bound-to (Skill key or action kind), version.
 
 > Source: PRD §12.5
 
@@ -328,7 +391,7 @@ Platform Center must present a catalog of integration adapters covering at least
 
 Plus one extension slot: `custom-webhook` (generic webhook-based inbound adapter, deferred behavior but registry entry supported).
 
-Integration connections must expose team ownership scope using Workspace, Application, and SNOW Group fields so multiple Jira, Confluence, Jenkins, and related systems can be configured without ambiguity across product teams.
+Integration connections must expose team ownership scope using Workspace, Application, and SNOW Group ids and display names so multiple Jira, Confluence, Jenkins, ServiceNow, and related systems can be configured without ambiguity across product teams.
 
 > Source: PRD §12.6
 
@@ -419,7 +482,7 @@ This deviates from the Dashboard slice (which used Gemini for FE, Codex for BE) 
 Platform Center objects fall into two scope classes:
 
 - **Platform-scoped** — templates, platform-default configurations, platform-default policies, adapter kinds (registry) — visible to all workspace admins
-- **Workspace-scoped** — adapter instances (connections), role assignments for workspace scope, configuration overrides, policy overrides, audit records — scoped per PRD §9.2
+- **Application / SNOW group / Workspace / Project-scoped** — adapter instances (connections), role assignments, configuration overrides, policy overrides, audit records — scoped per PRD §9.2 and the Day 1 ownership model
 
 The UI must show the active scope chip for any selected object and warn when an action crosses scope boundaries.
 
@@ -461,7 +524,7 @@ All mutating Platform Center endpoints must emit an audit record **as part of th
 - Low-code / no-code template editor with WYSIWYG layout
 - Cross-tenant template marketplace
 - Attribute-based access control (ABAC) editor UI
-- Identity provider / SSO connection
+- Identity provider / SSO connection configuration
 - Skill registry editor (lives in AI Center)
 - Real-time notifications panel (Platform Center itself)
 - CSV / PDF export of audit logs (belongs to Report Center)
@@ -478,6 +541,10 @@ All mutating Platform Center endpoints must emit an audit record **as part of th
 |-------------|-------------|
 | REQ-PC-01 | §10, shared-app-shell nav |
 | REQ-PC-02 | §11.13, §12.1–§12.6 |
+| REQ-PC-02A | Product decision |
+| REQ-PC-02B | §9.3; product decision |
+| REQ-PC-02C | Product decision |
+| REQ-PC-02D | Product decision |
 | REQ-PC-03 | §16.1; slice decision |
 | REQ-PC-04 | §6.1, §16.1 |
 | REQ-PC-10 | §12.1 |
@@ -495,6 +562,7 @@ All mutating Platform Center endpoints must emit an audit record **as part of th
 | REQ-PC-40 | §12.4, §16.1 |
 | REQ-PC-41 | §12.4 |
 | REQ-PC-42 | §12.4 |
+| REQ-PC-42A | Product decision |
 | REQ-PC-43 | §12.4 |
 | REQ-PC-44 | §12.4 |
 | REQ-PC-50 | §12.5 |
