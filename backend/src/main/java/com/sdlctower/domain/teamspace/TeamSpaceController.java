@@ -9,10 +9,10 @@ import com.sdlctower.domain.teamspace.dto.TeamOperatingModelDto;
 import com.sdlctower.domain.teamspace.dto.TeamRiskRadarDto;
 import com.sdlctower.domain.teamspace.dto.TeamSpaceAggregateDto;
 import com.sdlctower.domain.teamspace.dto.WorkspaceSummaryDto;
+import com.sdlctower.platform.workspace.WorkspaceContextHolder;
 import com.sdlctower.shared.ApiConstants;
 import com.sdlctower.shared.dto.ApiResponse;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,64 +28,63 @@ public class TeamSpaceController {
         this.accessGuard = accessGuard;
     }
 
-    @GetMapping("/{workspaceId}")
-    public ApiResponse<TeamSpaceAggregateDto> aggregate(@PathVariable String workspaceId) {
-        guard(workspaceId);
-        return ApiResponse.ok(service.loadAggregate(workspaceId));
+    @GetMapping
+    public ApiResponse<TeamSpaceAggregateDto> aggregate() {
+        String wsId = workspaceId();
+        return ApiResponse.ok(service.loadAggregate(wsId));
     }
 
-    @GetMapping("/{workspaceId}/summary")
-    public ApiResponse<WorkspaceSummaryDto> summary(@PathVariable String workspaceId) {
-        guard(workspaceId);
-        return ApiResponse.ok(service.loadSummary(workspaceId));
+    @GetMapping("/summary")
+    public ApiResponse<WorkspaceSummaryDto> summary() {
+        String wsId = workspaceId();
+        return ApiResponse.ok(service.loadSummary(wsId));
     }
 
-    @GetMapping("/{workspaceId}/operating-model")
-    public ApiResponse<TeamOperatingModelDto> operatingModel(@PathVariable String workspaceId) {
-        guard(workspaceId);
-        return ApiResponse.ok(service.loadOperatingModel(workspaceId));
+    @GetMapping("/operating-model")
+    public ApiResponse<TeamOperatingModelDto> operatingModel() {
+        String wsId = workspaceId();
+        return ApiResponse.ok(service.loadOperatingModel(wsId));
     }
 
-    @GetMapping("/{workspaceId}/members")
-    public ApiResponse<MemberMatrixDto> members(@PathVariable String workspaceId) {
-        guard(workspaceId);
-        return ApiResponse.ok(service.loadMembers(workspaceId));
+    @GetMapping("/members")
+    public ApiResponse<MemberMatrixDto> members() {
+        String wsId = workspaceId();
+        return ApiResponse.ok(service.loadMembers(wsId));
     }
 
-    @GetMapping("/{workspaceId}/templates")
-    public ApiResponse<TeamDefaultTemplatesDto> templates(@PathVariable String workspaceId) {
-        guard(workspaceId);
-        return ApiResponse.ok(service.loadTemplates(workspaceId));
+    @GetMapping("/templates")
+    public ApiResponse<TeamDefaultTemplatesDto> templates() {
+        String wsId = workspaceId();
+        return ApiResponse.ok(service.loadTemplates(wsId));
     }
 
-    @GetMapping("/{workspaceId}/pipeline")
-    public ApiResponse<RequirementPipelineDto> pipeline(@PathVariable String workspaceId) {
-        guard(workspaceId);
-        return ApiResponse.ok(service.loadPipeline(workspaceId));
+    @GetMapping("/pipeline")
+    public ApiResponse<RequirementPipelineDto> pipeline() {
+        String wsId = workspaceId();
+        return ApiResponse.ok(service.loadPipeline(wsId));
     }
 
-    @GetMapping("/{workspaceId}/metrics")
-    public ApiResponse<TeamMetricsDto> metrics(@PathVariable String workspaceId) {
-        guard(workspaceId);
-        return ApiResponse.ok(service.loadMetrics(workspaceId));
+    @GetMapping("/metrics")
+    public ApiResponse<TeamMetricsDto> metrics() {
+        String wsId = workspaceId();
+        return ApiResponse.ok(service.loadMetrics(wsId));
     }
 
-    @GetMapping("/{workspaceId}/risks")
-    public ApiResponse<TeamRiskRadarDto> risks(@PathVariable String workspaceId) {
-        guard(workspaceId);
-        return ApiResponse.ok(service.loadRisks(workspaceId));
+    @GetMapping("/risks")
+    public ApiResponse<TeamRiskRadarDto> risks() {
+        String wsId = workspaceId();
+        return ApiResponse.ok(service.loadRisks(wsId));
     }
 
-    @GetMapping("/{workspaceId}/projects")
-    public ApiResponse<ProjectDistributionDto> projects(@PathVariable String workspaceId) {
-        guard(workspaceId);
-        return ApiResponse.ok(service.loadProjects(workspaceId));
+    @GetMapping("/projects")
+    public ApiResponse<ProjectDistributionDto> projects() {
+        String wsId = workspaceId();
+        return ApiResponse.ok(service.loadProjects(wsId));
     }
 
-    private void guard(String workspaceId) {
-        if (!TeamSpaceConstants.WORKSPACE_ID_PATTERN.matcher(workspaceId).matches()) {
-            throw new IllegalArgumentException("Invalid workspaceId: " + workspaceId);
-        }
-        accessGuard.check(workspaceId);
+    private String workspaceId() {
+        String wsId = WorkspaceContextHolder.current().workspaceId();
+        accessGuard.check(wsId);
+        return wsId;
     }
 }
