@@ -51,12 +51,16 @@ function resetUserForm() {
 }
 
 async function saveUser() {
-  if (!userForm.staffId || !userForm.displayName) return;
+  store.error = null;
+  if (!userForm.staffId.trim() || !userForm.displayName.trim()) {
+    store.error = 'Staff ID and display name are required.';
+    return;
+  }
   busy.value = true;
   try {
     const payload = {
-      staffId: userForm.staffId,
-      displayName: userForm.displayName,
+      staffId: userForm.staffId.trim(),
+      displayName: userForm.displayName.trim(),
       email: userForm.email || null,
       profileSource: 'manual',
       status: userForm.status,
