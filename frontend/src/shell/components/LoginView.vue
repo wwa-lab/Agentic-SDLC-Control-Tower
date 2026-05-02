@@ -4,7 +4,7 @@ import { LogIn, UserRound, ShieldCheck } from 'lucide-vue-next';
 import { useSessionStore } from '@/shell/stores/sessionStore';
 
 const session = useSessionStore();
-const staffId = ref('43910516');
+const staffId = ref('');
 const password = ref('');
 const inlineError = ref<string | null>(null);
 
