@@ -110,6 +110,8 @@ profiles, agent manifests, and freshness.
 - [x] Add `POST /requirements/{id}/agent-runs`
 - [x] Add `GET /requirements/agent-runs/{executionId}`
 - [x] Add `POST /requirements/agent-runs/{executionId}/stage-events`
+- [x] Add `POST /requirements/agent-runs/{executionId}/merge-confirmation`
+      for lightweight manual PR URL confirmation and SDD document refresh
 - [x] Add `POST /requirements/agent-runs/{executionId}/callback`
 - [x] Generate manifest with requirement, profile, repo, branch/ref, source
       references, document references, output expectations, and constraints

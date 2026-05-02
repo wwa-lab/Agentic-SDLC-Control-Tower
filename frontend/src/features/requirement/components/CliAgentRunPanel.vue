@@ -174,7 +174,7 @@ function confirmMerge() {
   if (!latestRun.value) return;
   const prUrl = mergePrUrl.value.trim();
   if (!/^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+\/?$/.test(prUrl)) {
-    mergeError.value = 'Enter a GitHub PR URL.';
+    mergeError.value = 'Use a full GitHub PR URL, for example https://github.com/org/repo/pull/123.';
     return;
   }
   emit('confirmMerge', latestRun.value.executionId, prUrl);
@@ -224,7 +224,7 @@ function confirmMerge() {
       </div>
 
       <form v-if="showMergeForm" class="merge-form" @submit.prevent="confirmMerge">
-        <label for="merge-pr-url">GitHub PR URL</label>
+        <label for="merge-pr-url">Merged GitHub PR URL</label>
         <div class="merge-input-row">
           <input
             id="merge-pr-url"
@@ -235,7 +235,7 @@ function confirmMerge() {
           />
           <button class="prepare-btn" type="submit">
             <CheckCircle2 :size="14" />
-            <span>Mark Merged</span>
+            <span>Confirm Merge</span>
           </button>
           <button class="icon-btn" type="button" aria-label="Cancel merge confirmation" @click="closeMergeForm">
             <X :size="14" />

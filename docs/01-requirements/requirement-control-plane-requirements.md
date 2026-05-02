@@ -344,6 +344,14 @@ The CLI wrapper or agent must be able to report precise stage events such as
 STARTED, RUNNING, DONE, and FAILED. Control Tower must persist those events and
 use them to update the coarse agent run status.
 
+### REQ-RCP-53B: Lightweight PR merge confirmation
+
+For the short-term rollout, Requirement Detail must support manual PR merge
+confirmation without GitHub webhook or GitHub API dependency. The user provides a
+GitHub PR URL after merging the PR. The backend must validate the URL shape,
+record the PR URL with requirement ID, profile ID, execution ID, and target
+stage as a DONE stage event, then refresh the GitHub SDD document index.
+
 ### REQ-RCP-54: Execution visibility
 
 Requirement detail must show recent agent runs, their statuses, requested skill,

@@ -395,6 +395,12 @@ export interface AgentStageEvent {
   readonly createdAt: string;
 }
 
+export interface AgentRunMergeConfirmation {
+  readonly run: AgentRun;
+  readonly event: AgentStageEvent;
+  readonly documents: SddDocumentIndex;
+}
+
 export interface FreshnessItem {
   readonly subjectType: string;
   readonly subjectId: string;

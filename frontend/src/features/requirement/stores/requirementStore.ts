@@ -944,14 +944,12 @@ export const useRequirementStore = defineStore('requirement', () => {
       return;
     }
 
-    await requirementApi.createAgentStageEvent(run.executionId, {
-      stageId,
-      stageLabel,
-      state: 'DONE',
-      message: 'GitHub PR merge confirmed manually.',
-      outputPath: prUrl,
-    });
-    await requirementApi.refreshSddDocuments(selectedRequirementId.value, activeProfile.value.id);
+    const result = await requirementApi.confirmAgentRunMerge(run.executionId, { prUrl });
+    agentRuns.value = [
+      result.run,
+      ...agentRuns.value.filter(candidate => candidate.executionId !== result.run.executionId),
+    ];
+    sddDocuments.value = result.documents;
     await fetchControlPlane(selectedRequirementId.value);
     skillMessage.value = `GitHub merge confirmed for ${stageLabel}.`;
   }

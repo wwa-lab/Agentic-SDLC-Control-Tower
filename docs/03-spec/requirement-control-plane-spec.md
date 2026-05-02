@@ -144,8 +144,10 @@ generated knowledge graph outputs derived from released SDD baselines.
   and a compact Markdown preview for the selected document so reviewers can make
   the approve/reject decision without switching context for routine checks.
 - After a developer merges the generated PR, Requirement detail allows manual
-  merge confirmation with a GitHub PR URL. The confirmation is recorded as a
-  stage event and triggers document refresh.
+  merge confirmation with a GitHub PR URL. The backend validates only the URL
+  shape, records the confirmation as a DONE stage event, and triggers document
+  refresh. This lightweight path intentionally does not require GitHub webhook
+  delivery or GitHub API merge-state verification.
 
 ### F-RCP-FRESHNESS: Freshness and Traceability
 
@@ -258,6 +260,7 @@ RUNNING -> FAILED
 | POST | `/api/v1/requirements/{id}/agent-runs` | Create agent run manifest |
 | GET | `/api/v1/requirements/agent-runs/{executionId}` | Get agent run status |
 | POST | `/api/v1/requirements/agent-runs/{executionId}/stage-events` | Record CLI stage progress |
+| POST | `/api/v1/requirements/agent-runs/{executionId}/merge-confirmation` | Manually confirm merged GitHub PR URL and refresh SDD docs |
 | POST | `/api/v1/requirements/agent-runs/{executionId}/callback` | Agent status/artifact callback |
 | GET | `/api/v1/requirements/{id}/traceability` | Source/doc/review/run traceability |
 

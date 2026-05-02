@@ -245,8 +245,12 @@ document and scroll to Business Review. The click should move the user directly
 from diagnosis to review work, not merely change hidden state lower on the page.
 
 After the developer completes CLI review cycles and merges the GitHub PR, the
-panel exposes `Confirm Merge`. It opens an inline GitHub PR URL field and records
-a `DONE` stage event with that URL, then refreshes the SDD document index.
+panel exposes `Confirm Merge`. It opens an inline GitHub PR URL field and calls
+the merge-confirmation endpoint. The backend validates the URL shape, records a
+`DONE` stage event with requirement ID, profile ID, execution ID, target stage,
+and PR URL, then refreshes the SDD document index. This path is intentionally
+lightweight: it records a human confirmation and does not query GitHub for merge
+state.
 
 ## Backend Structure
 

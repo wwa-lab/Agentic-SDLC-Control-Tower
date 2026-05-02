@@ -4,10 +4,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunCallbackRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunMergeConfirmationDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentStageEventDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentStageEventRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.ArtifactLinkDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.ArtifactLinkRequestDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.ConfirmAgentRunMergeRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateAgentRunRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateDocumentReviewRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateQualityGateRunRequestDto;
@@ -63,6 +65,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RequirementControlPlaneService {
     private static final List<String> SOURCE_TYPES = List.of("JIRA", "CONFLUENCE", "GITHUB", "KB", "UPLOAD", "URL");
     private static final List<String> REVIEW_DECISIONS = List.of("COMMENT", "APPROVED", "CHANGES_REQUESTED", "REJECTED");
+    private static final Pattern GITHUB_PR_URL = Pattern.compile("^https://github\\.com/[^/]+/[^/]+/pull/\\d+/?$");
     private static final int QUALITY_GATE_THRESHOLD = 80;
 
     private final RequirementRepository requirementRepository;
@@ -398,6 +401,32 @@ public class RequirementControlPlaneService {
         RequirementAgentRunEntity run = agentRunRepository.findById(executionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agent run not found: " + executionId));
         return toAgentStageEventDto(recordAgentStageEvent(run, request));
+    }
+
+    @Transactional
+    public AgentRunMergeConfirmationDto confirmAgentRunMerge(String executionId, ConfirmAgentRunMergeRequestDto request) {
+        RequirementAgentRunEntity run = agentRunRepository.findById(executionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agent run not found: " + executionId));
+        String prUrl = request == null ? null : request.prUrl();
+        if (isBlank(prUrl)) {
+            throw new IllegalArgumentException("GitHub PR URL is required");
+        }
+        String normalizedPrUrl = prUrl.trim();
+        if (!GITHUB_PR_URL.matcher(normalizedPrUrl).matches()) {
+            throw new IllegalArgumentException("GitHub PR URL must match https://github.com/{org}/{repo}/pull/{number}");
+        }
+
+        String stageId = firstNonBlank(run.getTargetStage(), "spec");
+        RequirementAgentStageEventEntity event = recordAgentStageEvent(run, new AgentStageEventRequestDto(
+                stageId,
+                labelForStage(run.getProfileId(), stageId),
+                "DONE",
+                "GitHub PR merge confirmed manually.",
+                normalizedPrUrl,
+                null
+        ));
+        SddDocumentIndexDto documents = syncSddDocuments(run.getRequirementId(), run.getProfileId());
+        return new AgentRunMergeConfirmationDto(toAgentRunDto(run), toAgentStageEventDto(event), documents);
     }
 
     private RequirementAgentStageEventEntity recordAgentStageEvent(RequirementAgentRunEntity run, AgentStageEventRequestDto request) {

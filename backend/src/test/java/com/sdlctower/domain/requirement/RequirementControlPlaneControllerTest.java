@@ -273,4 +273,67 @@ class RequirementControlPlaneControllerTest {
                 .andExpect(jsonPath("$.data.artifactLinks.length()", greaterThan(0)))
                 .andExpect(jsonPath("$.data.freshness.length()", greaterThan(0)));
     }
+
+    @Test
+    void confirmAgentRunMergeRecordsManualPrAndRefreshesDocuments() throws Exception {
+        String body = mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUNS, "REQ-0001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "skillKey": "user-story-to-spec",
+                                  "targetStage": "spec",
+                                  "profileId": "standard-sdd"
+                                }
+                                """))
+                .andExpect(status().isAccepted())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String executionId = body.replaceAll("(?s).*\"executionId\":\"([^\"]+)\".*", "$1");
+
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUN_MERGE_CONFIRMATION, executionId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "prUrl": "https://github.com/wwa-lab/payment-gateway-sdd/pull/42"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.run.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.event.state").value("DONE"))
+                .andExpect(jsonPath("$.data.event.stageId").value("spec"))
+                .andExpect(jsonPath("$.data.event.outputPath").value("https://github.com/wwa-lab/payment-gateway-sdd/pull/42"))
+                .andExpect(jsonPath("$.data.documents.profileId").value("standard-sdd"))
+                .andExpect(jsonPath("$.data.documents.stages.length()").value(9));
+    }
+
+    @Test
+    void confirmAgentRunMergeRejectsNonGithubPrUrl() throws Exception {
+        String body = mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUNS, "REQ-0001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "skillKey": "user-story-to-spec",
+                                  "targetStage": "spec",
+                                  "profileId": "standard-sdd"
+                                }
+                                """))
+                .andExpect(status().isAccepted())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String executionId = body.replaceAll("(?s).*\"executionId\":\"([^\"]+)\".*", "$1");
+
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_AGENT_RUN_MERGE_CONFIRMATION, executionId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "prUrl": "https://example.com/not-a-pr"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("GitHub PR URL must match https://github.com/{org}/{repo}/pull/{number}"));
+    }
 }

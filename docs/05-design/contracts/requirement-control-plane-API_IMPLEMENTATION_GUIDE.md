@@ -383,8 +383,6 @@ Returns current run status, artifacts, stage events, and the derived command.
 ### POST `/api/v1/requirements/agent-runs/{executionId}/stage-events`
 
 Records precise stage progress from the local CLI wrapper or agent.
-The frontend also uses this endpoint for short-term manual merge confirmation
-after a developer has merged the generated PR in GitHub.
 
 Request:
 
@@ -403,16 +401,19 @@ Request:
 }
 ```
 
-Manual merge confirmation request:
+### POST `/api/v1/requirements/agent-runs/{executionId}/merge-confirmation`
+
+Records a lightweight human confirmation after the developer has merged the
+generated PR in GitHub. The backend validates the PR URL shape, records a DONE
+stage event with the run's requirement ID, profile ID, execution ID, and target
+stage, then refreshes the SDD document index. It does not query GitHub for merge
+state.
+
+Request:
 
 ```json
 {
-  "stageId": "program-spec",
-  "stageLabel": "Program Spec",
-  "state": "DONE",
-  "message": "GitHub PR merge confirmed manually.",
-  "outputPath": "https://github.com/wwa-lab/payment-app/pull/42",
-  "errorMessage": null
+  "prUrl": "https://github.com/wwa-lab/payment-app/pull/42"
 }
 ```
 
@@ -421,26 +422,28 @@ Response:
 ```json
 {
   "data": {
-    "executionId": "exec-1024",
-    "status": "RUNNING",
-    "stageEvents": [
-      {
-        "id": "evt-001",
-        "executionId": "exec-1024",
-        "requirementId": "REQ-1024",
-        "profileId": "ibm-i",
-        "skillKey": "ibm-i-workflow-orchestrator",
-        "targetStage": "program-spec",
-        "status": "RUNNING",
-        "message": "Generating Program Spec from Functional Spec context.",
-        "artifactUri": null,
-        "metadata": {
-          "runner": "scripts/control-tower-run"
-        },
-        "occurredAt": "2026-04-27T09:14:00Z",
-        "createdAt": "2026-04-27T09:14:01Z"
-      }
-    ]
+    "run": {
+      "executionId": "exec-1024",
+      "requirementId": "REQ-1024",
+      "profileId": "ibm-i",
+      "targetStage": "program-spec",
+      "status": "COMPLETED"
+    },
+    "event": {
+      "executionId": "exec-1024",
+      "requirementId": "REQ-1024",
+      "profileId": "ibm-i",
+      "stageId": "program-spec",
+      "stageLabel": "Program Spec",
+      "state": "DONE",
+      "message": "GitHub PR merge confirmed manually.",
+      "outputPath": "https://github.com/wwa-lab/payment-app/pull/42"
+    },
+    "documents": {
+      "requirementId": "REQ-1024",
+      "profileId": "ibm-i",
+      "stages": []
+    }
   },
   "error": null
 }

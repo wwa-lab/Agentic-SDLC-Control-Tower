@@ -164,6 +164,14 @@ public final class RequirementControlPlaneDtos {
             String errorMessage
     ) {}
 
+    public record ConfirmAgentRunMergeRequestDto(String prUrl) {}
+
+    public record AgentRunMergeConfirmationDto(
+            AgentRunDto run,
+            AgentStageEventDto event,
+            SddDocumentIndexDto documents
+    ) {}
+
     public record AgentStageEventDto(
             String id,
             String executionId,

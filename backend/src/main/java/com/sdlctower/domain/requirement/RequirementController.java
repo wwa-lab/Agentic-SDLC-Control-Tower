@@ -8,8 +8,10 @@ import com.sdlctower.domain.requirement.dto.InvokeSkillRequestDto;
 import com.sdlctower.domain.requirement.dto.RawRequirementInputDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunCallbackRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentRunMergeConfirmationDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentStageEventDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.AgentStageEventRequestDto;
+import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.ConfirmAgentRunMergeRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateAgentRunRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateDocumentReviewRequestDto;
 import com.sdlctower.domain.requirement.dto.RequirementControlPlaneDtos.CreateQualityGateRunRequestDto;
@@ -279,6 +281,14 @@ public class RequirementController {
             @RequestBody AgentStageEventRequestDto body
     ) {
         return ApiResponse.ok(controlPlaneService.recordAgentStageEvent(executionId, body));
+    }
+
+    @PostMapping(ApiConstants.REQUIREMENT_AGENT_RUN_MERGE_CONFIRMATION)
+    public ApiResponse<AgentRunMergeConfirmationDto> confirmAgentRunMerge(
+            @PathVariable String executionId,
+            @RequestBody ConfirmAgentRunMergeRequestDto body
+    ) {
+        return ApiResponse.ok(controlPlaneService.confirmAgentRunMerge(executionId, body));
     }
 
     @GetMapping(ApiConstants.REQUIREMENT_TRACEABILITY)
