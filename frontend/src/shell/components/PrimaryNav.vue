@@ -30,8 +30,9 @@ const { config } = useShellConfig();
 const workspaceStore = useWorkspaceStore();
 
 const navigate = (featurePath: string) => {
-  const key = workspaceStore.activeWorkspaceKey;
-  if (!key) return;
+  const key = workspaceStore.activeWorkspaceKey
+    ?? workspaceStore.workspaces[0]?.workspaceKey
+    ?? 'payment-gateway-pro';
   const path = featurePath === '/' ? `/${key}` : `/${key}${featurePath}`;
   router.push(path);
 };

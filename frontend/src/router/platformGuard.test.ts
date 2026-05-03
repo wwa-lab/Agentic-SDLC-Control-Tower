@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { router } from './index';
 import { useSessionStore } from '@/shell/stores/sessionStore';
 import * as authApi from '@/shared/api/authApi';
+import * as workspaceApi from '@/shared/api/workspaceApi';
 
 describe('platform route guard', () => {
   beforeEach(async () => {
@@ -12,6 +13,14 @@ describe('platform route guard', () => {
       { provider: 'manual', label: 'Staff ID', enabled: true, startUrl: null },
       { provider: 'guest', label: 'Guest', enabled: true, startUrl: null },
     ]);
+    vi.spyOn(workspaceApi, 'resolveWorkspaceByKey').mockResolvedValue({
+      workspaceId: 'ws-default-001',
+      workspaceKey: 'payment-gateway-pro',
+      name: 'Payment Gateway Pro',
+      applicationId: 'app-payment-gateway-pro',
+      snowGroupId: 'snow-fin-tech-ops',
+      profileId: 'standard-java-sdd',
+    });
     window.history.replaceState({}, '', '/');
   });
 
@@ -28,11 +37,11 @@ describe('platform route guard', () => {
       scopes: [{ scopeType: 'application', scopeId: 'app-payment-gateway-pro' }],
     });
 
-    await router.push('/platform/templates');
+    await router.push('/payment-gateway-pro/platform/templates');
     await router.isReady();
 
     expect(router.currentRoute.value.path).toBe('/403');
-    expect(router.currentRoute.value.query.redirect).toBe('/platform/templates');
+    expect(router.currentRoute.value.query.redirect).toBe('/payment-gateway-pro/platform/templates');
   });
 
   it('allows platform admins into Platform Center', async () => {
@@ -50,9 +59,9 @@ describe('platform route guard', () => {
     };
     sessionStore.initialized = true;
 
-    await router.push('/platform/templates');
+    await router.push('/payment-gateway-pro/platform/templates');
     await router.isReady();
 
-    expect(router.currentRoute.value.path).toBe('/platform/templates');
+    expect(router.currentRoute.value.path).toBe('/payment-gateway-pro/platform/templates');
   });
 });

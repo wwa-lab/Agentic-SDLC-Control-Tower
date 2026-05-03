@@ -22,7 +22,19 @@ const route = useRoute();
 
 async function initAndLoad() {
   await workspaceStore.load();
-  // After loading workspaces, redirect from root to first available workspace.
+
+  const urlKey = route.params.workspaceKey as string | undefined;
+
+  // Already on a workspace URL but workspace not yet activated (typical after
+  // logging in from LoginView, where the unauthenticated guard short-circuited
+  // and skipped workspace resolution). Re-trigger the navigation so the guard
+  // resolves the workspace and calls setActive.
+  if (urlKey && !workspaceStore.activeWorkspaceKey) {
+    await router.replace({ path: route.fullPath, force: true });
+    return;
+  }
+
+  // At root: redirect to first available workspace.
   if (route.path === '/' || route.path === '') {
     const key = workspaceStore.workspaces[0]?.workspaceKey ?? 'payment-gateway-pro';
     router.replace(`/${key}`);
