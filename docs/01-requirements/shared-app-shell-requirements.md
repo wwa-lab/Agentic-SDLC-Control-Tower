@@ -28,7 +28,9 @@ The shared app shell is the outermost UI frame of the product. It covers:
 - route-to-page mapping
 
 It does **not** cover page-specific business modules, backend data APIs beyond
-workspace context and navigation, or final visual token finalization.
+workspace context and navigation, or final visual token finalization. It does
+own the global entry experience: staff-id login, optional enterprise SSO entry,
+guest mode, help links, and support request entry points.
 
 ---
 
@@ -177,6 +179,110 @@ Search, notifications, and audit are shell-level controls, not page-specific
 actions. They must appear in a consistent area of the shell.
 
 > Source: PRD §15.1
+
+### REQ-SHELL-34: Contact Us support entry
+
+The shell must expose a global **Contact Us** button. When clicked, it opens a
+small support form and submits the issue to the backend. The backend creates a
+Jira story in the configured internal Jira project and returns the created Jira
+key / URL to the user.
+
+The form must capture at minimum: title, description, category, current route,
+current display context, reporter identity (`staffId` when logged in, `guest`
+when in guest mode), and timestamp.
+
+> Source: product decision
+
+### REQ-SHELL-34A: Contact Us resilience
+
+The backend must persist the support request before calling Jira. If Jira is
+temporarily unavailable, the user still receives a local request id and a
+`pending` status, and a retry/outbox worker creates the Jira story later.
+Support requests must not be lost because an external system is down.
+
+> Source: Day 1 high-availability review
+
+### REQ-SHELL-35: User guideline entry
+
+The shell must expose a global **User Guideline** button. Clicking it opens the
+configured Confluence guideline page in a new browser tab. The URL is provided
+by backend configuration so it can vary by environment without a frontend build.
+
+> Source: product decision
+
+### REQ-SHELL-39A: HA-ready session storage
+
+Authenticated and guest sessions must work when the backend runs as multiple
+instances. Deployed profiles must not depend on a single in-memory session
+store; they must use either a shared session store or signed server-validated
+session tokens. Repeated failed login attempts should be rate-limited by staff id
+and source.
+
+> Source: Day 1 high-availability review
+
+### REQ-SHELL-39B: Logout and session expiry
+
+The shell must provide a logout path for authenticated and guest sessions.
+Session expiry duration is backend-configured, and expired sessions must return
+the user to the login / guest entry screen without exposing stale data.
+
+> Source: Day 1 access-control review
+
+---
+
+## 5A. Authentication And Access Requirements
+
+### REQ-SHELL-36: Staff ID login
+
+Users access the authenticated system by entering a staff id and password. Staff
+id is the primary login identifier (for example `43910516`). V1 validation only
+requires a non-empty password, but the backend must still avoid storing plaintext
+passwords.
+
+> Source: product decision
+
+### REQ-SHELL-36A: Optional TeamBook SSO provider
+
+Internal deployments should support TeamBook SSO as an optional authentication
+provider. TeamBook is company-specific and is not required for local, external,
+or open environments. When enabled, TeamBook authenticates the staff user and
+returns at least staff id, nStaff Name, and avatar URL.
+
+The platform still uses `PlatformUser` and role assignments as the authorization
+source of truth. A TeamBook-authenticated staff id must map to an active platform
+user before the user can access real team data. If TeamBook is unavailable or not
+configured, the manual staff-id login path remains available.
+
+> Source: product decision for internal SSO / TeamBook integration
+
+### REQ-SHELL-37: Session identity
+
+After login, the shell must know the current identity, mode, roles, and scoped
+access grants. The shell uses this identity to render user affordances, including
+staff display name and avatar when available, and to send authenticated requests.
+Role and data-scope enforcement remains backend authoritative.
+
+> Source: product decision
+
+### REQ-SHELL-38: Guest mode
+
+The login screen must provide a **Continue as Guest** path. A guest can enter
+the product without staff credentials and can browse read-only demo data across
+all major feature areas so they understand the product's capabilities.
+
+Guest mode must not expose real team-owned data for any Application + SNOW Group
+ownership boundary. It uses a demo/public dataset and all mutation actions are
+disabled or hidden.
+
+> Source: product decision; reconciles with Application + SNOW data isolation
+
+### REQ-SHELL-39: Read-only enforcement for guest
+
+Guest mode is read-only. Any create, update, delete, approve, execute, import,
+or configuration action must be blocked server-side and reflected in the UI as
+disabled with a clear read-only reason.
+
+> Source: product decision
 
 ---
 
@@ -350,6 +456,16 @@ The following are explicitly out of scope for the shell slice:
 | REQ-SHELL-31 | §15.1 |
 | REQ-SHELL-32 | §15.1 |
 | REQ-SHELL-33 | §15.1 |
+| REQ-SHELL-34 | Product decision |
+| REQ-SHELL-34A | Day 1 high-availability review |
+| REQ-SHELL-35 | Product decision |
+| REQ-SHELL-36 | Product decision |
+| REQ-SHELL-36A | Product decision for internal SSO / TeamBook integration |
+| REQ-SHELL-37 | Product decision |
+| REQ-SHELL-38 | Product decision |
+| REQ-SHELL-39 | Product decision |
+| REQ-SHELL-39A | Day 1 high-availability review |
+| REQ-SHELL-39B | Day 1 access-control review |
 | REQ-SHELL-40 | §15.4 |
 | REQ-SHELL-41 | §15.4 |
 | REQ-SHELL-42 | §15.4 |

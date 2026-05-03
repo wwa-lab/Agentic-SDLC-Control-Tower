@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { NavItem, ShellPageConfig, ShellAction } from '@/shared/types/shell';
+import { useSessionStore } from '@/shell/stores/sessionStore';
+import { useWorkspaceStore } from '@/shared/stores/workspaceStore';
+import { resolveWorkspaceByKey } from '@/shared/api/workspaceApi';
 import {
   LayoutDashboard,
   Users,
@@ -21,6 +24,7 @@ import { PLATFORM_CHILD_ROUTES } from '@/features/platform';
 /**
  * The 13 required navigation entries as per spec §3.1.
  * Icon field matches the Lucide component name for decoupling.
+ * Paths are workspace-relative feature segments (e.g. '/requirements').
  */
 export const NAVIGATION_ITEMS: NavItem[] = [
   { key: 'dashboard', label: 'Dashboard', path: '/', icon: 'LayoutDashboard' },
@@ -34,13 +38,12 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { key: 'deployment', label: 'Deployment', path: '/deployment', icon: 'Send' },
   { key: 'incidents', label: 'Incident Management', path: '/incidents', icon: 'AlertTriangle' },
   { key: 'ai-center', label: 'AI Center', path: '/ai-center', icon: 'Cpu' },
-  { key: 'reports', label: 'Reports', path: '/reports', icon: 'BarChart' },
+  { key: 'reports', label: 'Report Center', path: '/reports', icon: 'BarChart' },
   { key: 'platform', label: 'Platform Center', path: '/platform', icon: 'Settings' }
 ];
 
 /**
  * Lucide icon components keyed by nav item key.
- * Exported so PrimaryNav can render icons without hardcoding its own map.
  */
 export const ICON_MAP: Record<string, any> = {
   dashboard: LayoutDashboard,
@@ -58,10 +61,6 @@ export const ICON_MAP: Record<string, any> = {
   platform: Settings
 };
 
-/**
- * Page-specific shell configuration for Round 1 pages.
- * Uses ShellPageConfig contract (spec §7).
- */
 const PAGE_CONFIGS: Record<string, Pick<ShellPageConfig, 'subtitle' | 'actions' | 'showAiPanel'>> = {
   dashboard: {
     subtitle: 'Cross-stage health and operational overview',
@@ -167,11 +166,6 @@ const COMPONENT_MAP: Record<string, () => Promise<any>> = {
   platform: () => import('@/features/platform/shell/PlatformShell.vue'),
 };
 
-/**
- * Child route definitions for modules that use nested routing.
- * Each key matches a NAVIGATION_ITEMS key; the parent gets `children`
- * and loses its own `name` (the default child takes the parent name).
- */
 const CHILD_ROUTES: Record<string, Array<{ path: string; name: string; component: () => Promise<any> }>> = {
   requirements: [
     { path: '', name: 'requirements', component: () => import('@/features/requirement/views/RequirementListView.vue') },
@@ -221,15 +215,23 @@ const CHILD_ROUTES: Record<string, Array<{ path: string; name: string; component
   platform: PLATFORM_CHILD_ROUTES,
 };
 
+function workspacedPath(featurePath: string): string {
+  return `/:workspaceKey${featurePath === '/' ? '' : featurePath}`;
+}
+
 const routes = NAVIGATION_ITEMS.map(item => {
   const pageConfig = PAGE_CONFIGS[item.key];
   const children = CHILD_ROUTES[item.key];
-  const resolvedPath = item.key === 'project-space'
+
+  const featurePath = item.key === 'project-space'
     ? '/project-space/:projectId?'
     : item.path;
+
+  const resolvedPath = workspacedPath(featurePath);
+
   const base = {
     path: resolvedPath,
-    ...(item.key === 'testing' ? { alias: '/testing-management' } : {}),
+    ...(item.key === 'testing' ? { alias: '/:workspaceKey/testing-management' } : {}),
     component: COMPONENT_MAP[item.key] || (() => import('@/features/placeholder/PlaceholderView.vue')),
     meta: {
       navKey: item.key,
@@ -241,13 +243,38 @@ const routes = NAVIGATION_ITEMS.map(item => {
     },
   };
 
-  // Modules with child routes: parent is a router-view host, name lives on default child
   if (children) {
     return { ...base, children };
   }
 
   return { ...base, name: item.key };
 });
+
+// Root redirect — go to first available workspace key (resolved after login).
+routes.push({
+  path: '/',
+  redirect: () => {
+    const workspaceStore = useWorkspaceStore();
+    const key = workspaceStore.activeWorkspaceKey
+      ?? workspaceStore.workspaces[0]?.workspaceKey
+      ?? 'payment-gateway-pro';
+    return `/${key}`;
+  },
+} as any);
+
+routes.push({
+  path: '/403',
+  name: 'forbidden',
+  component: () => import('@/features/platform/shell/ForbiddenView.vue'),
+  meta: {
+    title: 'Forbidden',
+    navKey: '',
+    comingSoon: false,
+    subtitle: 'This area requires platform administrator access',
+    actions: undefined,
+    showAiPanel: false,
+  },
+} as any);
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -264,4 +291,65 @@ export const router = createRouter({
     }
     return { top: 0 };
   },
+});
+
+router.beforeEach(async to => {
+  const workspaceKey = to.params.workspaceKey as string | undefined;
+
+  // Non-workspace routes (root redirect, /403) — skip workspace resolution.
+  if (!workspaceKey) {
+    return true;
+  }
+
+  const sessionStore = useSessionStore();
+  if (!sessionStore.initialized) {
+    await sessionStore.init();
+  }
+
+  // Not authenticated yet — AppShell will show LoginView.
+  if (!sessionStore.isAuthenticated) {
+    return true;
+  }
+
+  const workspaceStore = useWorkspaceStore();
+
+  // Already active for this key — no re-resolution needed.
+  if (workspaceStore.activeWorkspaceKey === workspaceKey) {
+    // Platform admin guard.
+    if (to.meta.navKey === 'platform') {
+      if (!sessionStore.currentUser?.roles.includes('PLATFORM_ADMIN')) {
+        return { path: '/403', query: { redirect: to.fullPath } };
+      }
+    }
+    return true;
+  }
+
+  // Demo workspace: synthetic context for guest/demo mode.
+  if (workspaceKey === 'demo') {
+    workspaceStore.setActive({
+      workspaceId: 'demo',
+      workspaceKey: 'demo',
+      name: 'Demo Workspace',
+      applicationId: 'demo-app',
+      snowGroupId: 'demo-snow',
+      profileId: 'standard-java-sdd',
+    });
+    return true;
+  }
+
+  // Resolve workspace from backend.
+  const workspace = await resolveWorkspaceByKey(workspaceKey);
+  if (!workspace) {
+    return { path: '/403', query: { redirect: to.fullPath } };
+  }
+  workspaceStore.setActive(workspace);
+
+  // Platform admin guard.
+  if (to.meta.navKey === 'platform') {
+    if (!sessionStore.currentUser?.roles.includes('PLATFORM_ADMIN')) {
+      return { path: '/403', query: { redirect: to.fullPath } };
+    }
+  }
+
+  return true;
 });

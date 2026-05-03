@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the complete data model for the Platform Center slice: domain ER diagram, frontend TypeScript type catalog, backend DTOs and JPA entities, database schema DDL (Flyway migrations starting at V40), and frontend-to-backend type mapping.
+This document defines the complete data model for the Platform Center slice: domain ER diagram, frontend TypeScript type catalog, backend DTOs and JPA entities, database schema DDL (Flyway migrations starting at V86), and frontend-to-backend type mapping.
 
 ## Source
 
@@ -16,13 +16,19 @@ This document defines the complete data model for the Platform Center slice: dom
 
 ```mermaid
 graph LR
+    APP[PlatformApplication] -->|default owner| SG[PlatformSnowGroup]
+    WS[PlatformWorkspace] -->|belongs to| APP
+    WS -->|owned by| SG
+    SR[PlatformScopeResolution] -. ordered chain .-> SCOPE
+
     T[Template] -->|1..N| TV[TemplateVersion]
     T -. references .-> KIND1[Kind: page, flow, project, policy, metric, ai]
 
     C[Configuration] -->|self-ref parent| C
     C -. scope pair .-> SCOPE[scopeType, scopeId]
 
-    RA[RoleAssignment] -. scope pair .-> SCOPE
+    U[PlatformUser] -->|1..N| RA[RoleAssignment]
+    RA -. scope pair .-> SCOPE
     RA -. role enum .-> ROLE[PLATFORM_ADMIN / WORKSPACE_ADMIN / WORKSPACE_MEMBER / WORKSPACE_VIEWER / AUDITOR]
 
     P[Policy] -->|1..N| PE[PolicyException]
@@ -39,14 +45,15 @@ graph LR
     AU -. references .-> CN
 ```
 
-Nine primary entities:
+Primary entities:
 
-1. `Template` + `TemplateVersion` (1:N)
-2. `Configuration` (self-referential parent for overrides)
-3. `RoleAssignment` (standalone, scope-bound)
-4. `Policy` + `PolicyException` (1:N)
-5. `Connection` + `CredentialRef` (1:1 via reference)
-6. `AuditRecord` (append-only, cross-cutting, references by id/type)
+1. `PlatformApplication`, `PlatformSnowGroup`, `PlatformWorkspace`, `PlatformScopeResolution` (foundation master data and read model)
+2. `Template` + `TemplateVersion` (1:N)
+3. `Configuration` (self-referential parent for overrides)
+4. `PlatformUser` + `RoleAssignment` (staff-id identity and scope-bound grants)
+5. `Policy` + `PolicyException` (1:N)
+6. `Connection` + `CredentialRef` (1:1 via reference)
+7. `AuditRecord` (append-only, cross-cutting, references by id/type)
 
 ---
 
@@ -55,7 +62,7 @@ Nine primary entities:
 ### 2.1 Scope
 
 ```typescript
-type ScopeType = "platform" | "application" | "workspace" | "project";
+type ScopeType = "platform" | "application" | "snow_group" | "workspace" | "project";
 
 interface Scope {
   scopeType: ScopeType;
@@ -63,7 +70,61 @@ interface Scope {
 }
 ```
 
-### 2.2 Role
+### 2.2 Platform foundation
+
+```typescript
+interface PlatformApplication {
+  id: string;
+  key: string;
+  name: string;
+  ownerSnowGroupId: string | null;
+  criticality: "low" | "medium" | "high" | "critical";
+  status: "active" | "inactive";
+}
+
+interface PlatformSnowGroup {
+  id: string;
+  servicenowGroupName: string;
+  displayName: string;
+  ownerEmail: string | null;
+  escalationPolicy: string | null;
+  status: "active" | "inactive";
+}
+
+interface PlatformWorkspace {
+  id: string;
+  key: string;
+  name: string;
+  applicationId: string;
+  snowGroupId: string;
+  status: "active" | "inactive";
+}
+
+interface PlatformScopeResolution {
+  inputType: "application" | "snow_group" | "workspace" | "project";
+  inputId: string;
+  scopeChain: Scope[];
+  applicationId: string | null;
+  snowGroupId: string | null;
+  workspaceId: string | null;
+  projectId: string | null;
+}
+
+interface PlatformUser {
+  staffId: string;
+  displayName: string;
+  staffName: string | null;       // TeamBook nStaff Name when available
+  avatarUrl: string | null;       // TeamBook or manually supplied avatar
+  email: string | null;
+  profileSource: "manual" | "teambook";
+  lastProfileSyncAt: string | null;
+  status: "active" | "inactive";
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### 2.3 Role
 
 ```typescript
 type Role =
@@ -74,7 +135,7 @@ type Role =
   | "AUDITOR";
 ```
 
-### 2.3 Cursor Page envelope
+### 2.4 Cursor Page envelope
 
 ```typescript
 interface CursorPage<T> {
@@ -86,7 +147,7 @@ interface CursorPage<T> {
 }
 ```
 
-### 2.4 API Error envelope
+### 2.5 API Error envelope
 
 ```typescript
 interface ApiError {
@@ -136,11 +197,12 @@ interface TemplateVersion {
 
 interface InheritanceField {
   effectiveValue: unknown;
-  winningLayer: "platform" | "application" | "snowGroup" | "project";
+  winningLayer: "platform" | "application" | "snowGroup" | "workspace" | "project";
   layers: {
     platform: unknown;
     application: unknown | null;
     snowGroup: unknown | null;
+    workspace: unknown | null;
     project: unknown | null;
   };
 }
@@ -219,7 +281,7 @@ interface AuditRecord {
 ```typescript
 interface RoleAssignment {
   id: string;
-  userId: string;
+  staffId: string;
   userDisplayName: string;
   role: Role;
   scopeType: ScopeType;
@@ -312,8 +374,11 @@ interface ConnectionTestResult {
 
 ```typescript
 interface CurrentUser {
-  userId: string;
+  staffId: string;
   displayName: string;
+  staffName: string | null;
+  avatarUrl: string | null;
+  authProvider: "manual" | "teambook";
   roles: Role[];
   scopes: Scope[];            // roles * scopes resolved
 }
@@ -325,7 +390,50 @@ interface CurrentUser {
 
 All DTOs are Java 21 records. They live beside their controllers in `com.sdlctower.platform.{sub}`.
 
-### 4.1 Template DTOs
+### 4.1 Foundation DTOs
+
+```java
+public record PlatformApplicationDto(
+    String id,
+    String key,
+    String name,
+    String ownerSnowGroupId,
+    String criticality,
+    String status
+) {}
+
+public record PlatformSnowGroupDto(
+    String id,
+    String servicenowGroupName,
+    String displayName,
+    String ownerEmail,
+    String escalationPolicy,
+    String status
+) {}
+
+public record PlatformWorkspaceDto(
+    String id,
+    String key,
+    String name,
+    String applicationId,
+    String snowGroupId,
+    String status
+) {}
+
+public record ScopeDto(String scopeType, String scopeId) {}
+
+public record PlatformScopeResolutionDto(
+    String inputType,
+    String inputId,
+    List<ScopeDto> scopeChain,
+    String applicationId,
+    String snowGroupId,
+    String workspaceId,
+    String projectId
+) {}
+```
+
+### 4.2 Template DTOs
 
 ```java
 public record TemplateSummaryDto(
@@ -358,11 +466,11 @@ public record TemplateVersionDto(
 public record InheritanceFieldDto(
     JsonNode effectiveValue,
     String winningLayer,
-    Map<String, JsonNode> layers    // keys: platform, application, snowGroup, project
+    Map<String, JsonNode> layers    // keys: platform, application, snowGroup, workspace, project
 ) {}
 ```
 
-### 4.2 Configuration DTOs
+### 4.3 Configuration DTOs
 
 ```java
 public record ConfigurationSummaryDto(
@@ -392,7 +500,7 @@ public record CreateConfigurationRequest(
 ) {}
 ```
 
-### 4.3 Audit DTOs
+### 4.4 Audit DTOs
 
 ```java
 public record AuditRecordDto(
@@ -425,12 +533,12 @@ public record AuditQuery(
 ) {}
 ```
 
-### 4.4 Access DTOs
+### 4.5 Access DTOs
 
 ```java
 public record RoleAssignmentDto(
     String id,
-    String userId,
+    String staffId,
     String userDisplayName,
     String role,
     String scopeType,
@@ -440,23 +548,47 @@ public record RoleAssignmentDto(
 ) {}
 
 public record AssignRoleRequest(
-    String userId,
+    String staffId,
     String role,
     String scopeType,
     String scopeId
 ) {}
 
-public record CurrentUserDto(
-    String userId,
+public record PlatformUserDto(
+    String staffId,
     String displayName,
+    String staffName,
+    String avatarUrl,
+    String email,
+    String profileSource,
+    Instant lastProfileSyncAt,
+    String status,
+    Instant createdAt,
+    Instant updatedAt
+) {}
+
+public record UpsertPlatformUserRequest(
+    String staffId,
+    String displayName,
+    String staffName,
+    String avatarUrl,
+    String email,
+    String profileSource,
+    String status
+) {}
+
+public record CurrentUserDto(
+    String staffId,
+    String displayName,
+    String staffName,
+    String avatarUrl,
+    String authProvider,
     List<String> roles,
     List<ScopeDto> scopes
 ) {}
-
-public record ScopeDto(String scopeType, String scopeId) {}
 ```
 
-### 4.5 Policy DTOs
+### 4.6 Policy DTOs
 
 ```java
 public record PolicyDto(
@@ -496,7 +628,7 @@ public record CreatePolicyRequest(
 ) {}
 ```
 
-### 4.6 Integration DTOs
+### 4.7 Integration DTOs
 
 ```java
 public record AdapterDescriptorDto(
@@ -510,6 +642,10 @@ public record ConnectionDto(
     String id,
     String kind,
     String scopeWorkspaceId,
+    String applicationId,
+    String applicationName,
+    String snowGroupId,
+    String snowGroupName,
     String credentialRef,
     String syncMode,
     String pullSchedule,
@@ -523,6 +659,8 @@ public record ConnectionDto(
 public record CreateConnectionRequest(
     String kind,
     String scopeWorkspaceId,
+    String applicationId,
+    String snowGroupId,
     String credentialRef,
     String syncMode,
     String pullSchedule,
@@ -543,6 +681,42 @@ public record ConnectionTestResultDto(
 Entities are regular Java classes with `@Entity` annotations (NOT records — JPA requires mutable classes). Signatures only; full bodies are generated by Codex per the backend prompt.
 
 ```java
+@Entity @Table(name = "PLATFORM_APPLICATION")
+public class PlatformApplication {
+    @Id private String id;
+    @Column(name = "app_key", nullable = false, unique = true) private String key;
+    @Column(nullable = false) private String name;
+    @Column(name = "owner_snow_group_id") private String ownerSnowGroupId;
+    @Column(nullable = false) private String criticality;
+    @Column(nullable = false) private String status;
+    @Column(name = "created_at", nullable = false) private Instant createdAt;
+    @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+}
+
+@Entity @Table(name = "PLATFORM_SNOW_GROUP")
+public class PlatformSnowGroup {
+    @Id private String id;
+    @Column(name = "servicenow_group_name", nullable = false, unique = true) private String servicenowGroupName;
+    @Column(name = "display_name", nullable = false) private String displayName;
+    @Column(name = "owner_email") private String ownerEmail;
+    @Column(name = "escalation_policy") private String escalationPolicy;
+    @Column(nullable = false) private String status;
+    @Column(name = "created_at", nullable = false) private Instant createdAt;
+    @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+}
+
+@Entity @Table(name = "PLATFORM_WORKSPACE")
+public class PlatformWorkspace {
+    @Id private String id;
+    @Column(name = "workspace_key", nullable = false, unique = true) private String key;
+    @Column(nullable = false) private String name;
+    @Column(name = "application_id", nullable = false) private String applicationId;
+    @Column(name = "snow_group_id", nullable = false) private String snowGroupId;
+    @Column(nullable = false) private String status;
+    @Column(name = "created_at", nullable = false) private Instant createdAt;
+    @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+}
+
 @Entity @Table(name = "PLATFORM_TEMPLATE")
 public class Template {
     @Id private String id;
@@ -600,10 +774,24 @@ public class AuditRecord {
     @Lob @Column private String payload;    // JSON as text
 }
 
+@Entity @Table(name = "PLATFORM_USER")
+public class PlatformUser {
+    @Id @Column(name = "staff_id") private String staffId;
+    @Column(name = "display_name", nullable = false) private String displayName;
+    @Column(name = "staff_name") private String staffName;
+    @Column(name = "avatar_url") private String avatarUrl;
+    @Column private String email;
+    @Column(name = "profile_source", nullable = false) private String profileSource;
+    @Column(name = "last_profile_sync_at") private Instant lastProfileSyncAt;
+    @Column(nullable = false) private String status;
+    @Column(name = "created_at", nullable = false) private Instant createdAt;
+    @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+}
+
 @Entity @Table(name = "PLATFORM_ROLE_ASSIGNMENT")
 public class RoleAssignment {
     @Id private String id;
-    @Column(name = "user_id", nullable = false) private String userId;
+    @Column(name = "staff_id", nullable = false) private String staffId;
     @Column(name = "user_display_name") private String userDisplayName;
     @Column(nullable = false) private String role;
     @Column(name = "scope_type", nullable = false) private String scopeType;
@@ -646,6 +834,10 @@ public class Connection {
     @Id private String id;
     @Column(nullable = false) private String kind;
     @Column(name = "scope_workspace_id", nullable = false) private String scopeWorkspaceId;
+    @Column(name = "application_id") private String applicationId;
+    @Column(name = "application_name") private String applicationName;
+    @Column(name = "snow_group_id") private String snowGroupId;
+    @Column(name = "snow_group_name") private String snowGroupName;
     @Column(name = "credential_ref", nullable = false) private String credentialRef;
     @Column(name = "sync_mode", nullable = false) private String syncMode;
     @Column(name = "pull_schedule") private String pullSchedule;
@@ -670,11 +862,60 @@ public class CredentialRef {
 
 ## 6. Database Schema — Flyway Migrations
 
-The next available Flyway version in the repo is **V40** (existing top is V36 — see `backend/src/main/resources/db/migration/`). Platform Center uses a contiguous block V40–V47.
+The current repo already uses V40–V85 for other SDLC slices. Platform Center uses the next contiguous block V86–V94.
 
-### V40: Templates
+### V86: Platform foundation
 
-File: `V40__create_platform_template.sql`
+File: `V86__create_platform_foundation.sql`
+
+```sql
+CREATE TABLE PLATFORM_SNOW_GROUP (
+    id                     VARCHAR(64)  PRIMARY KEY,
+    servicenow_group_name  VARCHAR(255) NOT NULL,
+    display_name           VARCHAR(255) NOT NULL,
+    owner_email            VARCHAR(255)          ,
+    escalation_policy      VARCHAR(512)          ,
+    status                 VARCHAR(32)  NOT NULL,
+    created_at             TIMESTAMP    NOT NULL,
+    updated_at             TIMESTAMP    NOT NULL,
+    CONSTRAINT uq_platform_snow_group_name UNIQUE (servicenow_group_name)
+);
+
+CREATE TABLE PLATFORM_APPLICATION (
+    id                   VARCHAR(64)  PRIMARY KEY,
+    app_key              VARCHAR(128) NOT NULL,
+    name                 VARCHAR(255) NOT NULL,
+    owner_snow_group_id  VARCHAR(64)           ,
+    criticality          VARCHAR(32)  NOT NULL,
+    status               VARCHAR(32)  NOT NULL,
+    created_at           TIMESTAMP    NOT NULL,
+    updated_at           TIMESTAMP    NOT NULL,
+    CONSTRAINT uq_platform_application_key UNIQUE (app_key),
+    CONSTRAINT fk_papp_owner_snow_group FOREIGN KEY (owner_snow_group_id) REFERENCES PLATFORM_SNOW_GROUP(id)
+);
+
+CREATE TABLE PLATFORM_WORKSPACE (
+    id              VARCHAR(64)  PRIMARY KEY,
+    workspace_key   VARCHAR(128) NOT NULL,
+    name            VARCHAR(255) NOT NULL,
+    application_id  VARCHAR(64)  NOT NULL,
+    snow_group_id   VARCHAR(64)  NOT NULL,
+    status          VARCHAR(32)  NOT NULL,
+    created_at      TIMESTAMP    NOT NULL,
+    updated_at      TIMESTAMP    NOT NULL,
+    CONSTRAINT uq_platform_workspace_key UNIQUE (workspace_key),
+    CONSTRAINT fk_pws_application FOREIGN KEY (application_id) REFERENCES PLATFORM_APPLICATION(id),
+    CONSTRAINT fk_pws_snow_group FOREIGN KEY (snow_group_id) REFERENCES PLATFORM_SNOW_GROUP(id)
+);
+
+CREATE INDEX ix_platform_application_snow ON PLATFORM_APPLICATION (owner_snow_group_id);
+CREATE INDEX ix_platform_workspace_app ON PLATFORM_WORKSPACE (application_id);
+CREATE INDEX ix_platform_workspace_snow ON PLATFORM_WORKSPACE (snow_group_id);
+```
+
+### V87: Templates
+
+File: `V87__create_platform_template.sql`
 
 ```sql
 CREATE TABLE PLATFORM_TEMPLATE (
@@ -707,16 +948,16 @@ CREATE TABLE PLATFORM_TEMPLATE_VERSION (
 );
 ```
 
-### V41: Configurations
+### V88: Configurations
 
-File: `V41__create_platform_configuration.sql`
+File: `V88__create_platform_configuration.sql`
 
 ```sql
 CREATE TABLE PLATFORM_CONFIGURATION (
     id                VARCHAR(64)  PRIMARY KEY,
     config_key        VARCHAR(128) NOT NULL,
     kind              VARCHAR(32)  NOT NULL,    -- page/field/component/flow-rule/view-rule/notification/ai-config
-    scope_type        VARCHAR(32)  NOT NULL,    -- platform/application/workspace/project
+    scope_type        VARCHAR(32)  NOT NULL,    -- platform/application/snow_group/workspace/project
     scope_id          VARCHAR(64)  NOT NULL,    -- "*" when platform
     parent_id         VARCHAR(64)           ,
     status            VARCHAR(32)  NOT NULL,    -- active/inactive
@@ -733,9 +974,9 @@ CREATE UNIQUE INDEX uq_platform_configuration_scope_key
     ON PLATFORM_CONFIGURATION (config_key, kind, scope_type, scope_id);
 ```
 
-### V42: Audit
+### V89: Audit
 
-File: `V42__create_platform_audit.sql`
+File: `V89__create_platform_audit.sql`
 
 ```sql
 CREATE TABLE PLATFORM_AUDIT (
@@ -763,14 +1004,28 @@ CREATE INDEX ix_platform_audit_actor ON PLATFORM_AUDIT (actor);
 CREATE INDEX ix_platform_audit_scope ON PLATFORM_AUDIT (scope_type, scope_id);
 ```
 
-### V43: Role assignments
+### V90: Users and role assignments
 
-File: `V43__create_platform_role_assignment.sql`
+File: `V90__create_platform_user_and_role_assignment.sql`
 
 ```sql
+CREATE TABLE PLATFORM_USER (
+    staff_id      VARCHAR(64)  PRIMARY KEY,
+    display_name  VARCHAR(256) NOT NULL,
+    staff_name    VARCHAR(256)          ,
+    avatar_url    VARCHAR(1024)         ,
+    email         VARCHAR(256)          ,
+    profile_source VARCHAR(32) NOT NULL DEFAULT 'manual',
+    last_profile_sync_at TIMESTAMP      ,
+    status        VARCHAR(32)  NOT NULL,
+    password_hash VARCHAR(512)          , -- V1 placeholder hash; never plaintext
+    created_at    TIMESTAMP    NOT NULL,
+    updated_at    TIMESTAMP    NOT NULL
+);
+
 CREATE TABLE PLATFORM_ROLE_ASSIGNMENT (
     id                 VARCHAR(64)  PRIMARY KEY,
-    user_id            VARCHAR(128) NOT NULL,
+    staff_id           VARCHAR(64)  NOT NULL,
     user_display_name  VARCHAR(256)          ,
     role               VARCHAR(32)  NOT NULL,
     scope_type         VARCHAR(32)  NOT NULL,
@@ -778,17 +1033,19 @@ CREATE TABLE PLATFORM_ROLE_ASSIGNMENT (
     granted_by         VARCHAR(128) NOT NULL,
     granted_at         TIMESTAMP    NOT NULL,
     attributes_json    CLOB                  ,    -- reserved for V2 ABAC
-    CONSTRAINT uq_platform_role_assignment UNIQUE (user_id, role, scope_type, scope_id)
+    CONSTRAINT fk_pra_user FOREIGN KEY (staff_id) REFERENCES PLATFORM_USER(staff_id),
+    CONSTRAINT uq_platform_role_assignment UNIQUE (staff_id, role, scope_type, scope_id)
 );
 
-CREATE INDEX ix_platform_role_assignment_user  ON PLATFORM_ROLE_ASSIGNMENT (user_id);
+CREATE INDEX ix_platform_user_status ON PLATFORM_USER (status);
+CREATE INDEX ix_platform_role_assignment_user  ON PLATFORM_ROLE_ASSIGNMENT (staff_id);
 CREATE INDEX ix_platform_role_assignment_scope ON PLATFORM_ROLE_ASSIGNMENT (scope_type, scope_id);
 CREATE INDEX ix_platform_role_assignment_role  ON PLATFORM_ROLE_ASSIGNMENT (role);
 ```
 
-### V44: Policies
+### V91: Policies
 
-File: `V44__create_platform_policy.sql`
+File: `V91__create_platform_policy.sql`
 
 ```sql
 CREATE TABLE PLATFORM_POLICY (
@@ -829,9 +1086,9 @@ CREATE INDEX ix_platform_policy_exception_policy  ON PLATFORM_POLICY_EXCEPTION (
 CREATE INDEX ix_platform_policy_exception_expiry ON PLATFORM_POLICY_EXCEPTION (expires_at);
 ```
 
-### V45: Connections
+### V92: Connections
 
-File: `V45__create_platform_connection.sql`
+File: `V92__create_platform_connection.sql`
 
 ```sql
 CREATE TABLE PLATFORM_CREDENTIAL_REF (
@@ -864,19 +1121,41 @@ CREATE TABLE PLATFORM_CONNECTION (
 
 CREATE INDEX ix_platform_connection_kind   ON PLATFORM_CONNECTION (kind);
 CREATE INDEX ix_platform_connection_scope  ON PLATFORM_CONNECTION (scope_workspace_id);
+CREATE INDEX ix_platform_connection_app    ON PLATFORM_CONNECTION (application_id);
+CREATE INDEX ix_platform_connection_snow   ON PLATFORM_CONNECTION (snow_group_id);
 CREATE INDEX ix_platform_connection_status ON PLATFORM_CONNECTION (status);
 ```
 
-### V46: Seed data (local profile baseline)
+### V93: Seed data (local profile baseline)
 
-File: `V46__seed_platform_center_data.sql`
+File: `V93__seed_platform_center_data.sql`
 
 ```sql
--- Default platform admin user (for local / dev only; real auth deferred)
-INSERT INTO PLATFORM_ROLE_ASSIGNMENT
-    (id, user_id, user_display_name, role, scope_type, scope_id, granted_by, granted_at, attributes_json)
+-- Default platform admin user (for local / dev only; TeamBook is optional in internal deployments)
+INSERT INTO PLATFORM_SNOW_GROUP
+    (id, servicenow_group_name, display_name, owner_email, escalation_policy, status, created_at, updated_at)
 VALUES
-    ('ra-default-admin', 'admin@sdlctower.local', 'Platform Admin',
+    ('snow-fin-tech-ops', 'FIN-TECH-OPS', 'FIN-TECH-OPS', 'fin-tech-ops@example.com', 'business-hours-primary', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO PLATFORM_APPLICATION
+    (id, app_key, name, owner_snow_group_id, criticality, status, created_at, updated_at)
+VALUES
+    ('app-payment-gateway-pro', 'payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'critical', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO PLATFORM_WORKSPACE
+    (id, workspace_key, name, application_id, snow_group_id, status, created_at, updated_at)
+VALUES
+    ('ws-default-001', 'global-sdlc-tower', 'Global SDLC Tower', 'app-payment-gateway-pro', 'snow-fin-tech-ops', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO PLATFORM_USER
+    (staff_id, display_name, staff_name, avatar_url, email, profile_source, status, password_hash, created_at, updated_at)
+VALUES
+    ('43910516', 'Platform Admin', NULL, NULL, 'admin@sdlctower.local', 'manual', 'active', 'local-dev-placeholder-hash', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO PLATFORM_ROLE_ASSIGNMENT
+    (id, staff_id, user_display_name, role, scope_type, scope_id, granted_by, granted_at, attributes_json)
+VALUES
+    ('ra-default-admin', '43910516', 'Platform Admin',
      'PLATFORM_ADMIN', 'platform', '*', 'system', CURRENT_TIMESTAMP, NULL);
 
 -- One template of each kind at the platform default layer
@@ -928,11 +1207,11 @@ INSERT INTO PLATFORM_CREDENTIAL_REF (ref, storage_kind, encrypted_value, created
 INSERT INTO PLATFORM_CONNECTION (id, kind, scope_workspace_id, application_id, application_name, snow_group_id, snow_group_name, base_url, credential_ref, sync_mode,
                                  pull_schedule, push_url, status, last_sync_at, last_test_at,
                                  last_test_ok, created_at) VALUES
-  ('conn-jira-ws1',       'jira',       'ws-default', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://jira.company.com',        'cred-jira-demo',       'both', '0 */15 * * * *', 'https://webhook.local/jira',    'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
-  ('conn-confluence-ws1', 'confluence', 'ws-default', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://confluence.company.com',  'cred-confluence-demo', 'pull', '0 */15 * * * *', NULL,                            'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
-  ('conn-gitlab-ws1',     'gitlab',     'ws-default', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://gitlab.company.com',      'cred-gitlab-demo',     'pull', '0 */10 * * * *', NULL,                            'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
-  ('conn-jenkins-ws1',    'jenkins',    'ws-default', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://jenkins.company.com',     'cred-jenkins-demo',    'push', NULL,             'https://webhook.local/jenkins', 'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
-  ('conn-servicenow-ws1', 'servicenow', 'ws-default', NULL,                      NULL,                  'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://company.service-now.com', 'cred-servicenow-demo', 'both', '0 */30 * * * *', 'https://webhook.local/snow',    'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP);
+  ('conn-jira-ws1',       'jira',       'ws-default-001', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://jira.company.com',        'cred-jira-demo',       'both', '0 */15 * * * *', 'https://webhook.local/jira',    'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
+  ('conn-confluence-ws1', 'confluence', 'ws-default-001', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://confluence.company.com',  'cred-confluence-demo', 'pull', '0 */15 * * * *', NULL,                            'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
+  ('conn-gitlab-ws1',     'gitlab',     'ws-default-001', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://gitlab.company.com',      'cred-gitlab-demo',     'pull', '0 */10 * * * *', NULL,                            'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
+  ('conn-jenkins-ws1',    'jenkins',    'ws-default-001', 'app-payment-gateway-pro', 'Payment-Gateway-Pro', 'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://jenkins.company.com',     'cred-jenkins-demo',    'push', NULL,             'https://webhook.local/jenkins', 'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP),
+  ('conn-servicenow-ws1', 'servicenow', 'ws-default-001', NULL,                      NULL,                  'snow-fin-tech-ops', 'FIN-TECH-OPS', 'https://company.service-now.com', 'cred-servicenow-demo', 'both', '0 */30 * * * *', 'https://webhook.local/snow',    'disabled', NULL, NULL, NULL, CURRENT_TIMESTAMP);
 
 -- One bootstrap audit record so the Audit catalog is not empty on first load
 INSERT INTO PLATFORM_AUDIT (id, timestamp, actor, actor_type, category, action, object_type, object_id,
@@ -942,9 +1221,9 @@ INSERT INTO PLATFORM_AUDIT (id, timestamp, actor, actor_type, category, action, 
    '{"note":"seed default platform admin"}');
 ```
 
-### V47: Future-reservation columns
+### V94: Future-reservation columns
 
-File: `V47__reserve_platform_future_columns.sql`
+File: `V94__reserve_platform_future_columns.sql`
 
 ```sql
 -- Reserve placeholder columns for V2 features so the V2 upgrade doesn't block on migrations.
@@ -961,13 +1240,18 @@ These columns are nullable; V1 application code ignores them.
 
 | Concept | FE TypeScript | BE DTO | Entity | Table | Notes |
 |---------|---------------|--------|--------|-------|-------|
+| Application | `PlatformApplication` | `PlatformApplicationDto` | `PlatformApplication` | `PLATFORM_APPLICATION` | Canonical application id and name |
+| SNOW group | `PlatformSnowGroup` | `PlatformSnowGroupDto` | `PlatformSnowGroup` | `PLATFORM_SNOW_GROUP` | Canonical ServiceNow ownership group |
+| Workspace binding | `PlatformWorkspace` | `PlatformWorkspaceDto` | `PlatformWorkspace` | `PLATFORM_WORKSPACE` | Bridges current `workspaceId` to application and SNOW group |
+| Scope resolution | `PlatformScopeResolution` | `PlatformScopeResolutionDto` | (computed) | n/a | Ordered scope chain for inheritance and permissions |
+| User | `PlatformUser` | `PlatformUserDto` | `PlatformUser` | `PLATFORM_USER` | Staff-id identity managed by Platform Admin; optional TeamBook profile metadata |
 | Template row | `TemplateSummary` | `TemplateSummaryDto` | `Template` | `PLATFORM_TEMPLATE` | `version` ↔ `current_version` |
 | Template detail | `TemplateDetail` | `TemplateDetailDto` | `Template` + `TemplateVersion` | two tables joined | Inheritance computed in service |
 | Template version | `TemplateVersion` | `TemplateVersionDto` | `TemplateVersion` | `PLATFORM_TEMPLATE_VERSION` | body is JSON stored as CLOB |
 | Inheritance field | `InheritanceField` | `InheritanceFieldDto` | (computed) | n/a | Composed from overrides across scopes |
 | Configuration row | `ConfigurationSummary` | `ConfigurationSummaryDto` | `Configuration` | `PLATFORM_CONFIGURATION` | `hasDrift` computed and denormalized |
 | Audit record | `AuditRecord` | `AuditRecordDto` | `AuditRecord` | `PLATFORM_AUDIT` | append-only |
-| Role assignment | `RoleAssignment` | `RoleAssignmentDto` | `RoleAssignment` | `PLATFORM_ROLE_ASSIGNMENT` | `attributesJson` reserved for ABAC |
+| Role assignment | `RoleAssignment` | `RoleAssignmentDto` | `RoleAssignment` | `PLATFORM_ROLE_ASSIGNMENT` | Staff-id role grant; `attributesJson` reserved for ABAC |
 | Current user | `CurrentUser` | `CurrentUserDto` | (computed) | n/a | Aggregates role assignments |
 | Policy | `Policy` | `PolicyDto` | `Policy` | `PLATFORM_POLICY` | body is category-shaped JSON |
 | Policy exception | `PolicyException` | `PolicyExceptionDto` | `PolicyException` | `PLATFORM_POLICY_EXCEPTION` | can outlive parent policy |

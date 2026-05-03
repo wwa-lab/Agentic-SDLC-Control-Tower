@@ -49,6 +49,13 @@ frontend/src/features/platform/
 │   ├── types.ts                      # shared TS types (ScopeType, Role, etc.)
 │   └── useCurrentUser.ts             # composable reading /access/me
 │
+├── foundation/
+│   ├── ScopePicker.vue               # platform/application/snow_group/workspace/project picker
+│   ├── ScopeResolutionPreview.vue    # ordered scope-chain display
+│   ├── store.ts
+│   ├── api.ts
+│   └── mocks.ts
+│
 ├── templates/
 │   ├── TemplatesView.vue             # catalog + detail
 │   ├── TemplateDetail.vue            # body + versions + inheritance
@@ -128,13 +135,24 @@ backend/src/main/java/com/sdlctower/platform/
 ├── shared/                            # NEW — cross-cutting platform beans
 │   ├── AdminAuthGuard.java            # HandlerInterceptor + @RequireAdmin
 │   ├── AuditWriter.java               # single-row insert bean
-│   ├── ScopeResolver.java             # parses/validates scope query params
-│   ├── InheritanceResolver.java
 │   ├── CursorCodec.java               # base64 encode/decode cursor
 │   └── dto/
 │       ├── CursorPage.java
 │       ├── ApiError.java
 │       └── ScopeDto.java
+│
+├── foundation/
+│   ├── PlatformApplication.java
+│   ├── PlatformSnowGroup.java
+│   ├── PlatformWorkspace.java
+│   ├── FoundationRepository.java
+│   ├── PlatformScopeResolver.java
+│   ├── FoundationService.java
+│   ├── FoundationController.java
+│   ├── PlatformApplicationDto.java
+│   ├── PlatformSnowGroupDto.java
+│   ├── PlatformWorkspaceDto.java
+│   └── PlatformScopeResolutionDto.java
 │
 ├── template/
 │   ├── Template.java                  # @Entity
@@ -152,6 +170,7 @@ backend/src/main/java/com/sdlctower/platform/
 │   ├── Configuration.java
 │   ├── ConfigurationRepository.java
 │   ├── ConfigurationService.java
+│   ├── InheritanceResolver.java
 │   ├── ConfigurationController.java
 │   ├── ConfigurationSummaryDto.java
 │   └── ConfigurationDetailDto.java
@@ -211,14 +230,15 @@ Test structure mirrors main (package-by-feature per CLAUDE.md Lesson #3).
 Under `backend/src/main/resources/db/migration/`, add:
 
 ```
-V40__create_platform_template.sql
-V41__create_platform_configuration.sql
-V42__create_platform_audit.sql
-V43__create_platform_role_assignment.sql
-V44__create_platform_policy.sql
-V45__create_platform_connection.sql
-V46__seed_platform_center_data.sql
-V47__reserve_platform_future_columns.sql
+V86__create_platform_foundation.sql
+V87__create_platform_template.sql
+V88__create_platform_configuration.sql
+V89__create_platform_audit.sql
+V90__create_platform_role_assignment.sql
+V91__create_platform_policy.sql
+V92__create_platform_connection.sql
+V93__seed_platform_center_data.sql
+V94__reserve_platform_future_columns.sql
 ```
 
 Full DDL in [platform-center-data-model.md §6](../04-architecture/platform-center-data-model.md).
@@ -328,8 +348,8 @@ Emits: `@confirm`, `@cancel`.
 
 | Prop | Type |
 |------|------|
-| `winningLayer` | `'platform' \| 'application' \| 'snowGroup' \| 'project'` |
-| `layers` | `{ platform: unknown; application: unknown\|null; snowGroup: unknown\|null; project: unknown\|null }` |
+| `winningLayer` | `'platform' \| 'application' \| 'snowGroup' \| 'workspace' \| 'project'` |
+| `layers` | `{ platform: unknown; application: unknown\|null; snowGroup: unknown\|null; workspace: unknown\|null; project: unknown\|null }` |
 
 Renders a colored dot + label + tooltip showing all four layer values side-by-side.
 
@@ -340,7 +360,7 @@ Renders a colored dot + label + tooltip showing all four layer values side-by-si
 | `scopeType` | `ScopeType` |
 | `scopeId` | `string` |
 
-Renders `platform:*` / `workspace:WS-42` / etc. with a tooltip for the full-id.
+Renders `platform:*` / `application:app-payment-gateway-pro` / `snow_group:snow-fin-tech-ops` / `workspace:ws-default-001` / `project:proj-42` with a tooltip for the full id and display name when available.
 
 ### 3.2 Per-sub-section view contracts
 
@@ -354,6 +374,11 @@ All six `*View.vue` components share the same overall shape:
 | Current-user roles | `useCurrentUser()` composable |
 
 Emits-to-store actions: `fetchCatalog()`, `applyFilter()`, `selectRow(id)`, `mutateThenRefetch()`.
+
+`AccessView.vue` additionally renders staff-user profile columns: staff id,
+display name, optional nStaff Name, optional avatar, profile source
+(`manual` / `teambook`), status, and last profile sync time. Profile fields are
+visual metadata only; role assignment rows remain the permission source of truth.
 
 ### 3.3 Route-guard contract
 
@@ -611,7 +636,7 @@ Key rules:
 
 | Q | Default |
 |---|---|
-| Do we expose search-by-user-id in Access? | Yes — substring match on `user_id` |
+| Do we expose search-by-staff-id in Access? | Yes — substring match on `staff_id` |
 | Do we allow cross-scope audit queries? | Yes — no scope filter defaults to all scopes |
 | Does the UI render the JSON body with a schema-aware form or raw editor? | V1 raw JSON textarea with validation; schema-aware form is V2 |
 | Does "Test connection" require admin lock (only one at a time per connection)? | No — V1 allows parallel test calls; backend handles concurrency |

@@ -38,6 +38,50 @@ function sortIndicator(field: SortField): string {
 function summaryFor(requirementId: string): RequirementControlPlaneListSummary | undefined {
   return props.controlPlaneSummaries[requirementId];
 }
+
+function currentStage(summary?: RequirementControlPlaneListSummary): string {
+  switch (summary?.status) {
+    case 'FRESH':
+      return 'Ready for handoff';
+    case 'DOCUMENT_CHANGED_AFTER_REVIEW':
+      return 'Review stale';
+    case 'SOURCE_CHANGED':
+      return 'Source changed';
+    case 'MISSING_SOURCE':
+      return 'Source intake';
+    case 'MISSING_DOCUMENT':
+      return 'SDD generation';
+    case 'ERROR':
+      return 'Control-plane error';
+    case 'UNKNOWN':
+      return 'Needs triage';
+    default:
+      return props.controlPlaneLoading ? 'Loading stage' : 'Not indexed';
+  }
+}
+
+function nextAction(summary?: RequirementControlPlaneListSummary): string {
+  switch (summary?.status) {
+    case 'FRESH':
+      return 'Continue downstream';
+    case 'DOCUMENT_CHANGED_AFTER_REVIEW':
+      return 'Re-run business review';
+    case 'SOURCE_CHANGED':
+      return 'Refresh affected SDD docs';
+    case 'MISSING_SOURCE':
+      return 'Link authoritative source';
+    case 'MISSING_DOCUMENT':
+      return summary.missingDocumentCount > 1
+        ? `Generate ${summary.missingDocumentCount} missing docs`
+        : 'Generate missing doc';
+    case 'ERROR':
+      return 'Retry summary load';
+    case 'UNKNOWN':
+      return 'Inspect traceability';
+    default:
+      return props.controlPlaneLoading ? 'Reading control plane' : 'Open requirement';
+  }
+}
 </script>
 
 <template>
@@ -50,7 +94,7 @@ function summaryFor(requirementId: string): RequirementControlPlaneListSummary |
       <span class="col-category">Category</span>
       <span class="col-stories">Stories</span>
       <span class="col-specs">Specs</span>
-      <span class="col-control-plane">Control Plane</span>
+      <span class="col-current-stage">Current Stage</span>
       <span class="col-completeness">Completeness</span>
       <span class="col-updated col-sortable" @click="emit('sort', 'recency')">Updated{{ sortIndicator('recency') }}</span>
     </div>
@@ -67,17 +111,15 @@ function summaryFor(requirementId: string): RequirementControlPlaneListSummary |
       <span class="col-category"><CategoryBadge :category="req.category" /></span>
       <span class="col-stories cell-tech">{{ req.storyCount }}</span>
       <span class="col-specs cell-tech">{{ req.specCount }}</span>
-      <span class="col-control-plane">
-        <span v-if="controlPlaneLoading && !summaryFor(req.id)" class="control-loading">Loading</span>
-        <span v-else-if="summaryFor(req.id)" class="control-cell">
-          <FreshnessChip :status="summaryFor(req.id)!.status" />
-          <span class="control-meta">
-            {{ summaryFor(req.id)!.sourceCount }} src ·
-            {{ summaryFor(req.id)!.documentCount }} docs
-            <template v-if="summaryFor(req.id)!.missingDocumentCount"> · {{ summaryFor(req.id)!.missingDocumentCount }} missing</template>
+      <span class="col-current-stage">
+        <span class="stage-cell">
+          <span class="stage-main">
+            <FreshnessChip v-if="summaryFor(req.id)" :status="summaryFor(req.id)!.status" />
+            <span v-else class="control-loading">{{ controlPlaneLoading ? 'Loading' : 'Pending' }}</span>
+            <strong>{{ currentStage(summaryFor(req.id)) }}</strong>
           </span>
+          <span class="control-meta">{{ nextAction(summaryFor(req.id)) }}</span>
         </span>
-        <span v-else class="control-loading">Pending</span>
       </span>
       <span class="col-completeness">
         <div class="progress-bar">
@@ -95,15 +137,17 @@ function summaryFor(requirementId: string): RequirementControlPlaneListSummary |
   background: var(--color-surface-container-high);
   border: var(--border-ghost);
   border-radius: var(--radius-sm);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .table-header, .table-row {
   display: grid;
-  grid-template-columns: 80px minmax(180px, 1fr) 70px 100px 100px 50px 50px minmax(170px, 0.8fr) 110px 100px;
+  grid-template-columns: 80px minmax(220px, 1fr) 70px 100px 100px 50px 50px minmax(210px, 0.9fr) 110px 100px;
   gap: 8px;
   align-items: center;
   padding: 12px 16px;
+  min-width: 1120px;
 }
 
 .table-header {
@@ -184,16 +228,34 @@ function summaryFor(requirementId: string): RequirementControlPlaneListSummary |
   text-align: center;
 }
 
-.col-control-plane {
+.col-current-stage {
   min-width: 0;
 }
 
-.control-cell {
+.stage-cell {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: 4px;
   align-items: flex-start;
+}
+
+.stage-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.stage-main strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-on-surface);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .control-meta, .control-loading {

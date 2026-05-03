@@ -123,6 +123,10 @@ const graphColumns = computed(() => {
 
 function skillGroupFor(skill: SkillDocumentContract) {
   const id = skill.skillId;
+  if (['req-to-user-story', 'user-story-to-spec'].includes(id)) return 'intake-analysis';
+  if (['spec-to-architecture', 'architecture-review', 'architecture-to-design'].includes(id)) return 'spec-design';
+  if (['design-to-tasks', 'tasks-to-code', 'tasks-to-implementation'].includes(id)) return 'build-test';
+  if (['review-code-against-design', 'review-doc-quality'].includes(id)) return 'review-routing';
   if (id.includes('normalizer') || id.includes('analyzer')) return 'intake-analysis';
   if (id.includes('functional-spec') || id.includes('technical-design') || id.includes('program-spec') || id.includes('file-spec')) {
     return 'spec-design';
@@ -256,6 +260,7 @@ function extraSkillCount(skillIds: ReadonlyArray<string>) {
                 <div class="skill-title">
                   <strong>{{ skill.label }}</strong>
                   <span>{{ skill.skillId }}</span>
+                  <p>{{ skill.description }}</p>
                 </div>
                 <span class="skill-deps">{{ skill.dependsOnSkills.length ? `${skill.dependsOnSkills.length} deps` : 'entry' }}</span>
               </div>
@@ -507,7 +512,8 @@ p {
 }
 
 .skill-title strong,
-.skill-title span {
+.skill-title span,
+.skill-title p {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -525,6 +531,16 @@ p {
   font-family: var(--font-tech);
   font-size: 0.5625rem;
   text-transform: uppercase;
+}
+
+.skill-title p {
+  max-width: 760px;
+  margin: 2px 0 0;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  text-transform: none;
 }
 
 .skill-deps {

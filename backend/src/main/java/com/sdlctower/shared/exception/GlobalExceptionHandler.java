@@ -7,6 +7,10 @@ import com.sdlctower.domain.teamspace.WorkspaceAccessDeniedException;
 import com.sdlctower.domain.codebuildmanagement.policy.CodeBuildManagementException;
 import com.sdlctower.domain.deploymentmanagement.policy.DeploymentException;
 import com.sdlctower.domain.testingmanagement.policy.TestingManagementException;
+import com.sdlctower.platform.access.PlatformAccessException;
+import com.sdlctower.platform.auth.PlatformAuthException;
+import com.sdlctower.platform.configuration.PlatformConfigurationException;
+import com.sdlctower.platform.policy.PlatformPolicyException;
 import com.sdlctower.shared.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -40,6 +44,42 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.fail(ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalState(IllegalStateException ex) {
+        HttpStatus status = "LAST_PLATFORM_ADMIN".equals(ex.getMessage()) ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
+        return ResponseEntity
+                .status(status)
+                .body(ApiResponse.fail(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PlatformAuthException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePlatformAuth(PlatformAuthException ex) {
+        return ResponseEntity
+                .status(ex.status())
+                .body(ApiResponse.fail(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PlatformAccessException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePlatformAccess(PlatformAccessException ex) {
+        return ResponseEntity
+                .status(ex.status())
+                .body(ApiResponse.fail(ex.code()));
+    }
+
+    @ExceptionHandler(PlatformConfigurationException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePlatformConfiguration(PlatformConfigurationException ex) {
+        return ResponseEntity
+                .status(ex.status())
+                .body(ApiResponse.fail(ex.code()));
+    }
+
+    @ExceptionHandler(PlatformPolicyException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePlatformPolicy(PlatformPolicyException ex) {
+        return ResponseEntity
+                .status(ex.status())
+                .body(ApiResponse.fail(ex.code()));
     }
 
     @ExceptionHandler(WorkspaceAccessDeniedException.class)

@@ -31,7 +31,7 @@ class ProjectManagementControllerTest {
 
     @Test
     void portfolioAggregateReturnsSeededSections() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_MANAGEMENT + "/portfolio")
+        mockMvc.perform(get(ApiConstants.PROJECT_MANAGEMENT + "/portfolio", "ws-default-001")
                         .param("workspaceId", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.summary.data.workspaceId").value("ws-default-001"))
@@ -45,7 +45,7 @@ class ProjectManagementControllerTest {
 
     @Test
     void planAggregateReturnsAllSections() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_MANAGEMENT + "/plan/proj-42"))
+        mockMvc.perform(get(ApiConstants.PROJECT_MANAGEMENT + "/plan/proj-42", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.header.data.projectId").value("proj-42"))
                 .andExpect(jsonPath("$.data.milestones.data.length()").value(3))
@@ -59,7 +59,7 @@ class ProjectManagementControllerTest {
 
     @Test
     void milestoneTransitionRejectsStaleRevision() throws Exception {
-        mockMvc.perform(post(ApiConstants.PROJECT_MANAGEMENT + "/plan/proj-42/milestones/MS-PROJ42-03/transition")
+        mockMvc.perform(post(ApiConstants.PROJECT_MANAGEMENT + "/plan/proj-42/milestones/MS-PROJ42-03/transition", "ws-default-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -74,7 +74,7 @@ class ProjectManagementControllerTest {
 
     @Test
     void capacityBatchUpdateReturnsUpdatedRevision() throws Exception {
-        mockMvc.perform(patch(ApiConstants.PROJECT_MANAGEMENT + "/plan/proj-42/capacity")
+        mockMvc.perform(patch(ApiConstants.PROJECT_MANAGEMENT + "/plan/proj-42/capacity", "ws-default-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -98,7 +98,7 @@ class ProjectManagementControllerTest {
 
     @Test
     void aiDismissSetsSuppressionWindow() throws Exception {
-        mockMvc.perform(post(ApiConstants.PROJECT_MANAGEMENT + "/plan/proj-55/ai-suggestions/sug-p55-r1/dismiss")
+        mockMvc.perform(post(ApiConstants.PROJECT_MANAGEMENT + "/plan/proj-55/ai-suggestions/sug-p55-r1/dismiss", "ws-default-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -112,7 +112,7 @@ class ProjectManagementControllerTest {
 
     @Test
     void counterSignRequiresTargetAuthority() throws Exception {
-        mockMvc.perform(post(ApiConstants.PROJECT_MANAGEMENT + "/plan/proj-42/dependencies/DEP-P42-UP-2/countersign")
+        mockMvc.perform(post(ApiConstants.PROJECT_MANAGEMENT + "/plan/proj-42/dependencies/DEP-P42-UP-2/countersign", "ws-default-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("X-PM-ACTOR-ID", "u-020")
                         .content("""
@@ -126,7 +126,7 @@ class ProjectManagementControllerTest {
 
     @Test
     void privateWorkspacePortfolioIsDenied() throws Exception {
-        mockMvc.perform(get(ApiConstants.PROJECT_MANAGEMENT + "/portfolio")
+        mockMvc.perform(get(ApiConstants.PROJECT_MANAGEMENT + "/portfolio", "ws-default-001")
                         .param("workspaceId", "ws-private-001"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value(containsString("PM_AUTH_FORBIDDEN")));

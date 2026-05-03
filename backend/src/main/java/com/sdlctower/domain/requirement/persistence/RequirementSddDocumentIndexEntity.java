@@ -2,17 +2,22 @@ package com.sdlctower.domain.requirement.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import com.sdlctower.shared.persistence.WorkspacePrePersistListener;
 
 @Entity
 @Table(name = "requirement_sdd_document_index")
+@EntityListeners(WorkspacePrePersistListener.class)
 public class RequirementSddDocumentIndexEntity {
     @Id
     private String id;
     @Column(name = "requirement_id", nullable = false)
     private String requirementId;
+    @Column(name = "workspace_id", nullable = false)
+    private String workspaceId;
     @Column(name = "profile_id", nullable = false)
     private String profileId;
     @Column(name = "sdd_workspace_id")
@@ -111,6 +116,7 @@ public class RequirementSddDocumentIndexEntity {
 
     public String getId() { return id; }
     public String getRequirementId() { return requirementId; }
+    public String getWorkspaceId() { return workspaceId; }
     public String getProfileId() { return profileId; }
     public String getSddWorkspaceId() { return sddWorkspaceId; }
     public String getSddType() { return sddType; }

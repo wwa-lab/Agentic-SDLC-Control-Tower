@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { Connection, AdapterDescriptor, ConnectionTestResult, LoadState } from '../shared/types';
+import type { Connection, AdapterDescriptor, ConnectionTestResult, CursorPage, LoadState } from '../shared/types';
 import { MOCK_CONNECTIONS, MOCK_ADAPTERS, MOCK_TEST_RESULT_OK, MOCK_TEST_RESULT_FAIL } from './mocks';
-import { withMockLatency, PC_USE_MOCK } from '../shared/api';
+import { withMockLatency, PC_USE_MOCK, pcGet, pcPost } from '../shared/api';
 
 type ConnectionInput = Omit<Connection, 'id' | 'lastSyncAt' | 'lastTestAt' | 'lastTestOk'> & {
   readonly id?: string | null;
@@ -37,6 +37,9 @@ export const useIntegrationsStore = defineStore('platform-integrations', () => {
       if (PC_USE_MOCK) {
         connections.value = await withMockLatency(readStoredConnections);
         adapters.value = MOCK_ADAPTERS;
+      } else {
+        connections.value = (await pcGet<CursorPage<Connection>>('/integrations/connections')).data;
+        adapters.value = await pcGet<AdapterDescriptor[]>('/integrations/adapters');
       }
       status.value = 'ready';
     } catch (e) {
@@ -60,6 +63,13 @@ export const useIntegrationsStore = defineStore('platform-integrations', () => {
           : item
         );
         persistConnections();
+      } else {
+        const result = await pcPost<ConnectionTestResult>(`/integrations/connections/${id}/test`);
+        testResult.value = result;
+        connections.value = connections.value.map(item => item.id === id
+          ? { ...item, lastTestAt: new Date().toISOString(), lastTestOk: result.ok, status: result.ok ? 'enabled' : 'error' }
+          : item
+        );
       }
     } finally {
       testLoading.value = false;

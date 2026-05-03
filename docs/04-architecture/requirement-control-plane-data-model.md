@@ -14,6 +14,7 @@ graph TD
     DOC["SddDocumentIndex"]
     REV["DocumentReview"]
     RUN["AgentRun"]
+    EVT["AgentStageEvent"]
     ART["ArtifactLink"]
     PROF["SddProfile"]
     WS["ProjectSddWorkspace"]
@@ -27,6 +28,7 @@ graph TD
     WS --> DOC
     WS --> KG
     DOC --> REV
+    RUN --> EVT
     RUN --> ART
     RUN --> DOC
     SRC --> RUN
@@ -191,10 +193,33 @@ Represents a CLI-agent execution request and status.
 | inputSummaryJson | clob/json | Human-readable source summary |
 | outputSummaryJson | clob/json | Agent summary |
 | errorMessage | string | Optional |
+| command | string | Derived DTO field for the slash-skill CLI prompt |
+| callbackUrl | string | Derived DTO field for the final callback URL |
 | requestedBy | string | User ID |
 | startedAt | instant | Optional |
 | endedAt | instant | Optional |
 | createdAt | instant | Timestamp |
+
+### AgentStageEvent
+
+Represents a precise progress fact reported by the local CLI wrapper or agent.
+Stage events are append-only audit records; the latest event also updates the
+coarse AgentRun status.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | string | UUID |
+| executionId | string | AgentRun ID |
+| requirementId | string | Requirement ID |
+| profileId | string | Active SDD profile |
+| skillKey | string | Profile skill binding |
+| targetStage | string | Profile-defined stage key |
+| status | enum | STARTED, RUNNING, DONE, FAILED |
+| message | string | Optional human-readable update |
+| artifactUri | string | Optional generated doc, PR, or report link |
+| metadataJson | clob/json | Optional raw runner metadata |
+| occurredAt | instant | Event timestamp |
+| createdAt | instant | Persistence timestamp |
 
 ### ArtifactLink
 
@@ -318,6 +343,34 @@ export interface DocumentReview {
   readonly blobSha: string;
   readonly createdAt: string;
 }
+
+export interface AgentStageEvent {
+  readonly id: string;
+  readonly executionId: string;
+  readonly requirementId: string;
+  readonly profileId: string;
+  readonly skillKey: string;
+  readonly targetStage: string;
+  readonly status: 'STARTED' | 'RUNNING' | 'DONE' | 'FAILED';
+  readonly message: string | null;
+  readonly artifactUri: string | null;
+  readonly metadata: Record<string, unknown> | null;
+  readonly occurredAt: string;
+  readonly createdAt: string;
+}
+
+export interface AgentRun {
+  readonly executionId: string;
+  readonly requirementId: string;
+  readonly profileId: string;
+  readonly skillKey: string;
+  readonly status: string;
+  readonly manifest: Record<string, unknown>;
+  readonly command: string | null;
+  readonly callbackUrl: string | null;
+  readonly stageEvents: ReadonlyArray<AgentStageEvent>;
+  readonly createdAt: string;
+}
 ```
 
 ## Database Tables
@@ -404,6 +457,21 @@ create table requirement_agent_run (
   requested_by varchar(128) not null,
   started_at timestamp,
   ended_at timestamp,
+  created_at timestamp not null
+);
+
+create table requirement_agent_stage_event (
+  id varchar(64) primary key,
+  execution_id varchar(64) not null,
+  requirement_id varchar(32) not null,
+  profile_id varchar(128) not null,
+  skill_key varchar(255) not null,
+  target_stage varchar(128) not null,
+  status varchar(64) not null,
+  message varchar(2048),
+  artifact_uri varchar(2048),
+  metadata_json clob,
+  occurred_at timestamp not null,
   created_at timestamp not null
 );
 

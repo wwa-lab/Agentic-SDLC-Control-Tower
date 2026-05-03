@@ -20,8 +20,17 @@ patterns for both frontend and backend developers.
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/api/v1/auth/providers` | Discover enabled auth providers |
+| POST | `/api/v1/auth/login` | Staff-id login |
+| GET | `/api/v1/auth/sso/teambook/start` | Start internal TeamBook SSO flow when enabled |
+| GET | `/api/v1/auth/sso/teambook/callback` | Internal TeamBook callback |
+| POST | `/api/v1/auth/guest` | Start guest read-only session |
+| GET | `/api/v1/auth/me` | Current user identity, mode, roles, scopes |
+| POST | `/api/v1/auth/logout` | End current session |
 | GET | `/api/v1/workspace-context` | Fetch current workspace context |
 | GET | `/api/v1/nav/entries` | Fetch ordered navigation items |
+| GET | `/api/v1/shell/help-links` | Fetch configured Confluence guideline URL |
+| POST | `/api/v1/support/contact` | Raise Contact Us issue as Jira story |
 | GET | `/actuator/health` | Spring Boot health check |
 
 ### Base URL
@@ -43,18 +52,23 @@ Accept: application/json
 
 **Query Parameters**: None.
 
-**Headers**: Standard HTTP headers. No authentication required in V1.
+**Headers**: authenticated session cookie or guest session cookie. Guest sessions return demo context.
 
 ### 2.2 Success Response (200 OK)
 
 ```json
 {
   "data": {
+    "workspaceId": "ws-default-001",
     "workspace": "Global SDLC Tower",
+    "applicationId": "app-payment-gateway-pro",
     "application": "Payment-Gateway-Pro",
+    "snowGroupId": "snow-fin-tech-ops",
     "snowGroup": "FIN-TECH-OPS",
+    "projectId": "proj-42",
     "project": "Q2-Cloud-Migration",
-    "environment": "Production"
+    "environment": "Production",
+    "demoMode": false
   },
   "error": null
 }
@@ -92,11 +106,218 @@ When no workspace context is seeded:
 
 | Field | Type | Nullable | Description |
 |-------|------|----------|-------------|
+| `workspaceId` | string | Yes | Canonical workspace id |
 | `workspace` | string | No | Workspace name |
+| `applicationId` | string | Yes | Canonical application id |
 | `application` | string | No | Application name |
+| `snowGroupId` | string | Yes | Canonical SNOW group id |
 | `snowGroup` | string | Yes | ServiceNow group |
+| `projectId` | string | Yes | Canonical project id |
 | `project` | string | Yes | Project name |
 | `environment` | string | Yes | Environment name |
+| `demoMode` | boolean | No | True when guest/demo dataset is active |
+
+---
+
+## 2A. Authentication APIs
+
+### GET /api/v1/auth/providers
+
+Returns auth providers enabled for the current environment. Local/external
+environments can omit TeamBook.
+
+```json
+{
+  "data": [
+    {
+      "provider": "teambook",
+      "label": "TeamBook SSO",
+      "enabled": true,
+      "startUrl": "/api/v1/auth/sso/teambook/start"
+    },
+    {
+      "provider": "manual",
+      "label": "Staff ID",
+      "enabled": true,
+      "startUrl": null
+    },
+    {
+      "provider": "guest",
+      "label": "Guest",
+      "enabled": true,
+      "startUrl": null
+    }
+  ],
+  "error": null
+}
+```
+
+### POST /api/v1/auth/login
+
+```json
+{
+  "staffId": "43910516",
+  "password": "non-empty"
+}
+```
+
+Validation:
+
+- `staffId` required
+- `password` required and non-empty
+- password is never returned in any response
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "mode": "staff",
+    "authProvider": "manual",
+    "staffId": "43910516",
+    "displayName": "Staff 43910516",
+    "staffName": null,
+    "avatarUrl": null,
+    "roles": ["WORKSPACE_VIEWER"],
+    "readOnly": false,
+    "scopes": [
+      { "scopeType": "application", "scopeId": "app-payment-gateway-pro" },
+      { "scopeType": "snow_group", "scopeId": "snow-fin-tech-ops" }
+    ]
+  },
+  "error": null
+}
+```
+
+### GET /api/v1/auth/sso/teambook/start
+
+Internal-only endpoint. Redirects the browser to TeamBook SSO when the provider
+is enabled. If TeamBook is disabled in the current environment, returns `404` or
+an auth-provider-disabled error.
+
+### GET /api/v1/auth/sso/teambook/callback
+
+Internal-only callback. The backend validates the TeamBook response, normalizes
+the profile to staff id, nStaff Name, and avatar URL, then checks the staff id
+against active `PlatformUser` records. TeamBook authentication alone never grants
+Application + SNOW access.
+
+**Redirect on success:** `/`
+
+**Redirect on provision failure:** `/login?error=user_not_provisioned`
+
+### POST /api/v1/auth/guest
+
+Starts a guest read-only session.
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "mode": "guest",
+    "authProvider": "guest",
+    "staffId": null,
+    "displayName": "Guest",
+    "staffName": null,
+    "avatarUrl": null,
+    "roles": ["GUEST"],
+    "readOnly": true,
+    "scopes": [
+      { "scopeType": "demo", "scopeId": "public-demo" }
+    ]
+  },
+  "error": null
+}
+```
+
+### GET /api/v1/auth/me
+
+Returns the current authenticated or guest identity. If no session exists, returns
+401 and the frontend routes to the login screen.
+
+### POST /api/v1/auth/logout
+
+Invalidates the current staff or guest session.
+
+```json
+{
+  "data": {
+    "loggedOut": true
+  },
+  "error": null
+}
+```
+
+---
+
+## 2B. Help And Support APIs
+
+### GET /api/v1/shell/help-links
+
+```json
+{
+  "data": {
+    "userGuidelineUrl": "https://confluence.company.com/display/SDLC/User+Guideline"
+  },
+  "error": null
+}
+```
+
+### POST /api/v1/support/contact
+
+Creates a Jira story in the configured support project.
+
+```json
+{
+  "title": "Cannot find deployment dashboard",
+  "category": "question",
+  "description": "I need help locating deployment status.",
+  "route": "/deployment",
+  "context": {
+    "workspaceId": "ws-default-001",
+    "workspace": "Global SDLC Tower",
+    "applicationId": "app-payment-gateway-pro",
+    "application": "Payment-Gateway-Pro",
+    "snowGroupId": "snow-fin-tech-ops",
+    "snowGroup": "FIN-TECH-OPS",
+    "projectId": "proj-42",
+    "project": "Q2-Cloud-Migration",
+    "environment": "Production",
+    "demoMode": false
+  },
+  "reporterStaffId": "43910516",
+  "reporterMode": "staff"
+}
+```
+
+**Response 201:**
+
+```json
+{
+  "data": {
+    "requestId": "support-req-20260502-0001",
+    "status": "created",
+    "jiraKey": "SDLC-1234",
+    "jiraUrl": "https://jira.company.com/browse/SDLC-1234"
+  },
+  "error": null
+}
+```
+
+If Jira is unavailable, the backend persists the request and returns `202`:
+
+```json
+{
+  "data": {
+    "requestId": "support-req-20260502-0002",
+    "status": "pending",
+    "jiraKey": null,
+    "jiraUrl": null
+  },
+  "error": null
+}
+```
 
 ---
 
@@ -558,8 +779,8 @@ After loading navigation entries:
 
 | Version | Changes |
 |---------|---------|
-| V1 (current) | Static workspace context (seeded), static nav items, no auth |
-| V2 | Multi-workspace support, workspace switching API |
+| V1 (current) | Staff-id login, optional TeamBook provider contract, guest read-only mode, seeded/default workspace context, static nav items, Contact Us, User Guideline |
+| V2 | Multi-workspace switching API, additional enterprise identity providers |
 | V3 | Dynamic navigation driven by DB, permission-filtered |
 | V4 | User preferences API (theme, layout, panel state) |
 

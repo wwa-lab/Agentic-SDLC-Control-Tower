@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { RefreshCw } from 'lucide-vue-next';
-import type { PipelineProfile, SpecTier } from '../types/requirement';
+import type { PipelineProfile, SddDocumentIndex, SddDocumentStage, SpecTier } from '../types/requirement';
 import RequirementCard from './RequirementCard.vue';
 
 interface Props {
   profile: PipelineProfile;
+  documents?: SddDocumentIndex | null;
   fullWidth?: boolean;
   compact?: boolean;
   primaryActionLoading?: boolean;
@@ -26,6 +27,108 @@ const routeSectionLabel = computed(() => props.profile.usesOrchestrator ? 'Possi
 const routeHint = computed(() => props.profile.usesOrchestrator ? 'Auto-selected by orchestrator' : 'Profile-defined path');
 const executionHub = computed(() => props.profile.chainNodes.find(node => node.isExecutionHub));
 const primaryActionLabel = computed(() => props.primaryActionLoading ? 'Refreshing GitHub' : 'Refresh GitHub');
+const hasProjectProgress = computed(() => Boolean(props.documents?.stages?.length));
+
+type NodeProgressState = 'done' | 'current' | 'attention' | 'pending' | 'template';
+
+interface ChainNodeProgress {
+  readonly node: PipelineProfile['chainNodes'][number];
+  readonly index: number;
+  readonly stage: SddDocumentStage | null;
+  readonly state: NodeProgressState;
+  readonly label: string;
+}
+
+function needsAttention(stage: SddDocumentStage | null): boolean {
+  return Boolean(stage && ['ERROR', 'SOURCE_CHANGED', 'DOCUMENT_CHANGED_AFTER_REVIEW'].includes(stage.freshnessStatus));
+}
+
+function isMissing(stage: SddDocumentStage | null): boolean {
+  return !stage || stage.missing || stage.freshnessStatus === 'MISSING_DOCUMENT';
+}
+
+function findStageForNode(node: PipelineProfile['chainNodes'][number]): SddDocumentStage | null {
+  const stages = props.documents?.stages ?? [];
+  return stages.find(stage => stage.sddType === node.id)
+    ?? stages.find(stage => stage.stageLabel.toLowerCase() === node.label.toLowerCase())
+    ?? null;
+}
+
+const chainProgress = computed<ReadonlyArray<ChainNodeProgress>>(() => {
+  const mapped = props.profile.chainNodes.map((node, index) => ({
+    node,
+    index,
+    stage: findStageForNode(node),
+  }));
+  const firstMissingIndex = mapped.findIndex(item => isMissing(item.stage));
+  const currentIndex = firstMissingIndex >= 0 ? firstMissingIndex : Math.max(0, mapped.length - 1);
+
+  return mapped.map(item => {
+    let state: NodeProgressState = 'template';
+    let label = item.node.isExecutionHub ? 'Hub' : 'Template';
+
+    if (hasProjectProgress.value) {
+      if (needsAttention(item.stage)) {
+        state = 'attention';
+        label = 'Attention';
+      } else if (item.index < currentIndex || (firstMissingIndex < 0 && item.index < mapped.length - 1)) {
+        state = 'done';
+        label = 'Done';
+      } else if (item.index === currentIndex) {
+        state = firstMissingIndex >= 0 ? 'current' : 'done';
+        label = firstMissingIndex >= 0 ? 'Current' : 'Done';
+      } else {
+        state = 'pending';
+        label = 'Pending';
+      }
+    }
+
+    return { ...item, state, label };
+  });
+});
+
+const currentProgress = computed(() => {
+  if (!hasProjectProgress.value) return null;
+  return chainProgress.value.find(item => item.state === 'attention')
+    ?? chainProgress.value.find(item => item.state === 'current')
+    ?? chainProgress.value[chainProgress.value.length - 1]
+    ?? null;
+});
+
+const previousProgress = computed(() => {
+  if (!currentProgress.value) return null;
+  return [...chainProgress.value]
+    .slice(0, currentProgress.value.index)
+    .reverse()
+    .find(item => item.state === 'done')
+    ?? null;
+});
+
+const nextProgress = computed(() => {
+  if (!currentProgress.value) return null;
+  return chainProgress.value.find(item => item.index > currentProgress.value!.index && item.state === 'pending')
+    ?? null;
+});
+
+const progressTitle = computed(() => {
+  if (!currentProgress.value) return 'Profile template';
+  if (currentProgress.value.state === 'attention') return `${currentProgress.value.node.label} needs attention`;
+  return currentProgress.value.state === 'done'
+    ? `${currentProgress.value.node.label} complete`
+    : currentProgress.value.node.label;
+});
+
+const progressSubtitle = computed(() => {
+  if (!hasProjectProgress.value) {
+    return 'Template route only; open a requirement to see project progress.';
+  }
+  if (currentProgress.value?.state === 'attention') {
+    return 'Freshness or review status needs attention before continuing.';
+  }
+  const previous = previousProgress.value?.node.label ?? 'None';
+  const next = nextProgress.value?.node.label ?? 'Complete';
+  return `Last completed: ${previous} · Next: ${next}`;
+});
 
 const compactChainNodes = computed<ReadonlyArray<PipelineProfile['chainNodes'][number]>>(() => {
   const nodes = props.profile.chainNodes;
@@ -35,6 +138,11 @@ const compactChainNodes = computed<ReadonlyArray<PipelineProfile['chainNodes'][n
     if (index >= 0 && index < nodes.length) indexes.add(index);
   });
   return [...indexes].sort((left, right) => left - right).map(index => nodes[index]);
+});
+
+const compactChainProgress = computed(() => {
+  const visibleIds = new Set(compactChainNodes.value.map(node => node.id));
+  return chainProgress.value.filter(item => visibleIds.has(item.node.id));
 });
 
 const hiddenCompactNodeCount = computed(() => {
@@ -61,11 +169,26 @@ function stageThresholdLabel(tier?: SpecTier | null): string {
           <span>{{ profile.chainNodes.length }} steps</span>
           <span>{{ profile.documentStages.length }} docs</span>
           <span v-if="executionHub">Hub: {{ executionHub.label }}</span>
+          <span class="compact-progress-meta">{{ progressTitle }}</span>
+        </div>
+
+        <div class="progress-summary" :class="{ 'progress-summary--template': !hasProjectProgress }">
+          <span class="progress-summary-label">{{ hasProjectProgress ? 'Current Stage' : 'Progress Source' }}</span>
+          <strong>{{ progressTitle }}</strong>
+          <small>{{ progressSubtitle }}</small>
         </div>
 
         <ol class="compact-chain">
-          <li v-for="node in compactChainNodes" :key="node.id" :class="{ 'compact-chain-node--hub': node.isExecutionHub }">
-            {{ node.label }}
+          <li
+            v-for="item in compactChainProgress"
+            :key="item.node.id"
+            :class="[
+              `compact-chain-node--${item.state}`,
+              { 'compact-chain-node--hub': item.node.isExecutionHub },
+            ]"
+          >
+            <span>{{ item.node.label }}</span>
+            <small>{{ item.label }}</small>
           </li>
           <li v-if="hiddenCompactNodeCount > 0" class="compact-chain-more">
             +{{ hiddenCompactNodeCount }}
@@ -144,6 +267,11 @@ function stageThresholdLabel(tier?: SpecTier | null): string {
           <span class="summary-label">Tiering</span>
           <strong>{{ tieringLabel }}</strong>
         </div>
+        <div class="summary-item summary-item--progress">
+          <span class="summary-label">{{ hasProjectProgress ? 'Current Stage' : 'Progress Source' }}</span>
+          <strong>{{ progressTitle }}</strong>
+          <small>{{ progressSubtitle }}</small>
+        </div>
       </div>
 
       <section class="workflow-section">
@@ -153,15 +281,18 @@ function stageThresholdLabel(tier?: SpecTier | null): string {
         </div>
         <ol class="chain-track">
           <li
-            v-for="(node, index) in profile.chainNodes"
-            :key="node.id"
+            v-for="item in chainProgress"
+            :key="item.node.id"
             class="chain-node"
-            :class="{ 'chain-node--hub': node.isExecutionHub }"
+            :class="[
+              `chain-node--${item.state}`,
+              { 'chain-node--hub': item.node.isExecutionHub },
+            ]"
           >
-            <span class="node-index">{{ index + 1 }}</span>
+            <span class="node-index">{{ item.index + 1 }}</span>
             <span class="node-copy">
-              <span class="node-label">{{ node.label }}</span>
-              <span class="node-type">{{ node.artifactType }}</span>
+              <span class="node-label">{{ item.node.label }}</span>
+              <span class="node-type">{{ item.label }} · {{ item.node.artifactType }}</span>
             </span>
           </li>
         </ol>
@@ -275,6 +406,54 @@ function stageThresholdLabel(tier?: SpecTier | null): string {
   font-size: 0.75rem;
 }
 
+.compact-meta .compact-progress-meta {
+  color: var(--color-on-surface);
+  border-color: rgba(129, 199, 132, 0.28);
+  background: rgba(129, 199, 132, 0.08);
+}
+
+.progress-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 10px;
+  align-items: baseline;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(129, 199, 132, 0.3);
+  background: rgba(129, 199, 132, 0.08);
+}
+
+.progress-summary--template {
+  border-color: rgba(137, 206, 255, 0.22);
+  background: rgba(137, 206, 255, 0.07);
+}
+
+.progress-summary-label {
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.progress-summary strong {
+  min-width: 0;
+  color: var(--color-on-surface);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.progress-summary small {
+  grid-column: 1 / -1;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
 .compact-chain {
   list-style: none;
   display: flex;
@@ -297,6 +476,20 @@ function stageThresholdLabel(tier?: SpecTier | null): string {
   font-weight: 600;
 }
 
+.compact-chain li span,
+.compact-chain li small {
+  display: block;
+}
+
+.compact-chain li small {
+  margin-top: 2px;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-tech);
+  font-size: 0.5625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .compact-chain li:not(:last-child)::after {
   content: "";
   position: absolute;
@@ -309,8 +502,26 @@ function stageThresholdLabel(tier?: SpecTier | null): string {
 
 .compact-chain .compact-chain-node--hub {
   border-color: var(--color-secondary);
-  background: rgba(137, 206, 255, 0.1);
-  box-shadow: 0 0 8px var(--color-secondary-glow);
+  box-shadow: inset 0 0 0 1px rgba(137, 206, 255, 0.12);
+}
+
+.compact-chain .compact-chain-node--done {
+  border-color: rgba(129, 199, 132, 0.35);
+  background: rgba(129, 199, 132, 0.1);
+}
+
+.compact-chain .compact-chain-node--current {
+  border-color: rgba(255, 202, 40, 0.5);
+  background: rgba(255, 202, 40, 0.1);
+}
+
+.compact-chain .compact-chain-node--attention {
+  border-color: rgba(239, 83, 80, 0.45);
+  background: rgba(239, 83, 80, 0.1);
+}
+
+.compact-chain .compact-chain-node--pending {
+  opacity: 0.72;
 }
 
 .compact-chain .compact-chain-more {
@@ -369,7 +580,7 @@ function stageThresholdLabel(tier?: SpecTier | null): string {
 
 .summary-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -402,6 +613,19 @@ function stageThresholdLabel(tier?: SpecTier | null): string {
   font-size: 0.875rem;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+.summary-item small {
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.summary-item--progress {
+  border-color: rgba(129, 199, 132, 0.3);
+  background: rgba(129, 199, 132, 0.08);
 }
 
 .workflow-section {
@@ -450,8 +674,26 @@ function stageThresholdLabel(tier?: SpecTier | null): string {
 
 .chain-node--hub {
   border-color: var(--color-secondary);
-  background: rgba(137, 206, 255, 0.1);
-  box-shadow: 0 0 10px var(--color-secondary-glow);
+  box-shadow: inset 0 0 0 1px rgba(137, 206, 255, 0.12);
+}
+
+.chain-node--done {
+  border-color: rgba(129, 199, 132, 0.35);
+  background: rgba(129, 199, 132, 0.1);
+}
+
+.chain-node--current {
+  border-color: rgba(255, 202, 40, 0.5);
+  background: rgba(255, 202, 40, 0.1);
+}
+
+.chain-node--attention {
+  border-color: rgba(239, 83, 80, 0.45);
+  background: rgba(239, 83, 80, 0.1);
+}
+
+.chain-node--pending {
+  opacity: 0.72;
 }
 
 .node-index {

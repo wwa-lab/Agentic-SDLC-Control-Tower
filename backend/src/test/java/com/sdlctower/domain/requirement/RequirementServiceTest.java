@@ -38,8 +38,8 @@ class RequirementServiceTest {
     void getRequirementListReturnsAllSeedRequirements() {
         var list = requirementService.getRequirementList(null, null, null, null, null, null);
 
-        assertEquals(10, list.items().size());
-        assertEquals(10, list.totalCount());
+        assertEquals(11, list.items().size());
+        assertEquals(11, list.totalCount());
         assertEquals(2, list.statusDistribution().draft());
     }
 
@@ -171,7 +171,7 @@ class RequirementServiceTest {
         ));
 
         assertEquals("REQ-0011", created.id());
-        assertEquals(11, requirementService.getRequirementList(null, null, null, null, null, null).items().size());
+        assertEquals(12, requirementService.getRequirementList(null, null, null, null, null, null).items().size());
         assertNotNull(requirementService.getRequirementDetail(created.id()));
         assertEquals("Create IBM i batch monitor", requirementService.getRequirementDetail(created.id()).header().data().title());
     }

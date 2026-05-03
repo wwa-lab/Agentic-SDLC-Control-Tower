@@ -2,12 +2,15 @@ package com.sdlctower.domain.requirement.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import com.sdlctower.shared.persistence.WorkspacePrePersistListener;
 
 @Entity
 @Table(name = "requirement_artifact_link")
+@EntityListeners(WorkspacePrePersistListener.class)
 public class RequirementArtifactLinkEntity {
     @Id
     private String id;
@@ -15,6 +18,8 @@ public class RequirementArtifactLinkEntity {
     private String executionId;
     @Column(name = "requirement_id", nullable = false)
     private String requirementId;
+    @Column(name = "workspace_id", nullable = false)
+    private String workspaceId;
     @Column(name = "artifact_type", nullable = false)
     private String artifactType;
     @Column(name = "storage_type", nullable = false)
@@ -58,6 +63,7 @@ public class RequirementArtifactLinkEntity {
     public String getId() { return id; }
     public String getExecutionId() { return executionId; }
     public String getRequirementId() { return requirementId; }
+    public String getWorkspaceId() { return workspaceId; }
     public String getArtifactType() { return artifactType; }
     public String getStorageType() { return storageType; }
     public String getTitle() { return title; }

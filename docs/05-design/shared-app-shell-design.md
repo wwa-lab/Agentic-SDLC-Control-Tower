@@ -29,12 +29,16 @@ frontend/src/
 │   ├── PrimaryNav.vue               # 240px left nav rail
 │   ├── TopContextBar.vue            # workspace context chain
 │   ├── GlobalActionBar.vue          # search, notifications, audit, theme toggle
+│   ├── ContactUsModal.vue           # creates Jira support story
+│   ├── LoginView.vue                # staff-id login + guest entry
 │   ├── PageHeader.vue               # page title, subtitle, action buttons
 │   ├── AiCommandPanel.vue           # 320px right AI panel
 │   └── shared/
 │       └── DataRibbon.vue           # operational metadata strip
 ├── composables/
 │   ├── useWorkspaceContext.ts       # singleton — fetches from API
+│   ├── useSession.ts                # current staff/guest user state
+│   ├── useHelpLinks.ts              # Confluence guideline URL
 │   └── useTheme.ts                  # dark/light toggle with localStorage
 ├── router/
 │   └── index.ts                     # 13 routes with ShellPageConfig metadata
@@ -111,8 +115,22 @@ Missing optional fields render as `---`. Shows loading text or error with retry 
 |-------|--------|-------------|
 | `theme` | `useTheme()` | current theme |
 | `toggleTheme` | `useTheme()` | toggle function |
+| `currentUser` | `useSession()` | staff or guest identity |
+| `helpLinks` | `useHelpLinks()` | configured guideline URL |
 
-Renders theme toggle + search, notifications, audit icon buttons.
+Renders theme toggle + search, notifications, audit, Contact Us, and User Guideline icon buttons.
+
+### LoginView.vue
+
+Staff login form with `staffId` and `password` fields plus "Continue as Guest".
+Password is required and non-empty. Guest mode enters the app with demo data and
+read-only affordances.
+
+### ContactUsModal.vue
+
+Modal launched from GlobalActionBar. Fields: title, category, description.
+On submit, sends route, context, and reporter identity to `/api/v1/support/contact`.
+Success state shows the created Jira key and link.
 
 ### PageHeader.vue
 
@@ -154,11 +172,32 @@ Frontend type (spec §4.3):
 
 ```typescript
 interface WorkspaceContext {
+  workspaceId?: string | null;
   workspace: string;
+  applicationId?: string | null;
   application: string;
+  snowGroupId?: string | null;
   snowGroup?: string | null;
+  projectId?: string | null;
   project?: string | null;
   environment?: string | null;
+  demoMode?: boolean;
+}
+```
+
+### CurrentUser
+
+```typescript
+interface CurrentUser {
+  mode: 'staff' | 'guest';
+  authProvider: 'manual' | 'teambook' | 'guest';
+  staffId: string | null;
+  displayName: string;
+  staffName?: string | null;
+  avatarUrl?: string | null;
+  roles: string[];
+  readOnly: boolean;
+  scopes: Array<{ scopeType: string; scopeId: string }>;
 }
 ```
 
@@ -215,17 +254,55 @@ Returns the current workspace context for display in the top context bar.
 
 ```json
 {
+  "workspaceId": "ws-default-001",
   "workspace": "Global SDLC Tower",
+  "applicationId": "app-payment-gateway-pro",
   "application": "Payment-Gateway-Pro",
+  "snowGroupId": "snow-fin-tech-ops",
   "snowGroup": "FIN-TECH-OPS",
+  "projectId": "proj-42",
   "project": "Q2-Cloud-Migration",
-  "environment": "Production"
+  "environment": "Production",
+  "demoMode": false
 }
 ```
 
 - `id` field is excluded from JSON via `@JsonIgnore`
 - `snowGroup`, `project`, `environment` may be `null`
 - Returns `404` if no workspace context is seeded
+
+### GET /api/v1/auth/providers
+
+Returns enabled auth providers. Internal environments can include TeamBook SSO;
+local/external environments can return only manual staff-id login and guest.
+
+### POST /api/v1/auth/login
+
+Staff-id login. Password must be non-empty.
+
+### GET /api/v1/auth/sso/teambook/start
+
+Starts the internal TeamBook SSO flow when configured.
+
+### POST /api/v1/auth/guest
+
+Starts read-only guest mode and returns `CurrentUser`.
+
+### GET /api/v1/auth/me
+
+Returns current staff or guest identity.
+
+### POST /api/v1/auth/logout
+
+Ends the current staff or guest session.
+
+### GET /api/v1/shell/help-links
+
+Returns `userGuidelineUrl`.
+
+### POST /api/v1/support/contact
+
+Creates a Jira story and returns `jiraKey` / `jiraUrl`.
 
 ### GET /api/v1/nav/entries
 

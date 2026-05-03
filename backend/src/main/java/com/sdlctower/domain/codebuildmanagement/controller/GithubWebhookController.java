@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping(ApiConstants.CODE_BUILD_MANAGEMENT)
+@RequestMapping(ApiConstants.WEBHOOKS_BASE)
 public class GithubWebhookController {
 
     private static final Logger log = LoggerFactory.getLogger(GithubWebhookController.class);
@@ -35,7 +35,7 @@ public class GithubWebhookController {
         this.outboxRepository = outboxRepository;
     }
 
-    @PostMapping("/webhooks/github")
+    @PostMapping("/github")
     public ResponseEntity<Void> receiveWebhook(HttpServletRequest request) throws IOException {
         String signatureHeader = request.getHeader("X-Hub-Signature-256");
         String eventType = request.getHeader("X-GitHub-Event");

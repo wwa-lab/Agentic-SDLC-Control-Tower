@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { useShellConfig } from '@/shell/composables/useShellConfig';
+import { useWorkspaceStore } from '@/shared/stores/workspaceStore';
 import { NAVIGATION_ITEMS, ICON_MAP } from '@/router';
 import type { SystemStatus } from '@/shared/types/shell';
 
@@ -26,8 +27,13 @@ const STATUS_LED: Record<SystemStatus, string> = {
 
 const router = useRouter();
 const { config } = useShellConfig();
+const workspaceStore = useWorkspaceStore();
 
-const navigate = (path: string) => {
+const navigate = (featurePath: string) => {
+  const key = workspaceStore.activeWorkspaceKey
+    ?? workspaceStore.workspaces[0]?.workspaceKey
+    ?? 'payment-gateway-pro';
+  const path = featurePath === '/' ? `/${key}` : `/${key}${featurePath}`;
   router.push(path);
 };
 </script>
@@ -157,5 +163,34 @@ const navigate = (path: string) => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .primary-nav {
+    width: 64px;
+  }
+
+  .logo {
+    padding: 20px 0;
+    justify-content: center;
+    font-size: 0.875rem;
+  }
+
+  .logo-accent,
+  .nav-label,
+  .system-status span {
+    display: none;
+  }
+
+  .nav-item {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .nav-footer {
+    padding: 16px 0;
+    display: flex;
+    justify-content: center;
+  }
 }
 </style>

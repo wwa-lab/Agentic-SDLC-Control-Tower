@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BACKEND=""
+EXECUTION_ID=""
+REQUIREMENT_ID=""
+PROFILE_ID=""
+STAGE=""
+SKILL=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --backend) BACKEND="${2:-}"; shift 2 ;;
+    --execution-id) EXECUTION_ID="${2:-}"; shift 2 ;;
+    --requirement-id) REQUIREMENT_ID="${2:-}"; shift 2 ;;
+    --profile-id) PROFILE_ID="${2:-}"; shift 2 ;;
+    --stage) STAGE="${2:-}"; shift 2 ;;
+    --skill) SKILL="${2:-}"; shift 2 ;;
+    *) echo "Unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -z "$BACKEND" || -z "$EXECUTION_ID" || -z "$STAGE" || -z "$SKILL" ]]; then
+  echo "Usage: control-tower-run --backend URL --execution-id ID --requirement-id ID --profile-id ID --stage STAGE --skill SKILL" >&2
+  exit 2
+fi
+
+stage_event_url="${BACKEND%/}/api/v1/requirements/agent-runs/${EXECUTION_ID}/stage-events"
+callback_url="${BACKEND%/}/api/v1/requirements/agent-runs/${EXECUTION_ID}/callback"
+
+post_json() {
+  local url="$1"
+  local body="$2"
+  curl -fsS -H "Content-Type: application/json" -X POST "$url" -d "$body" >/dev/null
+}
+
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+post_json "$stage_event_url" "{\"stageId\":\"$(json_escape "$STAGE")\",\"state\":\"RUNNING\",\"message\":\"CLI wrapper started $(json_escape "$SKILL")\"}"
+
+set +e
+if [[ -n "${CONTROL_TOWER_CLI_COMMAND:-}" ]]; then
+  CONTROL_TOWER_EXECUTION_ID="$EXECUTION_ID" \
+  CONTROL_TOWER_REQUIREMENT_ID="$REQUIREMENT_ID" \
+  CONTROL_TOWER_PROFILE_ID="$PROFILE_ID" \
+  CONTROL_TOWER_STAGE="$STAGE" \
+  CONTROL_TOWER_SKILL="$SKILL" \
+  bash -lc "$CONTROL_TOWER_CLI_COMMAND"
+  status=$?
+else
+  echo "Set CONTROL_TOWER_CLI_COMMAND to the real CLI invocation for ${SKILL}."
+  echo "Example: CONTROL_TOWER_CLI_COMMAND='codex run ${SKILL}' ./scripts/control-tower-run ..."
+  status=0
+fi
+set -e
+
+if [[ "$status" -eq 0 ]]; then
+  post_json "$stage_event_url" "{\"stageId\":\"$(json_escape "$STAGE")\",\"state\":\"DONE\",\"message\":\"CLI wrapper completed $(json_escape "$SKILL")\"}"
+  post_json "$callback_url" "{\"status\":\"COMPLETED\",\"outputSummary\":{\"stage\":\"$(json_escape "$STAGE")\",\"skill\":\"$(json_escape "$SKILL")\"},\"artifactLinks\":[]}"
+else
+  post_json "$stage_event_url" "{\"stageId\":\"$(json_escape "$STAGE")\",\"state\":\"FAILED\",\"message\":\"CLI wrapper failed $(json_escape "$SKILL")\",\"errorMessage\":\"exit ${status}\"}"
+  post_json "$callback_url" "{\"status\":\"FAILED\",\"outputSummary\":{\"stage\":\"$(json_escape "$STAGE")\",\"skill\":\"$(json_escape "$SKILL")\"},\"artifactLinks\":[],\"errorMessage\":\"CLI command exited ${status}\"}"
+fi
+
+exit "$status"

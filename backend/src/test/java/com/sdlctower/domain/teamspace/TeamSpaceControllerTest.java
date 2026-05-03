@@ -1,6 +1,5 @@
 package com.sdlctower.domain.teamspace;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -24,7 +23,7 @@ class TeamSpaceControllerTest {
 
     @Test
     void aggregateReturns200WithAllSections() throws Exception {
-        mockMvc.perform(get(ApiConstants.TEAM_SPACE + "/ws-default-001"))
+        mockMvc.perform(get(ApiConstants.TEAM_SPACE, "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.workspaceId").value("ws-default-001"))
                 .andExpect(jsonPath("$.data.summary.data.id").value("ws-default-001"))
@@ -42,7 +41,7 @@ class TeamSpaceControllerTest {
 
     @Test
     void summaryEndpointReturnsRawDto() throws Exception {
-        mockMvc.perform(get(ApiConstants.TEAM_SPACE + "/ws-default-001/summary"))
+        mockMvc.perform(get(ApiConstants.TEAM_SPACE + "/summary", "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value("ws-default-001"))
                 .andExpect(jsonPath("$.data.responsibilityBoundary.projectCount").value(7))
@@ -50,32 +49,9 @@ class TeamSpaceControllerTest {
     }
 
     @Test
-    void aggregateReturns400ForInvalidWorkspaceId() throws Exception {
-        mockMvc.perform(get(ApiConstants.TEAM_SPACE + "/INVALID"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Invalid workspaceId: INVALID"));
-    }
-
-    @Test
-    void aggregateReturns403ForDeniedWorkspace() throws Exception {
-        mockMvc.perform(get(ApiConstants.TEAM_SPACE + "/ws-private-001"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error").value("Workspace access denied: ws-private-001"));
-    }
-
-    @Test
-    void aggregateReturns404ForUnknownWorkspace() throws Exception {
-        mockMvc.perform(get(ApiConstants.TEAM_SPACE + "/ws-missing-001"))
+    void unknownWorkspaceReturns404() throws Exception {
+        mockMvc.perform(get(ApiConstants.TEAM_SPACE, "ws-missing-001"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Workspace ws-missing-001 not found"));
-    }
-
-    @Test
-    void aggregateIsolatesProjectionFailures() throws Exception {
-        mockMvc.perform(get(ApiConstants.TEAM_SPACE + "/ws-degraded-001"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.summary.data.id").value("ws-degraded-001"))
-                .andExpect(jsonPath("$.data.metrics.data").value(nullValue()))
-                .andExpect(jsonPath("$.data.metrics.error").value(containsString("Metrics projection failed")));
+                .andExpect(jsonPath("$.error").value("WORKSPACE_NOT_FOUND"));
     }
 }

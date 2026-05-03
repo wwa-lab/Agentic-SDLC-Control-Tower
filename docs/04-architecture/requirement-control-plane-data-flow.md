@@ -4,7 +4,8 @@
 
 This document describes runtime data flows for Requirement Control Plane:
 source intake, GitHub document rendering, business review, agent manifest
-creation, agent callback, and freshness refresh.
+creation, manual CLI handoff, agent stage callbacks, final agent callback, and
+freshness refresh.
 
 ## 1. Source Reference Intake
 
@@ -90,12 +91,12 @@ Rules:
 - Review requests must include commit SHA and blob SHA.
 - Approval becomes stale if the document blob changes later.
 
-## 4. Agent Run Request
+## 4. Agent Run Request and Manual CLI Prompt Handoff
 
 ```mermaid
 sequenceDiagram
     participant Developer
-    participant Tool as CLI / Developer Action
+    participant UI as Requirement Detail
     participant API as Requirement API
     participant AgentSvc as RequirementAgentRunService
     participant Docs as SddDocumentService
@@ -103,24 +104,68 @@ sequenceDiagram
     participant Profile as PipelineProfileService
     participant DB as DB
 
-    Developer->>Tool: Request agent run
-    Tool->>API: POST /requirements/{id}/agent-runs
+    Developer->>UI: Prepare prompt for next stage
+    UI->>API: POST /requirements/{id}/agent-runs
     API->>AgentSvc: createRun(request)
     AgentSvc->>Profile: Resolve active profile
     AgentSvc->>Source: Resolve latest source refs
     AgentSvc->>Docs: Resolve latest doc refs
     AgentSvc->>DB: Save execution + manifest
-    AgentSvc-->>API: AgentRunDto
+    AgentSvc->>AgentSvc: Build slash-skill prompt + callback URLs
+    AgentSvc-->>API: AgentRunDto(command, callbackUrl)
     API-->>UI: AgentRunDto
+    UI-->>Developer: Copyable /skill-name prompt
 ```
 
-The manifest pins resolved versions at creation time.
+The manifest pins resolved versions at creation time. In the short-term model,
+the UI does not execute the CLI directly. It prepares the run and shows the
+actual prompt a user should paste into their agent terminal, for example
+`/ibm-i-workflow-orchestrator please help me complete Program Spec for
+REQ-1024.` Callback URLs and run IDs remain in the manifest/API response for
+the CLI integration layer and should not be exposed as copy text by default.
 
-## 5. CLI Agent Callback
+## 5. CLI Agent Stage Events
 
 ```mermaid
 sequenceDiagram
-    participant Agent as CLI Agent
+    participant Developer
+    participant Runner as scripts/control-tower-run
+    participant API as Requirement API
+    participant AgentSvc as RequirementAgentRunService
+    participant DB as DB
+
+    Developer->>Runner: Paste prepared slash-skill prompt
+    Runner->>API: POST /requirements/agent-runs/{executionId}/stage-events RUNNING
+    API->>AgentSvc: recordStageEvent(event)
+    AgentSvc->>DB: Save event and mark run RUNNING
+    Runner->>Runner: Execute configured CLI skill command
+    alt Skill succeeds
+        Runner->>API: POST /stage-events DONE
+        API->>AgentSvc: recordStageEvent(event)
+        AgentSvc->>DB: Save event and mark run COMPLETED
+    else Skill fails
+        Runner->>API: POST /stage-events FAILED
+        API->>AgentSvc: recordStageEvent(event)
+        AgentSvc->>DB: Save event and mark run FAILED
+    end
+```
+
+Stage events are lightweight facts from the runner. They answer "where is this
+requirement now?" without requiring the UI to infer progress from generated
+files only.
+
+Supported stage event statuses:
+
+- STARTED
+- RUNNING
+- DONE
+- FAILED
+
+## 6. CLI Agent Final Callback
+
+```mermaid
+sequenceDiagram
+    participant Agent as CLI Runner or Skill
     participant API as Requirement API
     participant AgentSvc as RequirementAgentRunService
     participant Docs as SddDocumentService
@@ -144,7 +189,10 @@ Supported callback statuses:
 - STALE_CONTEXT
 - CANCELED
 
-## 6. Freshness Refresh
+The callback may include artifact links and may also include embedded
+stageEvents when a runner batches progress updates with its final result.
+
+## 7. Freshness Refresh
 
 ```mermaid
 sequenceDiagram
@@ -175,7 +223,7 @@ Freshness states:
 - UNKNOWN
 - ERROR
 
-## 7. Profile-Driven Document Rendering
+## 8. Profile-Driven Document Rendering
 
 ```mermaid
 sequenceDiagram

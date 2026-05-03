@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useWorkspaceStore } from '@/shared/stores/workspaceStore';
 import { ChevronRight, RefreshCw } from 'lucide-vue-next';
+import WorkspaceSwitcher from './WorkspaceSwitcher.vue';
 
 const store = useWorkspaceStore();
 </script>
@@ -22,10 +23,7 @@ const store = useWorkspaceStore();
 
     <!-- Normal state -->
     <div v-else class="context-chain animate-fade-in">
-      <div class="context-item">
-        <span class="text-label">Workspace</span>
-        <span class="text-tech">{{ store.context.workspace }}</span>
-      </div>
+      <WorkspaceSwitcher />
 
       <ChevronRight :size="14" class="separator" />
 
@@ -60,16 +58,22 @@ const store = useWorkspaceStore();
 
 <style scoped>
 .top-context-bar {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
+  min-width: 0;
   padding: 0 24px;
   height: 48px;
+  overflow: hidden;
 }
 
 .context-chain {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 12px;
+  overflow: hidden;
 }
 
 .context-error {
@@ -79,23 +83,32 @@ const store = useWorkspaceStore();
 .context-item {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 132px;
 }
 
 .context-item .text-label {
   font-size: 0.625rem;
   line-height: 1;
   margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .context-item .text-tech {
   font-size: 0.75rem;
   color: var(--color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .separator {
   color: var(--color-on-surface-variant);
   opacity: 0.5;
   margin-top: 10px;
+  flex-shrink: 0;
 }
 
 .icon-btn {
@@ -114,5 +127,31 @@ const store = useWorkspaceStore();
 .icon-btn:hover {
   background: var(--nav-hover-bg);
   color: var(--color-on-surface);
+}
+
+@media (max-width: 720px) {
+  .top-context-bar {
+    padding: 0 12px;
+  }
+
+  .context-chain {
+    gap: 8px;
+  }
+
+  .context-item {
+    max-width: 96px;
+  }
+
+  .context-item:nth-of-type(n + 3),
+  .separator:nth-of-type(n + 2) {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .context-item:nth-of-type(n + 2),
+  .separator {
+    display: none;
+  }
 }
 </style>

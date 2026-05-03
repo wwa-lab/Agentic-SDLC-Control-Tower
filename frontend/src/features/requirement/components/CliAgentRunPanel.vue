@@ -1,0 +1,464 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue';
+import { CheckCircle2, Clipboard, FileText, Play, RefreshCw, RotateCcw, Terminal, X } from 'lucide-vue-next';
+import type { AgentRun, PipelineProfile, SddDocumentIndex, SourceReference } from '../types/requirement';
+import RequirementCard from './RequirementCard.vue';
+
+const props = defineProps<{
+  profile: PipelineProfile;
+  documents: SddDocumentIndex | null;
+  sources: ReadonlyArray<SourceReference>;
+  agentRuns: ReadonlyArray<AgentRun>;
+  isLoading?: boolean;
+}>();
+
+const emit = defineEmits<{
+  prepareRun: [skillKey: string, targetStage: string];
+  refreshStatus: [];
+  refreshSource: [sourceId: string];
+  openDocument: [documentId: string];
+  refreshDocuments: [];
+  confirmMerge: [executionId: string, prUrl: string];
+}>();
+
+const copied = ref(false);
+const showMergeForm = ref(false);
+const mergePrUrl = ref('');
+const mergeError = ref<string | null>(null);
+
+const profileRuns = computed(() => props.agentRuns.filter(run => run.profileId === props.profile.id));
+const latestRun = computed(() => profileRuns.value[0] ?? null);
+const latestEvents = computed(() => latestRun.value?.stageEvents ?? []);
+const cliPrompt = computed(() => latestRun.value?.command ?? null);
+const isMerged = computed(() => latestRun.value?.status === 'COMPLETED' || latestEvents.value.some(event => event.state === 'DONE' || event.state === 'COMPLETED'));
+
+const sourceIssue = computed(() => props.sources.find(source => !['FRESH', 'UNKNOWN'].includes(source.freshnessStatus)) ?? null);
+const staleDocument = computed(() => props.documents?.stages.find(stage => !stage.missing && ['DOCUMENT_CHANGED_AFTER_REVIEW', 'SOURCE_CHANGED', 'ERROR'].includes(stage.freshnessStatus)) ?? null);
+const missingDocument = computed(() => props.documents?.stages.find(stage => stage.missing || stage.freshnessStatus === 'MISSING_DOCUMENT') ?? null);
+const fallbackStage = computed(() => props.documents?.stages[0] ?? props.profile.documentStages[0] ?? null);
+
+const actionStage = computed(() => missingDocument.value ?? staleDocument.value ?? fallbackStage.value);
+const targetStage = computed(() => actionStage.value?.sddType ?? props.profile.chainNodes.find(node => node.isExecutionHub)?.id ?? 'spec');
+const targetStageLabel = computed(() => {
+  const stage = actionStage.value;
+  if (!stage) return targetStage.value;
+  return 'stageLabel' in stage ? stage.stageLabel : stage.label;
+});
+
+const selectedSkill = computed(() => {
+  const stageId = targetStage.value;
+  const producerContract = props.profile.skillDocumentContracts?.find(contract => contract.outputDocuments.includes(stageId));
+  if (producerContract) {
+    const producerSkill = props.profile.skills.find(skill => skill.skillId === producerContract.skillId);
+    if (producerSkill) return producerSkill;
+  }
+  return props.profile.skills.find(skill => skill.triggerPoint === stageId)
+    ?? props.profile.skills.find(skill => skill.skillId.includes(stageId))
+    ?? props.profile.skills.find(skill => skill.triggerPoint === 'any-stage')
+    ?? null;
+});
+
+const reviewBlockerLabel = computed(() => missingDocument.value?.stageLabel ?? 'the next stage');
+
+function stageDisplayName(stageId?: string | null) {
+  if (!stageId) return targetStageLabel.value;
+  return props.documents?.stages.find(stage => stage.sddType === stageId)?.stageLabel
+    ?? props.profile.documentStages.find(stage => stage.sddType === stageId)?.label
+    ?? props.profile.chainNodes.find(node => node.id === stageId)?.label
+    ?? stageId.split(/[-_]/).filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+}
+
+const nextAction = computed(() => {
+  if (isMerged.value) {
+    return {
+      kind: 'refresh-documents',
+      kicker: 'PR Merged',
+      title: 'Refresh GitHub Docs',
+      description: 'PR merge has been confirmed. Refresh the SDD index so the new documents become visible here.',
+      primaryLabel: 'Refresh GitHub',
+    };
+  }
+  if (sourceIssue.value) {
+    return {
+      kind: 'refresh-source',
+      kicker: 'Source Changed',
+      title: `${sourceIssue.value.sourceType} source needs refresh`,
+      description: `${sourceIssue.value.title} changed or could not be verified. Refresh it first so downstream documents are based on current facts.`,
+      primaryLabel: 'Refresh Source',
+    };
+  }
+  if (staleDocument.value) {
+    const blockedStage = missingDocument.value?.stageLabel ? ` before generating ${missingDocument.value.stageLabel}` : '';
+    return {
+      kind: 'review-document',
+      kicker: 'Review Needed',
+      title: `${staleDocument.value.stageLabel} changed after review`,
+      description: `${staleDocument.value.title} has newer content than the last reviewed version. Review the current version${blockedStage}.`,
+      primaryLabel: 'Review Document',
+    };
+  }
+  if (latestRun.value && cliPrompt.value && !isMerged.value) {
+    return {
+      kind: 'continue-run',
+      kicker: 'CLI Handoff',
+      title: `Continue ${stageDisplayName(latestRun.value.targetStage)}`,
+      description: 'Copy this prompt into your CLI. After the PR is merged, confirm it here with the GitHub PR URL.',
+      primaryLabel: copied.value ? 'Copied' : 'Copy CLI Prompt',
+    };
+  }
+  if (missingDocument.value) {
+    return {
+      kind: 'generate-document',
+      kicker: 'CLI Handoff',
+      title: `Generate ${missingDocument.value.stageLabel}`,
+      description: selectedSkill.value
+        ? 'No upstream blockers detected. Prepare a short CLI prompt for the missing document.'
+        : 'No CLI skill is configured for this stage in the active profile.',
+      primaryLabel: 'Prepare Prompt',
+    };
+  }
+  return {
+    kind: 'ready',
+    kicker: 'Ready',
+    title: 'Ready for review',
+    description: 'Sources and SDD documents are current. Select a document and finish business review.',
+    primaryLabel: 'Refresh',
+  };
+});
+
+async function copyCommand() {
+  if (!cliPrompt.value) return;
+  await navigator.clipboard.writeText(cliPrompt.value);
+  copied.value = true;
+  window.setTimeout(() => {
+    copied.value = false;
+  }, 1800);
+}
+
+function prepareRun() {
+  if (!selectedSkill.value) return;
+  emit('prepareRun', selectedSkill.value.skillId, targetStage.value);
+}
+
+function runPrimaryAction() {
+  switch (nextAction.value.kind) {
+    case 'refresh-source':
+      if (sourceIssue.value) emit('refreshSource', sourceIssue.value.id);
+      break;
+    case 'review-document':
+      if (staleDocument.value?.id) emit('openDocument', staleDocument.value.id);
+      break;
+    case 'refresh-documents':
+    case 'ready':
+      emit('refreshDocuments');
+      break;
+    case 'continue-run':
+      void copyCommand();
+      break;
+    case 'generate-document':
+      prepareRun();
+      break;
+  }
+}
+
+function openMergeForm() {
+  showMergeForm.value = true;
+  mergeError.value = null;
+}
+
+function closeMergeForm() {
+  showMergeForm.value = false;
+  mergePrUrl.value = '';
+  mergeError.value = null;
+}
+
+function confirmMerge() {
+  if (!latestRun.value) return;
+  const prUrl = mergePrUrl.value.trim();
+  if (!/^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+\/?$/.test(prUrl)) {
+    mergeError.value = 'Use a full GitHub PR URL, for example https://github.com/org/repo/pull/123.';
+    return;
+  }
+  emit('confirmMerge', latestRun.value.executionId, prUrl);
+  closeMergeForm();
+}
+</script>
+
+<template>
+  <RequirementCard title="Next Action" :is-loading="isLoading" :full-width="true">
+    <div class="next-action-panel">
+      <div class="action-summary">
+        <div class="action-kicker">
+          <RotateCcw v-if="nextAction.kind === 'refresh-source' || nextAction.kind === 'refresh-documents' || nextAction.kind === 'ready'" :size="17" />
+          <FileText v-else-if="nextAction.kind === 'review-document'" :size="17" />
+          <Terminal v-else :size="17" />
+          <span>{{ nextAction.kicker }}</span>
+        </div>
+        <strong>{{ nextAction.title }}</strong>
+        <p>{{ nextAction.description }}</p>
+      </div>
+
+      <div v-if="nextAction.kind === 'review-document' && staleDocument" class="action-context">
+        <span>Review Target</span>
+        <strong>{{ staleDocument.title }}</strong>
+        <small>Blocks {{ reviewBlockerLabel }}</small>
+      </div>
+
+      <div class="action-buttons">
+        <button
+          class="primary-btn"
+          type="button"
+          :disabled="(nextAction.kind === 'generate-document' && !selectedSkill) || (nextAction.kind === 'review-document' && !staleDocument?.id)"
+          @click="runPrimaryAction"
+        >
+          <RotateCcw v-if="nextAction.kind === 'refresh-source' || nextAction.kind === 'refresh-documents' || nextAction.kind === 'ready'" :size="14" />
+          <FileText v-else-if="nextAction.kind === 'review-document'" :size="14" />
+          <Clipboard v-else-if="nextAction.kind === 'continue-run'" :size="14" />
+          <Play v-else-if="nextAction.kind === 'generate-document'" :size="14" />
+          <span>{{ nextAction.primaryLabel }}</span>
+        </button>
+        <button v-if="latestRun && !isMerged && nextAction.kind === 'continue-run'" class="secondary-btn" type="button" @click="openMergeForm">
+          <CheckCircle2 :size="14" />
+          <span>Confirm PR Merge</span>
+        </button>
+        <button v-if="latestRun" class="icon-text-btn" type="button" @click="emit('refreshStatus')">
+          <RefreshCw :size="14" />
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      <div v-if="cliPrompt" class="prompt-box" aria-label="CLI prompt">
+        <code>{{ cliPrompt }}</code>
+      </div>
+
+      <form v-if="showMergeForm" class="merge-form" @submit.prevent="confirmMerge">
+        <label for="merge-pr-url">Merged GitHub PR URL</label>
+        <div class="merge-input-row">
+          <input
+            id="merge-pr-url"
+            v-model="mergePrUrl"
+            type="url"
+            placeholder="https://github.com/org/repo/pull/123"
+            autocomplete="off"
+          />
+          <button class="prepare-btn" type="submit">
+            <CheckCircle2 :size="14" />
+            <span>Confirm Merge</span>
+          </button>
+          <button class="icon-btn" type="button" aria-label="Cancel merge confirmation" @click="closeMergeForm">
+            <X :size="14" />
+          </button>
+        </div>
+        <small v-if="mergeError">{{ mergeError }}</small>
+      </form>
+    </div>
+  </RequirementCard>
+</template>
+
+<style scoped>
+.next-action-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.action-summary {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.action-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-secondary);
+}
+
+.action-kicker span,
+.merge-form label {
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.action-summary > strong {
+  color: var(--color-on-surface);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+}
+
+.action-summary p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.action-context {
+  grid-column: 1;
+  min-width: min(100%, 260px);
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 202, 40, 0.28);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 202, 40, 0.08);
+}
+
+.action-context span,
+.action-context small {
+  display: block;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.action-context strong {
+  display: block;
+  margin: 4px 0;
+  color: var(--color-on-surface);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.action-buttons {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.primary-btn,
+.secondary-btn,
+.icon-text-btn,
+.prepare-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-secondary);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.primary-btn,
+.prepare-btn {
+  background: var(--color-secondary);
+  color: var(--color-on-secondary-container);
+}
+
+.primary-btn:disabled,
+.prepare-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.secondary-btn,
+.icon-text-btn {
+  background: transparent;
+  color: var(--color-secondary);
+}
+
+.prompt-box {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border: 1px solid rgba(137, 206, 255, 0.22);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-low);
+}
+
+.prompt-box code {
+  display: block;
+  min-width: 0;
+  overflow-x: auto;
+  color: var(--color-on-surface);
+  font-family: var(--font-tech);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.merge-form {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgba(125, 211, 166, 0.24);
+  border-radius: var(--radius-sm);
+  background: rgba(125, 211, 166, 0.08);
+}
+
+.merge-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+.merge-input-row input {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(137, 206, 255, 0.22);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-low);
+  color: var(--color-on-surface);
+  font-family: var(--font-tech);
+  font-size: 0.75rem;
+}
+
+.merge-form small {
+  color: var(--color-error);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  width: 34px;
+  border: 1px solid rgba(137, 206, 255, 0.22);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-on-surface-variant);
+  cursor: pointer;
+}
+
+@media (max-width: 1180px) {
+  .next-action-panel,
+  .merge-input-row {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    grid-column: auto;
+    grid-row: auto;
+    align-items: stretch;
+  }
+
+  .action-context {
+    grid-column: auto;
+    min-width: 0;
+  }
+}
+</style>

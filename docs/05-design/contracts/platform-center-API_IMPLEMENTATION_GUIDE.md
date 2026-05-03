@@ -17,6 +17,8 @@ It is the primary source of truth for Codex when implementing both the frontend 
 | Spec FR | Endpoint |
 |---------|----------|
 | FR-02, S-PC-02 | `GET /access/me` |
+| FR-04 | `GET /foundation/applications`, `/foundation/snow-groups`, `/foundation/workspaces` |
+| FR-05, FR-06 | `GET /foundation/scope/resolve` |
 | FR-10 | `GET /templates` |
 | FR-11 | `GET /templates/{id}` |
 | FR-12 | `GET /templates/{id}/versions` |
@@ -51,6 +53,10 @@ All endpoints are prefixed `/api/v1/platform`. Paths below are written relative 
 | # | Method | Path | Purpose |
 |---|--------|------|---------|
 | 1 | GET | `/access/me` | Current user + roles (used by route guard) |
+| 1A | GET | `/foundation/applications` | Canonical application catalog |
+| 1B | GET | `/foundation/snow-groups` | Canonical SNOW group catalog |
+| 1C | GET | `/foundation/workspaces` | Workspace to application/SNOW group bindings |
+| 1D | GET | `/foundation/scope/resolve` | Resolve ordered scope chain |
 | 2 | GET | `/templates` | Template catalog (filtered, paginated) |
 | 3 | GET | `/templates/{id}` | Template detail + inheritance |
 | 4 | GET | `/templates/{id}/versions` | Version list |
@@ -65,8 +71,11 @@ All endpoints are prefixed `/api/v1/platform`. Paths below are written relative 
 | 13 | GET | `/configurations/{id}/drift` | Drift report |
 | 14 | GET | `/audit` | Audit log (paginated, filtered) |
 | 15 | GET | `/audit/{id}` | Audit record detail |
+| 16A | GET | `/access/users` | Staff user catalog |
+| 16B | POST | `/access/users` | Create staff user |
+| 16C | PUT | `/access/users/{staffId}` | Update/deactivate staff user |
 | 16 | GET | `/access/assignments` | Role assignment catalog |
-| 17 | POST | `/access/assignments` | Assign role |
+| 17 | POST | `/access/assignments` | Assign role by staff id |
 | 18 | DELETE | `/access/assignments/{id}` | Revoke role (last-admin guarded) |
 | 19 | GET | `/policies` | Policy catalog |
 | 20 | POST | `/policies` | Create policy (v1) |
@@ -144,11 +153,16 @@ Returns the current user's identity and resolved roles. Called by the frontend r
 ```json
 {
   "data": {
-    "userId": "admin@sdlctower.local",
+    "staffId": "43910516",
     "displayName": "Platform Admin",
+    "staffName": null,
+    "avatarUrl": null,
+    "authProvider": "manual",
     "roles": ["PLATFORM_ADMIN"],
     "scopes": [
-      { "scopeType": "platform", "scopeId": "*" }
+      { "scopeType": "platform", "scopeId": "*" },
+      { "scopeType": "application", "scopeId": "app-payment-gateway-pro" },
+      { "scopeType": "snow_group", "scopeId": "snow-fin-tech-ops" }
     ]
   }
 }
@@ -159,17 +173,113 @@ Returns the current user's identity and resolved roles. Called by the frontend r
 ```json
 {
   "data": {
-    "userId": "alice@corp",
+    "staffId": "43910000",
     "displayName": "Alice",
+    "staffName": "Alice Chen",
+    "avatarUrl": "https://teambook.company.com/avatar/43910000",
+    "authProvider": "teambook",
     "roles": ["WORKSPACE_MEMBER"],
     "scopes": [
-      { "scopeType": "workspace", "scopeId": "ws-default" }
+      { "scopeType": "workspace", "scopeId": "ws-default-001" }
     ]
   }
 }
 ```
 
 No 401/403 from this endpoint — the route guard decides UI behavior.
+
+---
+
+## 1A–1D. Platform Foundation APIs
+
+These endpoints provide the canonical ids used by scope pickers and by backend resolvers.
+
+### `GET /foundation/applications`
+
+**Response 200:**
+
+```json
+{
+  "data": [
+    {
+      "id": "app-payment-gateway-pro",
+      "key": "payment-gateway-pro",
+      "name": "Payment-Gateway-Pro",
+      "ownerSnowGroupId": "snow-fin-tech-ops",
+      "criticality": "critical",
+      "status": "active"
+    }
+  ],
+  "pagination": { "nextCursor": null, "total": 1 }
+}
+```
+
+### `GET /foundation/snow-groups`
+
+**Response 200:**
+
+```json
+{
+  "data": [
+    {
+      "id": "snow-fin-tech-ops",
+      "servicenowGroupName": "FIN-TECH-OPS",
+      "displayName": "FIN-TECH-OPS",
+      "ownerEmail": "fin-tech-ops@example.com",
+      "escalationPolicy": "business-hours-primary",
+      "status": "active"
+    }
+  ],
+  "pagination": { "nextCursor": null, "total": 1 }
+}
+```
+
+### `GET /foundation/workspaces`
+
+**Response 200:**
+
+```json
+{
+  "data": [
+    {
+      "id": "ws-default-001",
+      "key": "global-sdlc-tower",
+      "name": "Global SDLC Tower",
+      "applicationId": "app-payment-gateway-pro",
+      "snowGroupId": "snow-fin-tech-ops",
+      "status": "active"
+    }
+  ],
+  "pagination": { "nextCursor": null, "total": 1 }
+}
+```
+
+### `GET /foundation/scope/resolve`
+
+**Query:** exactly one of `projectId`, `workspaceId`, `applicationId`, or `snowGroupId`.
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "inputType": "workspace",
+    "inputId": "ws-default-001",
+    "scopeChain": [
+      { "scopeType": "platform", "scopeId": "*" },
+      { "scopeType": "application", "scopeId": "app-payment-gateway-pro" },
+      { "scopeType": "snow_group", "scopeId": "snow-fin-tech-ops" },
+      { "scopeType": "workspace", "scopeId": "ws-default-001" }
+    ],
+    "applicationId": "app-payment-gateway-pro",
+    "snowGroupId": "snow-fin-tech-ops",
+    "workspaceId": "ws-default-001",
+    "projectId": null
+  }
+}
+```
+
+**Errors:** 400 when more than one input id is provided; 404 when the id cannot be resolved.
 
 ---
 
@@ -229,7 +339,7 @@ Template detail with inheritance resolution.
 
 **Path:** `id` — template id.
 
-**Query:** `scope` — optional `<scopeType>:<scopeId>` used as the child scope for resolution (default `platform:*`).
+**Query:** `scope` — optional `<scopeType>:<scopeId>` used as the child scope for resolution (default `platform:*`). Valid scope types are `platform`, `application`, `snow_group`, `workspace`, and `project`.
 
 **Response 200:**
 
@@ -408,8 +518,8 @@ Delete a draft template with zero usages.
       "id": "cfg-008",
       "key": "req.page.layout",
       "kind": "page",
-      "scopeType": "workspace",
-      "scopeId": "ws-default",
+      "scopeType": "snow_group",
+      "scopeId": "snow-fin-tech-ops",
       "parentId": "cfg-001",
       "status": "active",
       "hasDrift": true,
@@ -431,8 +541,8 @@ Create a scope override.
 ```json
 {
   "parentId": "cfg-001",
-  "scopeType": "workspace",
-  "scopeId": "ws-default",
+  "scopeType": "snow_group",
+  "scopeId": "snow-fin-tech-ops",
   "body": { "columns": 3 }
 }
 ```
@@ -538,7 +648,58 @@ Returns a single record with the same shape as above (wrapped in `data`). 404 if
 
 ## 16. `GET /access/assignments`
 
-**Query params:** `userId`, `role`, `scopeType`, `scopeId`, `limit`, `cursor`.
+## 16A–16C. `/access/users`
+
+Staff users are managed only by Platform Admin. TeamBook profile fields are
+display/enrichment metadata; they do not create grants.
+
+### `GET /access/users`
+
+**Query params:** `staffId`, `status`, `profileSource`, `q`, `limit`, `cursor`.
+
+```json
+{
+  "data": [
+    {
+      "staffId": "43910516",
+      "displayName": "Platform Admin",
+      "staffName": null,
+      "avatarUrl": null,
+      "email": "admin@sdlctower.local",
+      "profileSource": "manual",
+      "lastProfileSyncAt": null,
+      "status": "active",
+      "createdAt": "2026-04-18T02:15:00Z",
+      "updatedAt": "2026-04-18T02:15:00Z"
+    }
+  ],
+  "pagination": { "nextCursor": null, "total": 1 }
+}
+```
+
+### `POST /access/users`
+
+```json
+{
+  "staffId": "43910516",
+  "displayName": "Platform Admin",
+  "staffName": null,
+  "avatarUrl": null,
+  "email": "admin@sdlctower.local",
+  "profileSource": "manual",
+  "status": "active"
+}
+```
+
+### `PUT /access/users/{staffId}`
+
+Updates display metadata or status. Password changes are not part of this endpoint in V1.
+
+---
+
+## 16. `GET /access/assignments`
+
+**Query params:** `staffId`, `role`, `scopeType`, `scopeId`, `limit`, `cursor`.
 
 **Response 200:**
 
@@ -547,7 +708,7 @@ Returns a single record with the same shape as above (wrapped in `data`). 404 if
   "data": [
     {
       "id": "ra-default-admin",
-      "userId": "admin@sdlctower.local",
+      "staffId": "43910516",
       "userDisplayName": "Platform Admin",
       "role": "PLATFORM_ADMIN",
       "scopeType": "platform",
@@ -568,10 +729,10 @@ Returns a single record with the same shape as above (wrapped in `data`). 404 if
 
 ```json
 {
-  "userId": "alice@corp",
+  "staffId": "43910516",
   "role": "WORKSPACE_ADMIN",
-  "scopeType": "workspace",
-  "scopeId": "ws-default"
+  "scopeType": "snow_group",
+  "scopeId": "snow-fin-tech-ops"
 }
 ```
 
@@ -581,6 +742,7 @@ Returns a single record with the same shape as above (wrapped in `data`). 404 if
 
 - 422 `INVALID_ROLE` if role is not one of the five
 - 422 `INVALID_SCOPE_ID` if `scopeType=platform` and `scopeId != "*"`
+- 422 `INVALID_SCOPE_ID` if `scopeType` references an unknown application, SNOW group, workspace, or project id
 - 409 `DUPLICATE_ASSIGNMENT` if an identical assignment already exists
 
 Side effect: audit `category=permission_change`, `action=role.grant`.
@@ -769,7 +931,7 @@ Static registry.
     {
       "id": "conn-jira-ws1",
       "kind": "jira",
-      "scopeWorkspaceId": "ws-default",
+      "scopeWorkspaceId": "ws-default-001",
       "applicationId": "app-payment-gateway-pro",
       "applicationName": "Payment-Gateway-Pro",
       "snowGroupId": "snow-fin-tech-ops",
@@ -800,7 +962,7 @@ Credentials are NEVER returned in plain text.
 ```json
 {
   "kind": "jira",
-  "scopeWorkspaceId": "ws-default",
+  "scopeWorkspaceId": "ws-default-001",
   "applicationId": "app-payment-gateway-pro",
   "applicationName": "Payment-Gateway-Pro",
   "snowGroupId": "snow-fin-tech-ops",
@@ -997,7 +1159,7 @@ Register via `WebMvcConfigurer.addInterceptors(...)`.
 
 ### V1 auth stub
 
-`AccessService.currentUserHasRole(role)` reads a request header `X-User-Id` (local profile only) or a seeded default (`admin@sdlctower.local`) when the header is absent. Production auth is wired in a future slice.
+`AccessService.currentUserHasRole(role)` reads the authenticated session staff id, or a local-only `X-Staff-Id` header when running without the login screen. The seeded default local admin is staff id `43910516`. Internal deployments may authenticate through TeamBook SSO, but role checks still resolve only from `PLATFORM_USER` and `PLATFORM_ROLE_ASSIGNMENT`.
 
 ### CursorCodec
 
@@ -1123,7 +1285,7 @@ export const platformGuard: NavigationGuard = async (to, _from, next) => {
 | `POST /templates/{id}/publish` draft→published | 200; audit row inserted; catalog reflects new status |
 | `POST /templates/{id}/publish` published→ | 409 `INVALID_TRANSITION`; no audit row inserted |
 | `DELETE /templates/{id}` draft with usage | 409 `IN_USE` |
-| `GET /configurations?scopeType=workspace&scopeId=ws-default` | Returns only workspace-scoped rows |
+| `GET /configurations?scopeType=snow_group&scopeId=snow-fin-tech-ops` | Returns only SNOW-group-scoped rows |
 | `POST /configurations` duplicate | 409 `DUPLICATE_SCOPE_OVERRIDE` |
 | `DELETE /access/assignments/{last admin}` | 409 `LAST_PLATFORM_ADMIN` |
 | `PUT /policies/{id}` | New version row; previous row flipped to `inactive` |

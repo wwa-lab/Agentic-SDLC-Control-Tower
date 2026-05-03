@@ -1,26 +1,63 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useWorkspaceStore } from '@/shared/stores/workspaceStore';
 import { useShellUiStore } from '@/shell/stores/shellUiStore';
+import { useSessionStore } from '@/shell/stores/sessionStore';
 import { useShellConfig } from '@/shell/composables/useShellConfig';
 import PrimaryNav from './PrimaryNav.vue';
 import TopContextBar from './TopContextBar.vue';
 import GlobalActionBar from './GlobalActionBar.vue';
 import PageHeader from './PageHeader.vue';
 import AiCommandPanel from './AiCommandPanel.vue';
+import LoginView from './LoginView.vue';
 import DataRibbon from '@/shared/components/DataRibbon.vue';
 
 const workspaceStore = useWorkspaceStore();
 const shellUiStore = useShellUiStore();
+const sessionStore = useSessionStore();
 const { config } = useShellConfig();
+const router = useRouter();
+const route = useRoute();
 
-onMounted(() => {
-  workspaceStore.load();
+async function initAndLoad() {
+  await workspaceStore.load();
+
+  const urlKey = route.params.workspaceKey as string | undefined;
+
+  // Already on a workspace URL but workspace not yet activated (typical after
+  // logging in from LoginView, where the unauthenticated guard short-circuited
+  // and skipped workspace resolution). Re-trigger the navigation so the guard
+  // resolves the workspace and calls setActive.
+  if (urlKey && !workspaceStore.activeWorkspaceKey) {
+    await router.replace({ path: route.fullPath, force: true });
+    return;
+  }
+
+  // At root: redirect to first available workspace.
+  if (route.path === '/' || route.path === '') {
+    const key = workspaceStore.workspaces[0]?.workspaceKey ?? 'payment-gateway-pro';
+    router.replace(`/${key}`);
+  }
+}
+
+onMounted(async () => {
+  await sessionStore.init();
+  if (sessionStore.isAuthenticated) {
+    initAndLoad();
+  }
+});
+
+watch(() => sessionStore.isAuthenticated, (isAuthenticated) => {
+  if (isAuthenticated) {
+    initAndLoad();
+  }
 });
 </script>
 
 <template>
-  <div class="app-shell">
+  <LoginView v-if="sessionStore.initialized && !sessionStore.isAuthenticated" />
+  <div v-else-if="sessionStore.initialized" class="app-shell">
     <!-- Left Nav (overridable) -->
     <slot name="nav">
       <PrimaryNav />
@@ -55,6 +92,7 @@ onMounted(() => {
       <AiCommandPanel v-if="config.showAiPanel" :content="shellUiStore.resolvedAiPanelContent" />
     </slot>
   </div>
+  <div v-else class="shell-loading">Loading SDLC Tower...</div>
 </template>
 
 <style scoped>
@@ -67,7 +105,8 @@ onMounted(() => {
 }
 
 .main-stack {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -75,15 +114,19 @@ onMounted(() => {
 }
 
 .top-bar {
+  min-width: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: var(--border-ghost);
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .content-scroll {
   flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -92,5 +135,16 @@ onMounted(() => {
 
 .page-container {
   flex: 1;
+  min-width: 0;
+}
+
+.shell-loading {
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  background-color: var(--color-surface);
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
 }
 </style>

@@ -18,4 +18,6 @@ public interface RepoRepository extends JpaRepository<RepoEntity, String> {
     List<RepoEntity> findByWorkspaceId(String workspaceId);
 
     Optional<RepoEntity> findByWorkspaceIdAndProjectId(String workspaceId, String projectId);
+
+    Optional<RepoEntity> findByFullName(String fullName);
 }

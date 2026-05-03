@@ -96,9 +96,9 @@ public class DeploymentController {
         return ResponseEntity.ok(ApiResponse.ok(aiDeploymentSummaryService.enqueueRegeneration(deployId)));
     }
 
-    @PostMapping("/workspaces/{workspaceId}/ai-summary/regenerate")
-    public ResponseEntity<ApiResponse<RegenerateWorkspaceSummaryResponse>> regenerateWorkspaceSummary(
-            @PathVariable String workspaceId) {
+    @PostMapping("/ai-summary/regenerate")
+    public ResponseEntity<ApiResponse<RegenerateWorkspaceSummaryResponse>> regenerateWorkspaceSummary() {
+        String workspaceId = com.sdlctower.platform.workspace.WorkspaceContextHolder.current().workspaceId();
         return ResponseEntity.ok(ApiResponse.ok(
                 new RegenerateWorkspaceSummaryResponse(workspaceId,
                         com.sdlctower.domain.deploymentmanagement.dto.DeploymentEnums.AiRowStatus.PENDING,

@@ -16,6 +16,7 @@ This document converts the requirements in [platform-center-requirements.md](../
 | Epic | Scope | Stories |
 |------|-------|---------|
 | E1. Access & Entry | Platform Center gating, navigation, forbidden state | S-PC-01 through S-PC-03 |
+| E1A. Platform Foundation | Application/SNOW group master data and scope resolution | S-PC-04 through S-PC-07 |
 | E2. Template Management | Browse, view, version, lifecycle templates | S-PC-10 through S-PC-14 |
 | E3. Configuration Management | Browse, edit, override, drift | S-PC-20 through S-PC-23 |
 | E4. Audit Management | Browse, filter, drill-down audit records | S-PC-30 through S-PC-32 |
@@ -84,6 +85,98 @@ This document converts the requirements in [platform-center-requirements.md](../
 
 ---
 
+## Epic 1A — Platform Foundation
+
+### S-PC-04: Browse application and SNOW group master data
+
+> **As a** Platform Administrator
+> **I want** Platform Center to maintain stable Application and SNOW Group records
+> **So that** teams, policies, integrations, and reports do not depend on free-text labels.
+
+**Traces to:** REQ-PC-02A
+
+**Acceptance Criteria**
+
+- **Given** the Platform Foundation data has loaded
+  **When** the admin opens a scope picker
+  **Then** Application and SNOW Group options are shown by display name and backed by stable ids.
+
+- **Given** an application or SNOW group appears in a catalog row
+  **When** the row renders
+  **Then** the UI displays the name and keeps the id available for API calls, audit records, and deep links.
+
+### S-PC-05: Resolve an effective scope chain
+
+> **As a** Platform Administrator
+> **I want** the platform to resolve a project or workspace into its full scope chain
+> **So that** inheritance and access checks use one consistent order.
+
+**Traces to:** REQ-PC-02B, REQ-PC-02C
+
+**Acceptance Criteria**
+
+- **Given** a project belongs to workspace `ws-payments`, application `app-payments`, and SNOW group `snow-fin-ops`
+  **When** the resolver is called for that project
+  **Then** it returns the ordered chain `platform:* -> application:app-payments -> snow_group:snow-fin-ops -> workspace:ws-payments -> project:<id>`.
+
+- **Given** a workspace has no project context
+  **When** the resolver is called for that workspace
+  **Then** it returns `platform:* -> application:<id> -> snow_group:<id> -> workspace:<id>`.
+
+### S-PC-06: Pick SNOW group as an explicit scope
+
+> **As a** Platform Administrator
+> **I want** to assign roles, configurations, and policies at SNOW group scope
+> **So that** operational ownership boundaries can be managed directly.
+
+**Traces to:** REQ-PC-02B, REQ-PC-43, REQ-PC-50
+
+**Acceptance Criteria**
+
+- **Given** a form supports scoped objects
+  **When** the admin opens the scope type selector
+  **Then** `snow_group` appears alongside `platform`, `application`, `workspace`, and `project`.
+
+- **Given** the admin selects `snow_group`
+  **When** they open the scope id selector
+  **Then** only known SNOW groups are listed and the saved payload uses the selected SNOW group id.
+
+### S-PC-07: Keep shell context display separate from canonical scope ids
+
+> **As a** Platform Administrator
+> **I want** the app shell to show friendly names while APIs use stable ids
+> **So that** renaming a group or application does not break permissions or history.
+
+**Traces to:** REQ-PC-02A, REQ-PC-81
+
+**Acceptance Criteria**
+
+- **Given** the active context bar displays an application or SNOW group name
+  **When** an API request is made for a scoped Platform Center object
+  **Then** the request uses the canonical id, not the displayed label.
+
+- **Given** a SNOW group display name changes
+  **When** historical audit records are viewed
+  **Then** the original `scopeId` remains stable while the UI can show the current resolved display name where available.
+
+### S-PC-08: Keep team data isolated by Application and SNOW group
+
+> **As a** Platform Administrator
+> **I want** the shared service to enforce Application + SNOW Group data boundaries
+> **So that** teams can use the same platform without seeing each other's real data.
+
+**Traces to:** REQ-PC-02D
+
+**Acceptance Criteria**
+
+- **Given** a staff user has access only to `application:app-a` and `snow_group:snow-a`
+  **When** they open a business page
+  **Then** backend queries return only data within that ownership boundary.
+
+- **Given** a guest user enters the platform
+  **When** they browse pages
+  **Then** they see demo/public read-only data and no real team data.
+
 ## Epic 2 — Template Management
 
 ### S-PC-10: Browse templates
@@ -107,7 +200,7 @@ This document converts the requirements in [platform-center-requirements.md](../
 ### S-PC-11: View template inheritance chain
 
 > **As a** Platform Administrator  
-> **I want** to see the four-layer inheritance chain on a template detail  
+> **I want** to see the full platform inheritance chain on a template detail
 > **So that** I can tell which layer actually supplies each value.
 
 **Traces to:** REQ-PC-11
@@ -205,8 +298,12 @@ This document converts the requirements in [platform-center-requirements.md](../
 **Acceptance Criteria**
 
 - **Given** a platform-default configuration `X`  
-  **When** the admin clicks "Add override", picks scope `workspace = WS-42`, and saves a JSON body  
-  **Then** a new configuration row appears linked to `X` as parent, scope shown as `workspace:WS-42`, status `active`.
+  **When** the admin clicks "Add override", picks scope `snow_group = snow-fin-ops`, and saves a JSON body
+  **Then** a new configuration row appears linked to `X` as parent, scope shown as `snow_group:snow-fin-ops`, status `active`.
+
+- **Given** overrides exist at Application, SNOW Group, Workspace, and Project layers
+  **When** the same configuration is resolved for the project
+  **Then** the Project value wins and the provenance trail shows all five layers.
 
 - **Given** the JSON body fails schema validation  
   **When** the admin clicks Save  
@@ -319,12 +416,34 @@ This document converts the requirements in [platform-center-requirements.md](../
 **Acceptance Criteria**
 
 - **Given** the admin clicks "Assign role"  
-  **When** they pick user, role, and scope `(scope_type = workspace, scope_id = WS-42)` and confirm  
+  **When** they pick user, role, and scope `(scope_type = snow_group, scope_id = snow-fin-ops)` and confirm
   **Then** a new assignment is created, the catalog refreshes, an audit `permission_change` record with action `role.grant` is written.
 
 - **Given** the admin selects `scope_type = platform`  
   **When** they open the scope id dropdown  
   **Then** only the sentinel `"*"` value is available (since platform scope has a single id).
+
+### S-PC-41A: Manage staff users
+
+> **As a** Platform Administrator
+> **I want** to create and deactivate staff users by staff id
+> **So that** only authorized users can receive scoped access.
+
+**Traces to:** REQ-PC-42A
+
+**Acceptance Criteria**
+
+- **Given** the admin opens Access Management
+  **When** they create staff id `43910516` with display metadata
+  **Then** the user appears in the user catalog and can receive role assignments.
+
+- **Given** TeamBook SSO later returns nStaff Name and avatar URL for an active staff id
+  **When** the Access catalog is refreshed
+  **Then** the profile metadata can be shown without changing the user's role assignments.
+
+- **Given** a staff user should no longer access the platform
+  **When** the admin marks the user inactive
+  **Then** new login attempts for that staff id are rejected.
 
 ### S-PC-42: Revoke a role
 
@@ -434,12 +553,12 @@ This document converts the requirements in [platform-center-requirements.md](../
 
 - **Given** the Integration sub-section is active  
   **When** the catalog loads  
-  **Then** the header shows the adapter kinds (Jira / Confluence / GitLab / Jenkins / ServiceNow / custom-webhook) and the body lists all configured connection instances with columns: kind, workspace scope, sync mode, status, last-sync.
+  **Then** the header shows the adapter kinds (Jira / Confluence / GitLab / Jenkins / ServiceNow / custom-webhook) and the body lists all configured connection instances with columns: kind, workspace, application, SNOW group, sync mode, status, last-sync.
 
 ### S-PC-61: Configure a connection
 
 > **As a** Platform Administrator  
-> **I want** to create a Jira connection for a workspace  
+> **I want** to create a Jira connection for a workspace with application and SNOW group ownership
 > **So that** the requirement slice can sync with Jira.
 
 **Traces to:** REQ-PC-61, REQ-PC-62, REQ-PC-64
@@ -447,8 +566,8 @@ This document converts the requirements in [platform-center-requirements.md](../
 **Acceptance Criteria**
 
 - **Given** the admin clicks "New connection"  
-  **When** they pick kind = Jira, scope = workspace `WS-42`, paste a credential id (referenced from secret store), pick sync mode = `both`, and save  
-  **Then** a connection record appears with status `enabled` and an audit `config_change` record with action `integration.create` is written.
+  **When** they pick kind = Jira, workspace `ws-default-001`, application `app-payment-gateway-pro`, SNOW group `snow-fin-tech-ops`, paste a credential id (referenced from secret store), pick sync mode = `both`, and save
+  **Then** a connection record appears with status `enabled`, carries all three ownership ids, and an audit `config_change` record with action `integration.create` is written.
 
 - **Given** the admin is viewing an existing connection's detail  
   **When** they attempt to read the credential value  

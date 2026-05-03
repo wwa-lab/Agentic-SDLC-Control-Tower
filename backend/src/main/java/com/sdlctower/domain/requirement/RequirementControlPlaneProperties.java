@@ -8,6 +8,7 @@ public class RequirementControlPlaneProperties {
     private final SourceIntegration jira = new SourceIntegration();
     private final SourceIntegration confluence = new SourceIntegration();
     private final GitHubIntegration github = new GitHubIntegration();
+    private final CliRunner cliRunner = new CliRunner();
 
     public SourceIntegration getJira() {
         return jira;
@@ -19,6 +20,10 @@ public class RequirementControlPlaneProperties {
 
     public GitHubIntegration getGithub() {
         return github;
+    }
+
+    public CliRunner getCliRunner() {
+        return cliRunner;
     }
 
     public static class SourceIntegration {
@@ -96,6 +101,27 @@ public class RequirementControlPlaneProperties {
 
         public void setToken(String token) {
             this.token = token;
+        }
+    }
+
+    public static class CliRunner {
+        private String backendBaseUrl = "http://localhost:8080";
+        private String commandName = "./scripts/control-tower-run";
+
+        public String getBackendBaseUrl() {
+            return backendBaseUrl;
+        }
+
+        public void setBackendBaseUrl(String backendBaseUrl) {
+            this.backendBaseUrl = backendBaseUrl;
+        }
+
+        public String getCommandName() {
+            return commandName;
+        }
+
+        public void setCommandName(String commandName) {
+            this.commandName = commandName;
         }
     }
 }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRequirementStore } from '../stores/requirementStore';
+import { useImportStore } from '../stores/importStore';
 import ImportSourceTabs from './ImportSourceTabs.vue';
 import ImportTextInput from './ImportTextInput.vue';
 import ImportDropZone from './ImportDropZone.vue';
@@ -10,39 +11,40 @@ import BatchProgressBar from './BatchProgressBar.vue';
 import type { ImportSourceType, RequirementDraft } from '../types/requirement';
 
 const store = useRequirementStore();
-const importState = computed(() => store.importState);
+const importStore = useImportStore();
+const importState = computed(() => importStore.importState);
 
 function handleClose() {
-  store.closeImport();
+  importStore.closeImport();
 }
 
 function handleSourceSelect(source: ImportSourceType) {
-  store.setImportSource(source);
+  importStore.setImportSource(source);
 }
 
 function handleTextSubmit(text: string) {
-  store.setRawInput(text);
-  store.triggerNormalization();
+  importStore.setRawInput(text);
+  importStore.triggerNormalization(store.activeProfile.id);
 }
 
 function handleFilesSelected(files: File[]) {
-  store.handleFileImport(files);
+  importStore.handleFileImport(files, store.activeProfile.id);
 }
 
 function handleConfirmDraft(draft: RequirementDraft) {
-  store.confirmDraft(draft);
+  importStore.confirmDraft(draft, () => store.fetchRequirementList());
 }
 
 function handleDiscard() {
-  store.discardDraft();
+  importStore.discardDraft();
 }
 
 function handleBatchNormalize(indices: number[]) {
-  store.normalizeSelected(indices);
+  importStore.normalizeSelected(indices, store.activeProfile.id);
 }
 
 function handleUpdateMapping(column: string, target: string) {
-  store.updateColumnMapping(column, target);
+  importStore.updateColumnMapping(column, target);
 }
 </script>
 
@@ -174,7 +176,7 @@ function handleUpdateMapping(column: string, target: string) {
             </div>
             <div class="batch-actions">
               <button class="btn-discard" @click="handleDiscard">Discard All</button>
-              <button class="btn-confirm-all" @click="store.confirmAllDrafts()">
+              <button class="btn-confirm-all" @click="importStore.confirmAllDrafts(() => store.fetchRequirementList())">
                 Confirm All ({{ importState.batchDrafts.length }})
               </button>
             </div>

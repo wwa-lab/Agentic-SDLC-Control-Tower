@@ -25,7 +25,7 @@ class KnowledgeGraphControllerTest {
 
     @Test
     void getKnowledgeGraphReturnsProfileFallback() throws Exception {
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH).param("profileId", "standard-sdd"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH, "ws-default-001").param("profileId", "standard-sdd"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.scope.provider").value("profile"))
                 .andExpect(jsonPath("$.data.scope.profileId").value("standard-sdd"))
@@ -38,7 +38,7 @@ class KnowledgeGraphControllerTest {
 
     @Test
     void getGraphNodeReturnsDirectRelationships() throws Exception {
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH_NODE, "doc-type:standard-sdd:spec")
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH_NODE, "ws-default-001", "doc-type:standard-sdd:spec")
                         .param("profileId", "standard-sdd"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.node.id").value("doc-type:standard-sdd:spec"))
@@ -48,7 +48,7 @@ class KnowledgeGraphControllerTest {
 
     @Test
     void getGraphImpactReturnsDownstreamPaths() throws Exception {
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH_IMPACT)
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH_IMPACT, "ws-default-001")
                         .param("profileId", "standard-sdd")
                         .param("nodeId", "doc-type:standard-sdd:requirement")
                         .param("direction", "downstream")
@@ -61,7 +61,7 @@ class KnowledgeGraphControllerTest {
 
     @Test
     void getGraphHealthReturnsProviderStatus() throws Exception {
-        mockMvc.perform(get(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH_HEALTH).param("profileId", "ibm-i"))
+        mockMvc.perform(get(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH_HEALTH, "ws-default-001").param("profileId", "ibm-i"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.provider").value("profile"))
                 .andExpect(jsonPath("$.data.available").value(true))
@@ -70,10 +70,10 @@ class KnowledgeGraphControllerTest {
 
     @Test
     void importAndSyncTriggersReturnAccepted() throws Exception {
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH_SYNC))
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH_SYNC, "ws-default-001"))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.status").value("QUEUED"));
-        mockMvc.perform(post(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH_IMPORT))
+        mockMvc.perform(post(ApiConstants.REQUIREMENT_KNOWLEDGE_GRAPH_IMPORT, "ws-default-001"))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.status").value("QUEUED"));
     }

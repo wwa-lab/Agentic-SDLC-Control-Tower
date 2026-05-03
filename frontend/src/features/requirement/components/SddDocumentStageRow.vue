@@ -88,6 +88,10 @@ function openStage() {
 }
 .stage-copy { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
 .stage-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.75rem; font-weight: 600; }
+.stage-title > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .stage-loading {
   font-family: var(--font-ui);
   font-size: 0.5625rem;
@@ -127,4 +131,16 @@ function openStage() {
   cursor: pointer;
 }
 .icon-btn:hover { color: var(--color-secondary); border-color: var(--color-secondary); }
+
+@media (max-width: 640px) {
+  .stage-row {
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: flex-start;
+  }
+
+  .stage-actions {
+    grid-column: 2;
+    flex-wrap: wrap;
+  }
+}
 </style>

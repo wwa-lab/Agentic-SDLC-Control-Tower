@@ -31,7 +31,7 @@ class AiCenterControllerTest {
 
     @Test
     void metrics_returns200_withAllFiveSections() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER_METRICS).header(WS_HEADER, WS))
+        mockMvc.perform(get(ApiConstants.AI_CENTER_METRICS, "ws-default-001").header(WS_HEADER, WS))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.window").value("30d"))
                 .andExpect(jsonPath("$.data.aiUsageRate.data").exists())
@@ -44,7 +44,7 @@ class AiCenterControllerTest {
 
     @Test
     void metrics_respectsWindowParam() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER_METRICS)
+        mockMvc.perform(get(ApiConstants.AI_CENTER_METRICS, "ws-default-001")
                         .header(WS_HEADER, WS)
                         .param("window", "7d"))
                 .andExpect(status().isOk())
@@ -55,7 +55,7 @@ class AiCenterControllerTest {
 
     @Test
     void stageCoverage_returnsAll11Stages_inCanonicalOrder() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER_STAGE_COVERAGE).header(WS_HEADER, WS))
+        mockMvc.perform(get(ApiConstants.AI_CENTER_STAGE_COVERAGE, "ws-default-001").header(WS_HEADER, WS))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.entries", hasSize(11)))
                 .andExpect(jsonPath("$.data.entries[0].stageKey").value("requirement"))
@@ -68,7 +68,7 @@ class AiCenterControllerTest {
 
     @Test
     void skills_returnsListForWorkspace() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER_SKILLS).header(WS_HEADER, WS))
+        mockMvc.perform(get(ApiConstants.AI_CENTER_SKILLS, "ws-default-001").header(WS_HEADER, WS))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(8)))
                 .andExpect(jsonPath("$.data[0].key").exists())
@@ -76,17 +76,17 @@ class AiCenterControllerTest {
     }
 
     @Test
-    void skills_respectWorkspaceIsolation() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER_SKILLS).header(WS_HEADER, "WS-NONEXISTENT"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(0)));
+    void skills_unknownWorkspaceReturns404() throws Exception {
+        mockMvc.perform(get(ApiConstants.AI_CENTER_SKILLS, "ws-nonexistent").header(WS_HEADER, WS))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("WORKSPACE_NOT_FOUND"));
     }
 
     // ── Skill Detail ──────────────────────────────────────────
 
     @Test
     void skillDetail_returns200_forExistingKey() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER + "/skills/incident-diagnosis")
+        mockMvc.perform(get(ApiConstants.AI_CENTER + "/skills/incident-diagnosis", "ws-default-001")
                         .header(WS_HEADER, WS))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.skill.key").value("incident-diagnosis"))
@@ -98,7 +98,7 @@ class AiCenterControllerTest {
 
     @Test
     void skillDetail_returns404_forUnknownKey() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER + "/skills/unknown-key")
+        mockMvc.perform(get(ApiConstants.AI_CENTER + "/skills/unknown-key", "ws-default-001")
                         .header(WS_HEADER, WS))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Skill not found: unknown-key"));
@@ -108,7 +108,7 @@ class AiCenterControllerTest {
 
     @Test
     void runs_returns200_withPage() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER_RUNS).header(WS_HEADER, WS))
+        mockMvc.perform(get(ApiConstants.AI_CENTER_RUNS, "ws-default-001").header(WS_HEADER, WS))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items").isArray())
                 .andExpect(jsonPath("$.data.page").value(1))
@@ -118,7 +118,7 @@ class AiCenterControllerTest {
 
     @Test
     void runs_returns400_forSize201() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER_RUNS)
+        mockMvc.perform(get(ApiConstants.AI_CENTER_RUNS, "ws-default-001")
                         .header(WS_HEADER, WS)
                         .param("size", "201"))
                 .andExpect(status().isBadRequest())
@@ -127,7 +127,7 @@ class AiCenterControllerTest {
 
     @Test
     void runs_returns400_forSize0() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER_RUNS)
+        mockMvc.perform(get(ApiConstants.AI_CENTER_RUNS, "ws-default-001")
                         .header(WS_HEADER, WS)
                         .param("size", "0"))
                 .andExpect(status().isBadRequest())
@@ -136,7 +136,7 @@ class AiCenterControllerTest {
 
     @Test
     void runs_filtersByStatus() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER_RUNS)
+        mockMvc.perform(get(ApiConstants.AI_CENTER_RUNS, "ws-default-001")
                         .header(WS_HEADER, WS)
                         .param("status", "failed"))
                 .andExpect(status().isOk())
@@ -145,7 +145,7 @@ class AiCenterControllerTest {
 
     @Test
     void runs_filtersBySkillKey() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER_RUNS)
+        mockMvc.perform(get(ApiConstants.AI_CENTER_RUNS, "ws-default-001")
                         .header(WS_HEADER, WS)
                         .param("skillKey", "incident-diagnosis"))
                 .andExpect(status().isOk())
@@ -156,7 +156,7 @@ class AiCenterControllerTest {
 
     @Test
     void runDetail_returns200_withEvidence_and_steps() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER + "/runs/run-015")
+        mockMvc.perform(get(ApiConstants.AI_CENTER + "/runs/run-015", "ws-default-001")
                         .header(WS_HEADER, WS))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.run.id").value("run-015"))
@@ -170,7 +170,7 @@ class AiCenterControllerTest {
 
     @Test
     void runDetail_returns404_forUnknownId() throws Exception {
-        mockMvc.perform(get(ApiConstants.AI_CENTER + "/runs/unknown-id")
+        mockMvc.perform(get(ApiConstants.AI_CENTER + "/runs/unknown-id", "ws-default-001")
                         .header(WS_HEADER, WS))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Skill execution not found: unknown-id"));

@@ -23,6 +23,9 @@ graph TD
         NI["NavItem"]
         SPC["ShellPageConfig"]
         APC["AiPanelContent"]
+        CU["CurrentUser"]
+        SR["SupportRequest"]
+        HL["HelpLinks"]
     end
 
     subgraph ValueObjects["Value Objects"]
@@ -35,6 +38,9 @@ graph TD
     APC -->|"0:N"| RB
     WC -.->|"drives"| SPC
     NI -.->|"drives"| SPC
+    CU -.->|"gates"| SPC
+    SR -.->|"creates"| JIRA["Jira Story"]
+    HL -.->|"links to"| CONF["Confluence Guideline"]
 ```
 
 ---
@@ -49,11 +55,16 @@ The global workspace context displayed in the TopContextBar.
 
 ```typescript
 interface WorkspaceContext {
+  workspaceId?: string | null;       // Optional — canonical workspace id
   workspace: string;              // Required — workspace name
+  applicationId?: string | null;      // Optional — canonical application id
   application: string;            // Required — application name
+  snowGroupId?: string | null;        // Optional — canonical SNOW group id
   snowGroup?: string | null;      // Optional — ServiceNow group
+  projectId?: string | null;          // Optional — canonical project id
   project?: string | null;        // Optional — project name
   environment?: string | null;    // Optional — environment name
+  demoMode?: boolean;                 // True when guest/demo data is active
 }
 ```
 
@@ -64,6 +75,54 @@ interface WorkspaceContext {
 | `snowGroup` | No | "SNOW Group" | `---` |
 | `project` | No | "Project" | `---` |
 | `environment` | No | "Environment" | `---` |
+
+### 2.1A CurrentUser
+
+```typescript
+type UserMode = 'staff' | 'guest';
+type AuthProvider = 'manual' | 'teambook' | 'guest';
+
+interface CurrentUser {
+  mode: UserMode;
+  authProvider: AuthProvider;
+  staffId: string | null;
+  displayName: string;
+  staffName?: string | null;
+  avatarUrl?: string | null;
+  roles: string[];
+  readOnly: boolean;
+  scopes: ReadonlyArray<{ scopeType: string; scopeId: string }>;
+}
+```
+
+### 2.1B SupportRequest
+
+```typescript
+interface SupportRequest {
+  title: string;
+  category: 'access' | 'data' | 'bug' | 'question' | 'enhancement';
+  description: string;
+  route: string;
+  context: WorkspaceContext;
+  reporterStaffId: string | null;
+  reporterMode: UserMode;
+}
+
+interface SupportRequestResult {
+  requestId: string;
+  status: 'created' | 'pending';
+  jiraKey?: string | null;
+  jiraUrl?: string | null;
+}
+```
+
+### 2.1C HelpLinks
+
+```typescript
+interface HelpLinks {
+  userGuidelineUrl: string | null;
+}
+```
 
 ### 2.2 ShellPageConfig
 
@@ -143,20 +202,35 @@ public class WorkspaceContext {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "workspace_id")
+    private String workspaceId;
+
     @Column(name = "workspace_name", nullable = false)
     private String workspace;
+
+    @Column(name = "application_id")
+    private String applicationId;
 
     @Column(name = "application_name", nullable = false)
     private String application;
 
+    @Column(name = "snow_group_id")
+    private String snowGroupId;
+
     @Column(name = "snow_group")
     private String snowGroup;
+
+    @Column(name = "project_id")
+    private String projectId;
 
     @Column(name = "project_name")
     private String project;
 
     @Column(name = "environment_name")
     private String environment;
+
+    @Column(name = "demo_mode", nullable = false)
+    private boolean demoMode;
 
     // getters (no setters — managed by JPA lifecycle)
 }
@@ -168,19 +242,29 @@ public class WorkspaceContext {
 package com.sdlctower.platform.workspace;
 
 public record WorkspaceContextDto(
+    String workspaceId,
     String workspace,
+    String applicationId,
     String application,
+    String snowGroupId,
     String snowGroup,      // nullable
+    String projectId,
     String project,        // nullable
-    String environment     // nullable
+    String environment,    // nullable
+    Boolean demoMode
 ) {
     public static WorkspaceContextDto fromEntity(WorkspaceContext entity) {
         return new WorkspaceContextDto(
+            entity.getWorkspaceId(),
             entity.getWorkspace(),
+            entity.getApplicationId(),
             entity.getApplication(),
+            entity.getSnowGroupId(),
             entity.getSnowGroup(),
+            entity.getProjectId(),
             entity.getProject(),
-            entity.getEnvironment()
+            entity.getEnvironment(),
+            entity.isDemoMode()
         );
     }
 }
@@ -204,7 +288,62 @@ public record NavItem(
 V1: Hardcoded in `NavigationService`. No database table.
 V2+: May be driven by a `navigation_item` table for dynamic configuration.
 
-### 3.4 ApiResponse Envelope (Shared)
+### 3.4 Auth, Support, And Help DTOs
+
+```java
+public record CurrentUserDto(
+    String mode,
+    String authProvider,
+    String staffId,
+    String displayName,
+    String staffName,
+    String avatarUrl,
+    List<String> roles,
+    Boolean readOnly,
+    List<ScopeDto> scopes
+) {}
+
+public record LoginRequest(String staffId, String password) {}
+
+public record AuthProviderDto(
+    String provider,
+    String label,
+    Boolean enabled,
+    String startUrl
+) {}
+
+public record TeamBookProfileDto(
+    String staffId,
+    String staffName,
+    String avatarUrl
+) {}
+
+public record SupportRequestDto(
+    String title,
+    String category,
+    String description,
+    String route,
+    WorkspaceContextDto context,
+    String reporterStaffId,
+    String reporterMode
+) {}
+
+public record SupportRequestResultDto(
+    String requestId,
+    String status,
+    String jiraKey,
+    String jiraUrl
+) {}
+
+public record HelpLinksDto(String userGuidelineUrl) {}
+
+public record ScopeDto(String scopeType, String scopeId) {}
+```
+
+V1 auth stores users in Platform Center's user/access tables; the shell consumes
+the current-user DTO and does not own role-assignment persistence.
+
+### 3.5 ApiResponse Envelope (Shared)
 
 ```java
 package com.sdlctower.shared.dto;
@@ -225,11 +364,21 @@ public record ApiResponse<T>(T data, String error) {
 
 | Frontend (TypeScript) | Backend (Java) | JSON Key | Nullable |
 |-----------------------|----------------|----------|----------|
+| `WorkspaceContext.workspaceId` | `WorkspaceContextDto.workspaceId` | `workspaceId` | Yes |
 | `WorkspaceContext.workspace` | `WorkspaceContextDto.workspace` | `workspace` | No |
+| `WorkspaceContext.applicationId` | `WorkspaceContextDto.applicationId` | `applicationId` | Yes |
 | `WorkspaceContext.application` | `WorkspaceContextDto.application` | `application` | No |
+| `WorkspaceContext.snowGroupId` | `WorkspaceContextDto.snowGroupId` | `snowGroupId` | Yes |
 | `WorkspaceContext.snowGroup` | `WorkspaceContextDto.snowGroup` | `snowGroup` | Yes |
+| `WorkspaceContext.projectId` | `WorkspaceContextDto.projectId` | `projectId` | Yes |
 | `WorkspaceContext.project` | `WorkspaceContextDto.project` | `project` | Yes |
 | `WorkspaceContext.environment` | `WorkspaceContextDto.environment` | `environment` | Yes |
+| `WorkspaceContext.demoMode` | `WorkspaceContextDto.demoMode` | `demoMode` | No |
+| `CurrentUser.authProvider` | `CurrentUserDto.authProvider` | `authProvider` | No |
+| `CurrentUser.staffId` | `CurrentUserDto.staffId` | `staffId` | Yes for guest |
+| `CurrentUser.readOnly` | `CurrentUserDto.readOnly` | `readOnly` | No |
+| `CurrentUser.staffName` | `CurrentUserDto.staffName` | `staffName` | Yes |
+| `CurrentUser.avatarUrl` | `CurrentUserDto.avatarUrl` | `avatarUrl` | Yes |
 | `NavItem.key` | `NavItem.key` | `key` | No |
 | `NavItem.label` | `NavItem.label` | `label` | No |
 | `NavItem.path` | `NavItem.path` | `path` | No |
@@ -265,11 +414,16 @@ graph TD
 -- V1__create_workspace_context.sql
 CREATE TABLE workspace_context (
     id                BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    workspace_id      VARCHAR(64),
     workspace_name    VARCHAR(255) NOT NULL,
+    application_id    VARCHAR(64),
     application_name  VARCHAR(255) NOT NULL,
+    snow_group_id     VARCHAR(64),
     snow_group        VARCHAR(255),
+    project_id        VARCHAR(64),
     project_name      VARCHAR(255),
-    environment_name  VARCHAR(255)
+    environment_name  VARCHAR(255),
+    demo_mode         BOOLEAN DEFAULT FALSE NOT NULL
 );
 ```
 
@@ -278,13 +432,19 @@ CREATE TABLE workspace_context (
 ```sql
 -- V2__seed_workspace_context.sql
 INSERT INTO workspace_context (
-    workspace_name, application_name, snow_group, project_name, environment_name
+    workspace_id, workspace_name, application_id, application_name,
+    snow_group_id, snow_group, project_id, project_name, environment_name, demo_mode
 ) VALUES (
+    'ws-default-001',
     'Global SDLC Tower',
+    'app-payment-gateway-pro',
     'Payment-Gateway-Pro',
+    'snow-fin-tech-ops',
     'FIN-TECH-OPS',
+    'proj-42',
     'Q2-Cloud-Migration',
-    'Production'
+    'Production',
+    FALSE
 );
 ```
 
@@ -293,11 +453,16 @@ INSERT INTO workspace_context (
 | DB Column | Java Entity Field | DTO Field | TypeScript Field |
 |-----------|-------------------|-----------|------------------|
 | `id` | `id` | (excluded) | (not exposed) |
+| `workspace_id` | `workspaceId` | `workspaceId` | `workspaceId` |
 | `workspace_name` | `workspace` | `workspace` | `workspace` |
+| `application_id` | `applicationId` | `applicationId` | `applicationId` |
 | `application_name` | `application` | `application` | `application` |
+| `snow_group_id` | `snowGroupId` | `snowGroupId` | `snowGroupId` |
 | `snow_group` | `snowGroup` | `snowGroup` | `snowGroup` |
+| `project_id` | `projectId` | `projectId` | `projectId` |
 | `project_name` | `project` | `project` | `project` |
 | `environment_name` | `environment` | `environment` | `environment` |
+| `demo_mode` | `demoMode` | `demoMode` | `demoMode` |
 
 ---
 

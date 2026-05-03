@@ -1,6 +1,6 @@
 // ── Scope & Auth ─────────────────────────────────────────
 
-export type ScopeType = 'platform' | 'application' | 'workspace' | 'project';
+export type ScopeType = 'platform' | 'application' | 'snow_group' | 'workspace' | 'project';
 
 export interface Scope {
   readonly scopeType: ScopeType;
@@ -15,8 +15,11 @@ export type Role =
   | 'AUDITOR';
 
 export interface CurrentUser {
-  readonly userId: string;
+  readonly staffId: string;
   readonly displayName: string;
+  readonly staffName?: string | null;
+  readonly avatarUrl?: string | null;
+  readonly authProvider?: 'manual' | 'teambook' | 'guest';
   readonly roles: Role[];
   readonly scopes: Scope[];
 }
@@ -60,11 +63,12 @@ export interface TemplateVersion {
 
 export interface InheritanceField {
   readonly effectiveValue: unknown;
-  readonly winningLayer: 'platform' | 'application' | 'snowGroup' | 'project';
+  readonly winningLayer: 'platform' | 'application' | 'snowGroup' | 'workspace' | 'project';
   readonly layers: {
     readonly platform: unknown;
     readonly application: unknown | null;
     readonly snowGroup: unknown | null;
+    readonly workspace: unknown | null;
     readonly project: unknown | null;
   };
 }
@@ -142,13 +146,26 @@ export interface AuditRecord {
 
 export interface RoleAssignment {
   readonly id: string;
-  readonly userId: string;
+  readonly staffId: string;
   readonly userDisplayName: string;
   readonly role: Role;
   readonly scopeType: ScopeType;
   readonly scopeId: string;
   readonly grantedBy: string;
   readonly grantedAt: string;
+}
+
+export interface PlatformUser {
+  readonly staffId: string;
+  readonly displayName: string;
+  readonly staffName: string | null;
+  readonly avatarUrl: string | null;
+  readonly email: string | null;
+  readonly profileSource: 'manual' | 'teambook';
+  readonly lastProfileSyncAt: string | null;
+  readonly status: 'active' | 'inactive';
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }
 
 // ── Policies ─────────────────────────────────────────────

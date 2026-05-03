@@ -4,6 +4,7 @@ import type { DocumentQualityFinding, DocumentReview, SddDocumentContent, SddDoc
 import RequirementCard from './RequirementCard.vue';
 import ReviewHistoryList from './ReviewHistoryList.vue';
 import DocumentQualityBadge from './DocumentQualityBadge.vue';
+import FreshnessChip from './FreshnessChip.vue';
 
 const props = defineProps<{
   selectedDocument: SddDocumentContent | null;
@@ -45,6 +46,56 @@ const qualityGate = computed(() => currentDocument.value?.qualityGate ?? null);
 const canApprove = computed(() => canReview.value && Boolean(qualityGate.value?.passed && !qualityGate.value.stale));
 const trimmedRejectReason = computed(() => rejectReason.value.trim());
 const rejectReasonError = computed(() => rejectTouched.value && !trimmedRejectReason.value ? 'Rejection reason is required.' : '');
+const reviewDecisionState = computed(() => {
+  if (!currentDocument.value) return 'empty';
+  if (!canReview.value) return 'blocked';
+  if (!qualityGate.value) return 'gate-needed';
+  if (qualityGate.value.stale) return 'gate-stale';
+  if (!qualityGate.value.passed) return 'gate-failed';
+  return 'ready';
+});
+const reviewDecisionTitle = computed(() => {
+  switch (reviewDecisionState.value) {
+    case 'ready':
+      return 'Ready for approval';
+    case 'gate-failed':
+      return 'Quality gate needs changes';
+    case 'gate-stale':
+      return 'Quality gate is stale';
+    case 'gate-needed':
+      return 'Run quality gate';
+    case 'blocked':
+      return 'Document is not reviewable';
+    default:
+      return 'Select a document';
+  }
+});
+const reviewDecisionHint = computed(() => {
+  switch (reviewDecisionState.value) {
+    case 'ready':
+      return 'Approve this version, or reject it with a reason if the content is not acceptable.';
+    case 'gate-failed':
+      return 'Reject with a reason or ask the delivery team to fix the findings before approval.';
+    case 'gate-stale':
+      return 'Run the gate again before approving the current document version.';
+    case 'gate-needed':
+      return 'Run the gate before making the approval decision.';
+    case 'blocked':
+      return 'A missing document cannot be reviewed.';
+    default:
+      return 'Choose an SDD document to review.';
+  }
+});
+const markdownPreview = computed(() => {
+  const raw = props.selectedDocument?.markdown?.trim();
+  if (!raw) return null;
+  const lines = raw.split(/\r?\n/);
+  const previewLines = lines.slice(0, 34);
+  return {
+    text: previewLines.join('\n'),
+    truncated: lines.length > previewLines.length,
+  };
+});
 
 watch(() => currentDocument.value?.id, () => {
   rejectReason.value = '';
@@ -93,10 +144,21 @@ function findingText(finding: string | DocumentQualityFinding) {
 <template>
   <RequirementCard title="Business Review" :is-loading="isLoading">
     <div class="review-panel">
+      <div class="review-decision" :class="`review-decision--${reviewDecisionState}`">
+        <span class="target-label">Decision State</span>
+        <strong>{{ reviewDecisionTitle }}</strong>
+        <p>{{ reviewDecisionHint }}</p>
+      </div>
+
       <div v-if="currentDocument" class="review-target">
-        <span class="target-label">Selected Document</span>
-        <strong>{{ currentDocument.title }}</strong>
-        <span class="target-meta">{{ currentDocument.path ?? currentDocument.stageLabel }}</span>
+        <div class="review-target-head">
+          <div>
+            <span class="target-label">Selected Document</span>
+            <strong>{{ currentDocument.title }}</strong>
+            <span class="target-meta">{{ currentDocument.path ?? currentDocument.stageLabel }}</span>
+          </div>
+          <FreshnessChip :status="currentDocument.freshnessStatus" />
+        </div>
         <div v-if="qualityGate" class="quality-gate" :class="{ 'quality-gate--blocked': !qualityGate.passed }">
           <div class="quality-gate-head">
             <span class="target-label">Document Quality Gate</span>
@@ -135,7 +197,24 @@ function findingText(finding: string | DocumentQualityFinding) {
         </div>
       </div>
       <div v-else class="review-target review-target--empty">
-        Select an SDD document to choose the version for review.
+        <strong>No document selected</strong>
+        <span>Select an SDD document to choose the version for review.</span>
+      </div>
+
+      <div v-if="markdownPreview" class="review-preview">
+        <div class="preview-head">
+          <span class="target-label">Document Preview</span>
+          <a
+            v-if="selectedDocument?.githubUrl"
+            :href="selectedDocument.githubUrl"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+        </div>
+        <pre>{{ markdownPreview.text }}</pre>
+        <small v-if="markdownPreview.truncated">Preview truncated. Open GitHub SDD Documents for the full Markdown.</small>
       </div>
 
       <div class="review-actions">
@@ -177,6 +256,41 @@ function findingText(finding: string | DocumentQualityFinding) {
 
 <style scoped>
 .review-panel { display: flex; flex-direction: column; gap: 10px; }
+.review-decision {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid rgba(137, 206, 255, 0.24);
+  border-radius: var(--radius-sm);
+  background: rgba(137, 206, 255, 0.07);
+}
+.review-decision--ready {
+  border-color: rgba(125, 211, 166, 0.36);
+  background: rgba(125, 211, 166, 0.09);
+}
+.review-decision--gate-failed,
+.review-decision--blocked {
+  border-color: rgba(239, 68, 68, 0.32);
+  background: rgba(239, 68, 68, 0.08);
+}
+.review-decision--gate-stale,
+.review-decision--gate-needed {
+  border-color: rgba(255, 202, 40, 0.36);
+  background: rgba(255, 202, 40, 0.08);
+}
+.review-decision strong {
+  color: var(--color-on-surface);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+}
+.review-decision p {
+  margin: 0;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
 .review-target {
   display: flex;
   flex-direction: column;
@@ -190,6 +304,25 @@ function findingText(finding: string | DocumentQualityFinding) {
   color: var(--color-on-surface-variant);
   font-size: 0.75rem;
 }
+.review-target--empty strong {
+  color: var(--color-on-surface);
+  font-size: 0.8125rem;
+}
+.review-target--empty span {
+  margin-top: 2px;
+}
+.review-target-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.review-target-head > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .target-label {
   font-family: var(--font-ui);
   font-size: 0.5625rem;
@@ -200,14 +333,15 @@ function findingText(finding: string | DocumentQualityFinding) {
 .review-target strong {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   color: var(--color-on-surface);
   font-size: 0.8125rem;
 }
 .target-meta {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   color: var(--color-on-surface-variant);
   font-family: var(--font-tech);
   font-size: 0.625rem;
@@ -308,6 +442,48 @@ function findingText(finding: string | DocumentQualityFinding) {
   margin-top: 4px;
   color: var(--color-on-surface);
   font-family: var(--font-tech);
+  font-size: 0.6875rem;
+}
+.review-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px;
+  border: var(--border-ghost);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container-low);
+}
+.preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.preview-head a {
+  color: var(--color-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.review-preview pre {
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 9px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-container);
+  color: var(--color-on-surface);
+  font-family: var(--font-tech);
+  font-size: 0.6875rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.review-preview small {
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-ui);
   font-size: 0.6875rem;
 }
 .review-actions,

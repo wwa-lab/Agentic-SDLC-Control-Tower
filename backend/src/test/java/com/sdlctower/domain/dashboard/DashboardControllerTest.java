@@ -23,7 +23,7 @@ class DashboardControllerTest {
 
     @Test
     void getDashboardSummaryReturnsWrappedSummary() throws Exception {
-        mockMvc.perform(get(ApiConstants.DASHBOARD_SUMMARY))
+        mockMvc.perform(get(ApiConstants.DASHBOARD_SUMMARY, "ws-default-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").exists())
                 .andExpect(jsonPath("$.data.sdlcHealth").exists())

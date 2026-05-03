@@ -31,7 +31,7 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 | Phase | Scope | Tool | Deliverable |
 |---|---|---|---|
 | **A** | Frontend with mocked data | Codex | `/platform` renders shell + 6 sub-sections with all states; tests pass; build succeeds |
-| **B** | Backend + live API wiring | Codex | Spring Boot endpoints for all 6 capabilities, Flyway V80–V87 migrations, seed data, FE switched from mocks to live |
+| **B** | Backend + live API wiring | Codex | Spring Boot endpoints for all 6 capabilities plus platform foundation, Flyway V86–V94 migrations, seed data, FE switched from mocks to live |
 
 **Dependency**: Phase B begins after Phase A is merged. Phase B must NOT require component re-work beyond swapping the API client from mock to live (per AI Center / Dashboard / Incident precedent).
 
@@ -43,11 +43,12 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 
 | Epic | Stories | REQs | Phase A Tasks | Phase B Tasks |
 |---|---|---|---|---|
-| Shell & Navigation | S-PC-01 – S-PC-05 | REQ-PC-01 – REQ-PC-10 | A.1 – A.4 | — |
+| Shell & Navigation | S-PC-01 – S-PC-03 | REQ-PC-01 – REQ-PC-03, REQ-PC-70 | A.1 – A.4 | — |
+| Platform Foundation | S-PC-04 – S-PC-07 | REQ-PC-02A – REQ-PC-02C | A.2, A.4, A.6, A.8, A.9, A.10 | B.1 – B.5, B.5A |
 | Template Mgmt | S-PC-10 – S-PC-15 | REQ-PC-20 – REQ-PC-29 | A.5 | B.3, B.4 |
 | Configuration Mgmt | S-PC-20 – S-PC-24 | REQ-PC-30 – REQ-PC-39 | A.6 | B.3, B.5 |
 | Audit & Compliance | S-PC-30 – S-PC-35 | REQ-PC-40 – REQ-PC-49 | A.7 | B.3, B.6, B.12 |
-| Access Control | S-PC-40 – S-PC-46 | REQ-PC-50 – REQ-PC-59 | A.8 | B.3, B.7, B.11 |
+| Access Control | S-PC-40 – S-PC-46, S-PC-41A | REQ-PC-40 – REQ-PC-44, REQ-PC-42A | A.8 | B.3, B.7, B.9, B.12 |
 | Policy & Governance | S-PC-50 – S-PC-55 | REQ-PC-60 – REQ-PC-69 | A.9 | B.3, B.8 |
 | Integration Framework | S-PC-60 – S-PC-65 | REQ-PC-70 – REQ-PC-79 | A.10 | B.3, B.9, B.10 |
 | Cross-cutting (RBAC guard, shared, a11y) | S-PC-70 – S-PC-72 | REQ-PC-80 – REQ-PC-86 | A.11 – A.15 | B.1, B.2, B.11, B.13 |
@@ -73,7 +74,7 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 - **Files**:
   - `types/platform.ts` — shared envelope, scope, audit event types
   - `types/template.ts`, `types/configuration.ts`, `types/audit.ts`, `types/access.ts`, `types/policy.ts`, `types/integration.ts`
-  - `constants/scope.ts` — `ScopeLevel = 'platform' | 'application' | 'workspace' | 'project'`, inheritance order
+  - `constants/scope.ts` — `ScopeLevel = 'platform' | 'application' | 'snow_group' | 'workspace' | 'project'`, inheritance order
   - `constants/templateCategories.ts`, `constants/policyCategories.ts`, `constants/connectionTypes.ts`
 - **Content**: all TS types from data-model doc §2 verbatim; lookups from design doc §6 (visual tokens)
 - **Verification**: `tsc --noEmit` clean; no duplicate types with shared/
@@ -107,7 +108,7 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 
 ### A.6 Configuration Management sub-section
 - **Files**: `configuration/ConfigurationListView.vue`, `configuration/ConfigurationDetailPanel.vue`, `configuration/InheritancePreview.vue`, `configuration/ConfigurationEditForm.vue`, `stores/configurationStore.ts`, `api/configurationApi.ts`
-- **Content**: per design doc §4.3; list columns: key, scope, value-preview, source (Default/Override), lastUpdated; detail shows 4-layer inheritance chain (Platform Default → Application Default → SNOW Group Override → Project Override) with effective-value resolution
+- **Content**: per design doc §4.3; list columns: key, scope, value-preview, source (Default/Override), lastUpdated; detail shows 5-layer inheritance chain (Platform Default → Application Default → SNOW Group Override → Workspace Override → Project Override) with effective-value resolution
 - **States**: loading; empty; error; forbidden; override-indicator visual
 - **Mocks**: ≥ 20 configuration keys with at least 4 demonstrating full inheritance chain
 - **Verification**: component tests; effective-value resolver unit test
@@ -122,8 +123,8 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 - **Stories**: S-PC-30 – S-PC-35
 
 ### A.8 Access Control sub-section
-- **Files**: `access/AccessListView.vue`, `access/RoleAssignmentEditor.vue`, `access/AccessDetailPanel.vue`, `access/LastAdminGuardDialog.vue`, `stores/accessStore.ts`, `api/accessApi.ts`
-- **Content**: per design doc §4.5; list: assignments by user / role / scope; editor allows assign/revoke; last-admin guard warning dialog blocks final admin revocation
+- **Files**: `access/AccessListView.vue`, `access/UserCatalogView.vue`, `access/RoleAssignmentEditor.vue`, `access/AccessDetailPanel.vue`, `access/LastAdminGuardDialog.vue`, `stores/accessStore.ts`, `api/accessApi.ts`
+- **Content**: per design doc §4.5; list: staff users and assignments by staff id / role / scope; user rows show optional TeamBook nStaff Name, avatar, and profile source; editor allows create/deactivate user and assign/revoke; last-admin guard warning dialog blocks final admin revocation
 - **States**: loading; empty; error; forbidden; "last-admin" blocked confirm dialog
 - **Mocks**: ≥ 8 role assignments with at least 2 distinct users holding PLATFORM_ADMIN (so the last-admin path is testable)
 - **Verification**: component tests; last-admin guard unit test (attempting to revoke final admin shows dialog and blocks)
@@ -177,7 +178,7 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 - [ ] `npm run dev` and `npm run build` both succeed
 - [ ] `npm run test` passes for all new tests
 - [ ] No ESLint/tsc warnings introduced
-- [ ] Inheritance preview renders all 4 layers correctly with effective-value highlight
+- [ ] Inheritance preview renders all 5 layers correctly with effective-value highlight
 - [ ] No plaintext credentials rendered anywhere (snapshot test asserts)
 
 ---
@@ -186,35 +187,37 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 
 ### B.0 Package-by-feature layout
 - **Path**: `backend/src/main/java/com/sdlctower/platform/` (note: Platform Center lives under `platform/`, not `domain/` — per data-model doc §4 and CLAUDE.md Lesson #3)
-- **Sub-packages**: `template/`, `configuration/`, `audit/`, `access/`, `policy/`, `integration/`, `shared/`
+- **Sub-packages**: `foundation/`, `template/`, `configuration/`, `audit/`, `access/`, `policy/`, `integration/`, `shared/`
 - **Each sub-package**: `controller/`, `service/`, `repository/`, `entity/`, `dto/`, `exception/`
 - **Verification**: folder tree matches design doc §1.2
 
 ### B.1 Flyway migrations — schema
 - **Files** (under `backend/src/main/resources/db/migration/`):
-  - `V80__create_platform_template.sql` — PLATFORM_TEMPLATE, PLATFORM_TEMPLATE_VERSION
-  - `V81__create_platform_configuration.sql` — PLATFORM_CONFIGURATION
-  - `V82__create_platform_audit.sql` — PLATFORM_AUDIT (append-only, partitioned-ready)
-  - `V83__create_platform_role_assignment.sql` — PLATFORM_ROLE_ASSIGNMENT
-  - `V84__create_platform_policy.sql` — PLATFORM_POLICY, PLATFORM_POLICY_EXCEPTION
-  - `V85__create_platform_connection.sql` — PLATFORM_CONNECTION, PLATFORM_CREDENTIAL_REF (stub)
-  - `V86__reserve_platform_future_columns.sql` — forward-compat reserved columns (`deleted_at`, `tenant_id`, `rev`) on all platform tables
+  - `V86__create_platform_foundation.sql` — PLATFORM_APPLICATION, PLATFORM_SNOW_GROUP, PLATFORM_WORKSPACE
+  - `V87__create_platform_template.sql` — PLATFORM_TEMPLATE, PLATFORM_TEMPLATE_VERSION
+  - `V88__create_platform_configuration.sql` — PLATFORM_CONFIGURATION
+  - `V89__create_platform_audit.sql` — PLATFORM_AUDIT (append-only, partitioned-ready)
+  - `V90__create_platform_role_assignment.sql` — PLATFORM_ROLE_ASSIGNMENT
+  - `V91__create_platform_policy.sql` — PLATFORM_POLICY, PLATFORM_POLICY_EXCEPTION
+  - `V92__create_platform_connection.sql` — PLATFORM_CONNECTION, PLATFORM_CREDENTIAL_REF (stub)
+  - `V94__reserve_platform_future_columns.sql` — forward-compat reserved columns (`deleted_at`, `tenant_id`, `rev`) on all platform tables
 - **Content**: DDL per data-model doc §5; all string columns use Oracle-compatible types; JSON fields stored as CLOB (no vendor JSON type)
-- **Note**: V40–V47 are taken by Code & Build Management; V80+ is the next available range per CLAUDE.md migration allocation
-- **Verification**: `MigrationTest` applies V80–V86 from empty schema on H2; `./mvnw test` green; DDL rehearsal on Oracle XE docker image (manual)
+- **Note**: V40–V85 are taken by existing slices; V86+ is the next available range in this repo
+- **Verification**: `MigrationTest` applies V86–V94 from empty schema on H2; `./mvnw test` green; DDL rehearsal on Oracle XE docker image (manual)
 
 ### B.2 Flyway migration — seed
-- **File**: `backend/src/main/resources/db/migration/V87__seed_platform_center_data.sql`
-- **Content**: realistic seed matching Phase A mock counts — ≥ 12 templates with ≥ 15 versions; ≥ 20 configuration keys spanning all 4 inheritance layers; ≥ 50 audit events covering every action type; ≥ 8 role assignments with ≥ 2 PLATFORM_ADMIN holders; ≥ 10 policies + exceptions; ≥ 6 connections + credential refs
+- **File**: `backend/src/main/resources/db/migration/V93__seed_platform_center_data.sql`
+- **Content**: realistic seed matching Phase A mock counts — default Application + SNOW Group + Workspace bindings; ≥ 12 templates with ≥ 15 versions; ≥ 20 configuration keys spanning all 5 inheritance layers; ≥ 50 audit events covering every action type; ≥ 8 role assignments with ≥ 2 PLATFORM_ADMIN holders; ≥ 10 policies + exceptions; ≥ 6 connections + credential refs
 - **Note**: seed placed in `db/migration/` following the project convention (V2, V3, V8, V11, V26, V36, V39, V47, V53, V61, V77 are all seeds in the migration folder)
 - **Verification**: `local` profile populates data; seed data uses workspace-scoped IDs to avoid collision with other slices
 
 ### B.3 JPA entities
 - **Files** (one per sub-package under `entity/`):
   - Template: `PlatformTemplate`, `PlatformTemplateVersion`
+  - Foundation: `PlatformApplication`, `PlatformSnowGroup`, `PlatformWorkspace`
   - Configuration: `PlatformConfiguration`
   - Audit: `PlatformAudit`
-  - Access: `PlatformRoleAssignment`
+  - Access: `PlatformUser`, `PlatformRoleAssignment`
   - Policy: `PlatformPolicy`, `PlatformPolicyException`
   - Integration: `PlatformConnection`, `PlatformCredentialRef`
 - **Content**: per data-model doc §4; no Lombok; standard getters/setters; JSON fields as String/CLOB + Jackson in service layer
@@ -223,9 +226,10 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 ### B.4 Repositories
 - **Files** (one per aggregate root):
   - `TemplateRepository`, `TemplateVersionRepository`
+  - `PlatformApplicationRepository`, `PlatformSnowGroupRepository`, `PlatformWorkspaceRepository`
   - `ConfigurationRepository` (with `findEffectiveValue(key, scope)` JPQL)
   - `AuditRepository` (cursor pagination + filter predicate; append-only, no update methods)
-  - `RoleAssignmentRepository` (with `countByRoleAndScope` for last-admin guard)
+  - `PlatformUserRepository`, `RoleAssignmentRepository` (with `countByRoleAndScope` for last-admin guard)
   - `PolicyRepository`, `PolicyExceptionRepository`
   - `ConnectionRepository`, `CredentialRefRepository`
 - **Content**: scope-aware query methods; cursor helpers via `CursorCodec` (per API guide §5); no raw SQL unless necessary
@@ -235,6 +239,11 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 - **Files**: `dto/` per sub-package (Java records); `shared/cursor/CursorCodec.java`
 - **Content**: per data-model doc §3; record field names and shape match FE TS types; camelCase JSON via `@JsonProperty` or Jackson config
 - **Verification**: shape contract test compares record JSON output against API guide §2.x examples
+
+### B.5A Foundation service + PlatformScopeResolver
+- **Files**: `platform/foundation/service/FoundationService.java`, `PlatformScopeResolver.java`, `controller/FoundationController.java`, `dto/PlatformApplicationDto.java`, `dto/PlatformSnowGroupDto.java`, `dto/PlatformWorkspaceDto.java`, `dto/PlatformScopeResolutionDto.java`
+- **Content**: exposes `/foundation/applications`, `/foundation/snow-groups`, `/foundation/workspaces`, and `/foundation/scope/resolve`; resolver returns `platform → application → snow_group → workspace → project` chain and validates unknown scope ids
+- **Verification**: MockMvc for all foundation endpoints; unit tests for scope resolution from workspace and project ids
 
 ### B.6 AuditWriter + atomic audit pattern
 - **Files**:
@@ -256,14 +265,14 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 
 ### B.8 Configuration service + controller + inheritance resolver
 - **Files**: `platform/configuration/service/ConfigurationService.java`, `InheritanceResolver.java`, `controller/ConfigurationController.java`, `exception/ConfigurationNotFoundException.java`, `exception/DuplicateScopeOverrideException.java`
-- **Content**: per API guide §3.4; `InheritanceResolver` walks Platform → Application → SNOW Group → Project and returns effective value + provenance trail; unique constraint on `(config_key, scope_level, scope_id)` with 409 `DUPLICATE_SCOPE_OVERRIDE` on conflict
-- **Verification**: unit test for resolver across all 4 layers; MockMvc for endpoints
+- **Content**: per API guide §3.4; `InheritanceResolver` consumes `PlatformScopeResolver` output and walks Platform → Application → SNOW Group → Workspace → Project, returning effective value + provenance trail; unique constraint on `(config_key, scope_level, scope_id)` with 409 `DUPLICATE_SCOPE_OVERRIDE` on conflict
+- **Verification**: unit test for resolver across all 5 layers; MockMvc for endpoints
 - **Stories**: S-PC-20 – S-PC-24
 
 ### B.9 Access service + controller + last-admin guard
-- **Files**: `platform/access/service/AccessService.java`, `controller/AccessController.java`, `exception/LastPlatformAdminException.java`, `exception/AccessAssignmentNotFoundException.java`
-- **Content**: per API guide §3.5; `revoke(assignmentId)` runs a guard — if the target is a PLATFORM_ADMIN and `countActivePlatformAdmins() <= 1`, throw `LastPlatformAdminException` → 409 with `LAST_PLATFORM_ADMIN` error code; guard runs inside the same transaction as the revoke write
-- **Verification**: MockMvc: revoke final admin → 409; revoke one of two admins → 200; assign new admin → audit event written
+- **Files**: `platform/access/service/AccessService.java`, `controller/AccessController.java`, `exception/LastPlatformAdminException.java`, `exception/AccessAssignmentNotFoundException.java`, `exception/UserNotFoundException.java`
+- **Content**: per API guide §3.5; staff user CRUD by Platform Admin, including optional TeamBook profile metadata; `revoke(assignmentId)` runs a guard — if the target is a PLATFORM_ADMIN and `countActivePlatformAdmins() <= 1`, throw `LastPlatformAdminException` → 409 with `LAST_PLATFORM_ADMIN` error code; guard runs inside the same transaction as the revoke write
+- **Verification**: MockMvc: create/deactivate staff user; TeamBook profile fields round-trip without granting access; inactive user cannot log in; revoke final admin → 409; revoke one of two admins → 200; assign new admin → audit event written
 - **Stories**: S-PC-40 – S-PC-46
 
 ### B.10 Policy service + controller + state machine
@@ -303,8 +312,8 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
 
 ### B.16 Phase B acceptance
 - [ ] `./mvnw clean test` passes all tests (existing + new); ArchUnit rule in B.14 passes
-- [ ] `./mvnw spring-boot:run -Dspring.profiles.active=local` starts cleanly with V80–V87 applied + seed loaded
-- [ ] All 32 endpoints return JSON matching API guide §2 examples (shapes verified by MockMvc tests)
+- [ ] `./mvnw spring-boot:run -Dspring.profiles.active=local` starts cleanly with V86–V94 applied + seed loaded
+- [ ] All 39 Platform Center endpoints return JSON matching API guide examples (shapes verified by MockMvc tests)
 - [ ] Every platform endpoint returns 403 for non-admin (B.12 verified)
 - [ ] `GET /api/v1/platform/*?size=201` → 400 with `{ data: null, error: "size must be between 1 and 200" }`
 - [ ] Revoking final PLATFORM_ADMIN → 409 with `LAST_PLATFORM_ADMIN`
@@ -362,7 +371,7 @@ Both phases are delivered via **Codex** (FE and BE) — unlike earlier slices wh
                           B.16 Phase B acceptance
 ```
 
-**Critical path**: A.0 → A.1 → A.4 → (A.5–A.10 parallel) → A.11 → A.15, then B.1 (V80–V86) → B.2 (V87 seed) → B.3 → B.6 → (B.7–B.11 parallel) → B.14 → B.16.
+**Critical path**: A.0 → A.1 → A.4 → (A.5–A.10 parallel) → A.11 → A.15, then B.1 (V86–V94) → B.2 (V93 seed) → B.3 → B.5A → B.6 → (B.7–B.11 parallel) → B.14 → B.16.
 
 **Key gating task**: **B.6 (AuditWriter)** must land before any of B.7–B.11 because their mutations invoke `auditWriter.write`.
 

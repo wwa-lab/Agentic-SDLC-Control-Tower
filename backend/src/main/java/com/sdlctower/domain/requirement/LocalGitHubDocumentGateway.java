@@ -30,24 +30,24 @@ public class LocalGitHubDocumentGateway implements GitHubDocumentGateway {
         List<String[]> documents = new ArrayList<>();
 
         if (normalizedRepo.contains("payment-gateway")) {
-            documents.add(new String[] { "docs/01-requirements/sso-requirement.md", "SSO Requirement" });
+            documents.add(new String[] { "docs/01-requirements/sso-requirements.md", "SSO Requirement" });
             documents.add(new String[] { "docs/02-user-stories/sso-stories.md", "SSO User Stories" });
             documents.add(new String[] { "docs/03-spec/sso-functional-spec.md", "SSO Functional Spec" });
             documents.add(new String[] { "docs/04-architecture/sso-architecture.md", "SSO Architecture" });
-            documents.add(new String[] { "docs/04-architecture/sso-architecture-data-flow.md", "SSO Data Flow" });
-            documents.add(new String[] { "docs/04-architecture/sso-architecture-data-model.md", "SSO Data Model" });
+            documents.add(new String[] { "docs/04-architecture/sso-data-flow.md", "SSO Data Flow" });
+            documents.add(new String[] { "docs/04-architecture/sso-data-model.md", "SSO Data Model" });
             documents.add(new String[] { "docs/05-design/sso-design.md", "SSO Design" });
-            documents.add(new String[] { "docs/05-design/contracts/sso-api.md", "SSO API Guide" });
+            documents.add(new String[] { "docs/05-design/contracts/sso-API_IMPLEMENTATION_GUIDE.md", "SSO API Implementation Guide" });
             documents.add(new String[] { "docs/06-tasks/sso-tasks.md", "SSO Tasks" });
         } else if (normalizedRepo.contains("sdlc-tower")) {
-            documents.add(new String[] { "docs/01-requirements/audit-trail.md", "Audit Trail Requirement" });
+            documents.add(new String[] { "docs/01-requirements/audit-trail-requirements.md", "Audit Trail Requirement" });
             documents.add(new String[] { "docs/02-user-stories/audit-trail-stories.md", "Audit Trail User Stories" });
-            documents.add(new String[] { "docs/03-spec/audit-trail.md", "Audit Trail Spec" });
-            documents.add(new String[] { "docs/04-architecture/audit-trail.md", "Audit Trail Architecture" });
+            documents.add(new String[] { "docs/03-spec/audit-trail-spec.md", "Audit Trail Spec" });
+            documents.add(new String[] { "docs/04-architecture/audit-trail-architecture.md", "Audit Trail Architecture" });
             documents.add(new String[] { "docs/04-architecture/audit-trail-data-flow.md", "Audit Trail Data Flow" });
             documents.add(new String[] { "docs/04-architecture/audit-trail-data-model.md", "Audit Trail Data Model" });
-            documents.add(new String[] { "docs/05-design/audit-trail.md", "Audit Trail Design" });
-            documents.add(new String[] { "docs/05-design/contracts/audit-trail-api.md", "Audit Trail API Guide" });
+            documents.add(new String[] { "docs/05-design/audit-trail-design.md", "Audit Trail Design" });
+            documents.add(new String[] { "docs/05-design/contracts/audit-trail-API_IMPLEMENTATION_GUIDE.md", "Audit Trail API Implementation Guide" });
             documents.add(new String[] { "docs/06-tasks/audit-trail-tasks.md", "Audit Trail Tasks" });
             documents.add(new String[] { "docs/01-requirements/BR-AUDIT-001-normalizer.md", "Audit Trail Requirement Normalizer" });
             documents.add(new String[] { "docs/02-functional-spec/BR-AUDIT-001.md", "Audit Trail Functional Spec" });
